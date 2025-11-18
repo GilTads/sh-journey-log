@@ -14,7 +14,132 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      employees: {
+        Row: {
+          cargo: string
+          created_at: string | null
+          id: string
+          matricula: string
+          nome_completo: string
+        }
+        Insert: {
+          cargo: string
+          created_at?: string | null
+          id?: string
+          matricula: string
+          nome_completo: string
+        }
+        Update: {
+          cargo?: string
+          created_at?: string | null
+          id?: string
+          matricula?: string
+          nome_completo?: string
+        }
+        Relationships: []
+      }
+      trips: {
+        Row: {
+          created_at: string | null
+          destino: string | null
+          duration_seconds: number | null
+          employee_id: string
+          end_latitude: number | null
+          end_longitude: number | null
+          end_time: string | null
+          id: string
+          km_inicial: number
+          motivo: string | null
+          observacao: string | null
+          origem: string | null
+          start_latitude: number | null
+          start_longitude: number | null
+          start_time: string
+          status: string | null
+          updated_at: string | null
+          vehicle_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          destino?: string | null
+          duration_seconds?: number | null
+          employee_id: string
+          end_latitude?: number | null
+          end_longitude?: number | null
+          end_time?: string | null
+          id?: string
+          km_inicial: number
+          motivo?: string | null
+          observacao?: string | null
+          origem?: string | null
+          start_latitude?: number | null
+          start_longitude?: number | null
+          start_time: string
+          status?: string | null
+          updated_at?: string | null
+          vehicle_id: string
+        }
+        Update: {
+          created_at?: string | null
+          destino?: string | null
+          duration_seconds?: number | null
+          employee_id?: string
+          end_latitude?: number | null
+          end_longitude?: number | null
+          end_time?: string | null
+          id?: string
+          km_inicial?: number
+          motivo?: string | null
+          observacao?: string | null
+          origem?: string | null
+          start_latitude?: number | null
+          start_longitude?: number | null
+          start_time?: string
+          status?: string | null
+          updated_at?: string | null
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trips_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trips_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicles: {
+        Row: {
+          created_at: string | null
+          id: string
+          marca: string
+          modelo: string
+          placa: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          marca: string
+          modelo: string
+          placa: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          marca?: string
+          modelo?: string
+          placa?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
