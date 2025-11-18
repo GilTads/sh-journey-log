@@ -4,7 +4,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Combobox } from "@/components/ui/combobox";
 import { toast } from "sonner";
+import { useEmployees } from "@/hooks/useEmployees";
+import { useVehicles } from "@/hooks/useVehicles";
 import {
   User,
   Car,
@@ -19,8 +22,8 @@ import {
 } from "lucide-react";
 
 interface TripData {
-  employee: string;
-  vehicle: string;
+  employeeId: string;
+  vehicleId: string;
   initialKm: string;
   origin: string;
   destination: string;
@@ -34,9 +37,12 @@ interface TripData {
 }
 
 export const TripForm = () => {
+  const { data: employees = [], isLoading: isLoadingEmployees } = useEmployees();
+  const { data: vehicles = [], isLoading: isLoadingVehicles } = useVehicles();
+
   const [tripData, setTripData] = useState<TripData>({
-    employee: "",
-    vehicle: "",
+    employeeId: "",
+    vehicleId: "",
     initialKm: "",
     origin: "",
     destination: "",
@@ -99,7 +105,7 @@ export const TripForm = () => {
 
   const handleStartTrip = async () => {
     // Validação básica
-    if (!tripData.employee || !tripData.vehicle || !tripData.initialKm) {
+    if (!tripData.employeeId || !tripData.vehicleId || !tripData.initialKm) {
       toast.error("Preencha os campos obrigatórios: Funcionário, Veículo e Km Inicial");
       return;
     }
@@ -206,7 +212,7 @@ export const TripForm = () => {
       <Card>
         <CardContent className="pt-6 space-y-3">
           <div className="flex items-center justify-between">
-            <Label htmlFor="employee" className="text-base font-semibold flex items-center gap-2">
+            <Label className="text-base font-semibold flex items-center gap-2">
               <User className="h-4 w-4 text-primary" />
               Funcionário *
             </Label>
@@ -214,13 +220,17 @@ export const TripForm = () => {
               <QrCode className="h-4 w-4" />
             </Button>
           </div>
-          <Input
-            id="employee"
-            placeholder="Nome ou matrícula do colaborador"
-            value={tripData.employee}
-            onChange={(e) => setTripData({ ...tripData, employee: e.target.value })}
-            disabled={isActive}
-            className="h-12"
+          <Combobox
+            options={employees.map((emp) => ({
+              value: emp.id,
+              label: `${emp.nome_completo} (${emp.matricula}) - ${emp.cargo}`,
+            }))}
+            value={tripData.employeeId}
+            onChange={(value) => setTripData({ ...tripData, employeeId: value })}
+            placeholder="Selecione um funcionário"
+            searchPlaceholder="Buscar por nome ou matrícula..."
+            emptyText="Nenhum funcionário encontrado."
+            disabled={isActive || isLoadingEmployees}
           />
         </CardContent>
       </Card>
@@ -228,17 +238,21 @@ export const TripForm = () => {
       {/* Vehicle Field */}
       <Card>
         <CardContent className="pt-6 space-y-3">
-          <Label htmlFor="vehicle" className="text-base font-semibold flex items-center gap-2">
+          <Label className="text-base font-semibold flex items-center gap-2">
             <Car className="h-4 w-4 text-primary" />
             Veículo *
           </Label>
-          <Input
-            id="vehicle"
-            placeholder="Placa ou identificação do veículo"
-            value={tripData.vehicle}
-            onChange={(e) => setTripData({ ...tripData, vehicle: e.target.value })}
-            disabled={isActive}
-            className="h-12"
+          <Combobox
+            options={vehicles.map((veh) => ({
+              value: veh.id,
+              label: `${veh.placa} - ${veh.marca} ${veh.modelo}`,
+            }))}
+            value={tripData.vehicleId}
+            onChange={(value) => setTripData({ ...tripData, vehicleId: value })}
+            placeholder="Selecione um veículo"
+            searchPlaceholder="Buscar por placa ou modelo..."
+            emptyText="Nenhum veículo encontrado."
+            disabled={isActive || isLoadingVehicles}
           />
         </CardContent>
       </Card>
