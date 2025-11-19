@@ -23,6 +23,7 @@ import {
 
 interface TripData {
   employeeId: string;
+  employeePhoto: File | null;
   vehicleId: string;
   initialKm: string;
   origin: string;
@@ -42,6 +43,7 @@ export const TripForm = () => {
 
   const [tripData, setTripData] = useState<TripData>({
     employeeId: "",
+    employeePhoto: null,
     vehicleId: "",
     initialKm: "",
     origin: "",
@@ -56,6 +58,7 @@ export const TripForm = () => {
   const [isCapturingLocation, setIsCapturingLocation] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const employeePhotoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isActive) {
@@ -105,8 +108,8 @@ export const TripForm = () => {
 
   const handleStartTrip = async () => {
     // Validação básica
-    if (!tripData.employeeId || !tripData.vehicleId || !tripData.initialKm) {
-      toast.error("Preencha os campos obrigatórios: Funcionário, Veículo e Km Inicial");
+    if (!tripData.employeeId || !tripData.employeePhoto || !tripData.vehicleId || !tripData.initialKm) {
+      toast.error("Preencha os campos obrigatórios: Funcionário, Foto do Funcionário, Veículo e Km Inicial");
       return;
     }
 
@@ -173,6 +176,17 @@ export const TripForm = () => {
     }
   };
 
+  const handleEmployeePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files[0]) {
+      setTripData((prev) => ({
+        ...prev,
+        employeePhoto: files[0],
+      }));
+      toast.success("Foto do funcionário adicionada");
+    }
+  };
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
@@ -232,6 +246,37 @@ export const TripForm = () => {
             emptyText="Nenhum funcionário encontrado."
             disabled={isActive || isLoadingEmployees}
           />
+        </CardContent>
+      </Card>
+
+      {/* Employee Photo Field */}
+      <Card>
+        <CardContent className="pt-6 space-y-3">
+          <Label htmlFor="employeePhoto" className="text-base font-semibold flex items-center gap-2">
+            <Camera className="h-4 w-4 text-primary" />
+            Foto do Funcionário *
+          </Label>
+          <div className="space-y-3">
+            <Input
+              id="employeePhoto"
+              ref={employeePhotoInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleEmployeePhotoUpload}
+              disabled={isActive}
+              className="cursor-pointer"
+            />
+            {tripData.employeePhoto && (
+              <div className="relative w-full max-w-xs mx-auto">
+                <img
+                  src={URL.createObjectURL(tripData.employeePhoto)}
+                  alt="Foto do funcionário"
+                  className="w-full h-48 object-cover rounded-lg border-2 border-primary"
+                />
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
