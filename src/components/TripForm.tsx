@@ -109,7 +109,7 @@ export const TripForm = () => {
   const handleStartTrip = async () => {
     // Validação básica
     if (!tripData.employeeId || !tripData.employeePhoto || !tripData.vehicleId || !tripData.initialKm) {
-      toast.error("Preencha os campos obrigatórios: Funcionário, Foto do Funcionário, Veículo e Km Inicial");
+      toast.error("Preencha os campos obrigatórios: Motorista, Foto do Motorista, Veículo e Km Inicial");
       return;
     }
 
@@ -183,7 +183,7 @@ export const TripForm = () => {
         ...prev,
         employeePhoto: files[0],
       }));
-      toast.success("Foto do funcionário adicionada");
+      toast.success("Foto do motorista capturada");
     }
   };
 
@@ -222,13 +222,13 @@ export const TripForm = () => {
         </Card>
       )}
 
-      {/* Employee Field */}
+      {/* Driver Field */}
       <Card>
         <CardContent className="pt-6 space-y-3">
           <div className="flex items-center justify-between">
             <Label className="text-base font-semibold flex items-center gap-2">
               <User className="h-4 w-4 text-primary" />
-              Funcionário *
+              Motorista *
             </Label>
             <Button variant="ghost" size="sm" onClick={handleBarcodeScanner}>
               <QrCode className="h-4 w-4" />
@@ -241,39 +241,59 @@ export const TripForm = () => {
             }))}
             value={tripData.employeeId}
             onChange={(value) => setTripData({ ...tripData, employeeId: value })}
-            placeholder="Selecione um funcionário"
+            placeholder="Selecione um motorista"
             searchPlaceholder="Buscar por nome ou matrícula..."
-            emptyText="Nenhum funcionário encontrado."
+            emptyText="Nenhum motorista encontrado."
             disabled={isActive || isLoadingEmployees}
           />
         </CardContent>
       </Card>
 
-      {/* Employee Photo Field */}
+      {/* Driver Photo Field */}
       <Card>
         <CardContent className="pt-6 space-y-3">
           <Label htmlFor="employeePhoto" className="text-base font-semibold flex items-center gap-2">
             <Camera className="h-4 w-4 text-primary" />
-            Foto do Funcionário *
+            Foto do Motorista *
           </Label>
           <div className="space-y-3">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-12 flex items-center justify-center gap-2 border-2 border-dashed hover:border-primary"
+              onClick={() => employeePhotoInputRef.current?.click()}
+              disabled={isActive}
+            >
+              <Camera className="h-5 w-5" />
+              <span>Tirar Foto do Motorista</span>
+            </Button>
             <Input
               id="employeePhoto"
               ref={employeePhotoInputRef}
               type="file"
               accept="image/*"
-              capture="environment"
+              capture="user"
               onChange={handleEmployeePhotoUpload}
               disabled={isActive}
-              className="cursor-pointer"
+              className="hidden"
             />
             {tripData.employeePhoto && (
               <div className="relative w-full max-w-xs mx-auto">
                 <img
                   src={URL.createObjectURL(tripData.employeePhoto)}
-                  alt="Foto do funcionário"
+                  alt="Foto do motorista"
                   className="w-full h-48 object-cover rounded-lg border-2 border-primary"
                 />
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="sm"
+                  className="absolute top-2 right-2"
+                  onClick={() => setTripData((prev) => ({ ...prev, employeePhoto: null }))}
+                  disabled={isActive}
+                >
+                  Remover
+                </Button>
               </div>
             )}
           </div>
