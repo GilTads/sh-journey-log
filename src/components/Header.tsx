@@ -1,4 +1,4 @@
-import logo from "@/assets/logo-sh.png";
+import logo from "@/assets/icon.png";
 
 export const Header = () => {
   return (
