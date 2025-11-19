@@ -8,7 +8,10 @@ import { Combobox } from "@/components/ui/combobox";
 import { toast } from "sonner";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useVehicles } from "@/hooks/useVehicles";
-import { BarcodeScanner } from "@capacitor-community/barcode-scanner";
+import {
+  CapacitorBarcodeScanner,
+  CapacitorBarcodeScannerTypeHintALLOption,
+} from "@capacitor/barcode-scanner";
 import { Geolocation } from "@capacitor/geolocation";
 import {
   User,
@@ -84,17 +87,18 @@ export const TripForm = () => {
     const hrs = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    return `${hrs.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+    return `${hrs.toString().padStart(2, "0")}:${mins
+      .toString()
+      .padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
   const getCurrentLocation = async (): Promise<{ lat: number; lng: number }> => {
     try {
-      // Solicitar permissão para usar localização
       const permission = await Geolocation.checkPermissions();
-      
-      if (permission.location !== 'granted') {
+
+      if (permission.location !== "granted") {
         const requestPermission = await Geolocation.requestPermissions();
-        if (requestPermission.location !== 'granted') {
+        if (requestPermission.location !== "granted") {
           throw new Error("Permissão de localização negada");
         }
       }
@@ -114,9 +118,15 @@ export const TripForm = () => {
   };
 
   const handleStartTrip = async () => {
-    // Validação básica
-    if (!tripData.employeeId || !tripData.employeePhoto || !tripData.vehicleId || !tripData.initialKm) {
-      toast.error("Preencha os campos obrigatórios: Motorista, Foto do Motorista, Veículo e Km Inicial");
+    if (
+      !tripData.employeeId ||
+      !tripData.employeePhoto ||
+      !tripData.vehicleId ||
+      !tripData.initialKm
+    ) {
+      toast.error(
+        "Preencha os campos obrigatórios: Motorista, Foto do Motorista, Veículo e Km Inicial"
+      );
       return;
     }
 
@@ -135,7 +145,9 @@ export const TripForm = () => {
       setElapsedTime(0);
 
       toast.success("Viagem iniciada!", {
-        description: `Localização capturada: ${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`,
+        description: `Localização capturada: ${location.lat.toFixed(
+          6
+        )}, ${location.lng.toFixed(6)}`,
       });
     } catch (error) {
       toast.error("Erro ao capturar localização", {
@@ -160,7 +172,6 @@ export const TripForm = () => {
 
       setIsActive(false);
 
-      // Aqui você salvaria os dados no banco
       const tripRecord = {
         ...tripData,
         endLocation: location,
@@ -174,8 +185,7 @@ export const TripForm = () => {
         description: `Duração: ${formatTime(elapsedTime)}`,
       });
 
-      // Reset form (opcional)
-      // resetForm();
+      // resetForm() (se quiser limpar tudo aqui)
     } catch (error) {
       toast.error("Erro ao capturar localização final");
     } finally {
@@ -208,43 +218,37 @@ export const TripForm = () => {
 
   const handleBarcodeScanner = async () => {
     try {
-      // Solicitar permissão para usar a câmera
-      const permission = await BarcodeScanner.checkPermission({ force: true });
-      
-      if (!permission.granted) {
-        toast.error("Permissão de câmera necessária para scanner de código de barras");
+      const result = await CapacitorBarcodeScanner.scanBarcode({
+        hint: CapacitorBarcodeScannerTypeHintALLOption.ALL,
+        scanInstructions: "Aponte a câmera para o código de barras do crachá",
+        scanButton: true,
+        scanText: "Ler crachá",
+      });
+
+      const scanned = result?.ScanResult?.trim();
+
+      if (!scanned) {
+        toast.error("Nenhum código foi lido");
         return;
       }
 
-      // Preparar o scanner
-      await BarcodeScanner.prepare();
-      
-      // Esconder o background da web
-      document.body.classList.add("scanner-active");
-      
-      // Iniciar o scanner
-      const result = await BarcodeScanner.startScan();
-      
-      // Remover a classe do body
-      document.body.classList.remove("scanner-active");
-      
-      if (result.hasContent) {
-        // Buscar o funcionário pelo código escaneado (matrícula)
-        const employee = employees.find((emp) => emp.matricula === result.content);
-        
-        if (employee) {
-          setTripData({ ...tripData, employeeId: employee.id });
-          toast.success("Motorista identificado", {
-            description: employee.nome_completo,
-          });
-        } else {
-          toast.error("Motorista não encontrado", {
-            description: `Matrícula ${result.content} não cadastrada`,
-          });
-        }
+      const employee = employees.find((emp) => emp.matricula === scanned);
+
+      if (employee) {
+        setTripData((prev) => ({
+          ...prev,
+          employeeId: employee.id,
+        }));
+        toast.success("Motorista identificado", {
+          description: employee.nome_completo,
+        });
+      } else {
+        toast.error("Motorista não encontrado", {
+          description: `Matrícula ${scanned} não cadastrada`,
+        });
       }
     } catch (error) {
-      document.body.classList.remove("scanner-active");
+      console.error(error);
       toast.error("Erro ao escanear código de barras");
     }
   };
@@ -257,9 +261,13 @@ export const TripForm = () => {
           <CardContent className="py-4">
             <div className="flex items-center justify-center gap-3 text-white">
               <Clock className="h-6 w-6" />
-              <span className="text-2xl font-bold tabular-nums">{formatTime(elapsedTime)}</span>
+              <span className="text-2xl font-bold tabular-nums">
+                {formatTime(elapsedTime)}
+              </span>
             </div>
-            <p className="text-center text-white/90 text-sm mt-1">Viagem em andamento</p>
+            <p className="text-center text-white/90 text-sm mt-1">
+              Viagem em andamento
+            </p>
           </CardContent>
         </Card>
       )}
@@ -282,7 +290,9 @@ export const TripForm = () => {
               label: `${emp.nome_completo} (${emp.matricula}) - ${emp.cargo}`,
             }))}
             value={tripData.employeeId}
-            onChange={(value) => setTripData({ ...tripData, employeeId: value })}
+            onChange={(value) =>
+              setTripData((prev) => ({ ...prev, employeeId: value }))
+            }
             placeholder="Selecione um motorista"
             searchPlaceholder="Buscar por nome ou matrícula..."
             emptyText="Nenhum motorista encontrado."
@@ -294,7 +304,10 @@ export const TripForm = () => {
       {/* Driver Photo Field */}
       <Card>
         <CardContent className="pt-6 space-y-3">
-          <Label htmlFor="employeePhoto" className="text-base font-semibold flex items-center gap-2">
+          <Label
+            htmlFor="employeePhoto"
+            className="text-base font-semibold flex items-center gap-2"
+          >
             <Camera className="h-4 w-4 text-primary" />
             Foto do Motorista *
           </Label>
@@ -331,7 +344,9 @@ export const TripForm = () => {
                   variant="destructive"
                   size="sm"
                   className="absolute top-2 right-2"
-                  onClick={() => setTripData((prev) => ({ ...prev, employeePhoto: null }))}
+                  onClick={() =>
+                    setTripData((prev) => ({ ...prev, employeePhoto: null }))
+                  }
                   disabled={isActive}
                 >
                   Remover
@@ -355,7 +370,9 @@ export const TripForm = () => {
               label: `${veh.placa} - ${veh.marca} ${veh.modelo}`,
             }))}
             value={tripData.vehicleId}
-            onChange={(value) => setTripData({ ...tripData, vehicleId: value })}
+            onChange={(value) =>
+              setTripData((prev) => ({ ...prev, vehicleId: value }))
+            }
             placeholder="Selecione um veículo"
             searchPlaceholder="Buscar por placa ou modelo..."
             emptyText="Nenhum veículo encontrado."
@@ -375,7 +392,12 @@ export const TripForm = () => {
             type="number"
             placeholder="Quilometragem atual"
             value={tripData.initialKm}
-            onChange={(e) => setTripData({ ...tripData, initialKm: e.target.value })}
+            onChange={(e) =>
+              setTripData((prev) => ({
+                ...prev,
+                initialKm: e.target.value,
+              }))
+            }
             disabled={isActive}
             className="h-12"
           />
@@ -386,7 +408,10 @@ export const TripForm = () => {
       <Card>
         <CardContent className="pt-6 space-y-4">
           <div className="space-y-3">
-            <Label htmlFor="origin" className="text-base font-semibold flex items-center gap-2">
+            <Label
+              htmlFor="origin"
+              className="text-base font-semibold flex items-center gap-2"
+            >
               <MapPin className="h-4 w-4 text-primary" />
               Origem
             </Label>
@@ -394,13 +419,18 @@ export const TripForm = () => {
               id="origin"
               placeholder="Local de saída"
               value={tripData.origin}
-              onChange={(e) => setTripData({ ...tripData, origin: e.target.value })}
+              onChange={(e) =>
+                setTripData((prev) => ({ ...prev, origin: e.target.value }))
+              }
               disabled={isActive}
               className="h-12"
             />
           </div>
           <div className="space-y-3">
-            <Label htmlFor="destination" className="text-base font-semibold flex items-center gap-2">
+            <Label
+              htmlFor="destination"
+              className="text-base font-semibold flex items-center gap-2"
+            >
               <Navigation className="h-4 w-4 text-secondary" />
               Destino
             </Label>
@@ -408,7 +438,12 @@ export const TripForm = () => {
               id="destination"
               placeholder="Local de destino"
               value={tripData.destination}
-              onChange={(e) => setTripData({ ...tripData, destination: e.target.value })}
+              onChange={(e) =>
+                setTripData((prev) => ({
+                  ...prev,
+                  destination: e.target.value,
+                }))
+              }
               className="h-12"
             />
           </div>
@@ -418,7 +453,10 @@ export const TripForm = () => {
       {/* Reason Field */}
       <Card>
         <CardContent className="pt-6 space-y-3">
-          <Label htmlFor="reason" className="text-base font-semibold flex items-center gap-2">
+          <Label
+            htmlFor="reason"
+            className="text-base font-semibold flex items-center gap-2"
+          >
             <FileText className="h-4 w-4 text-primary" />
             Motivo da Viagem
           </Label>
@@ -426,7 +464,9 @@ export const TripForm = () => {
             id="reason"
             placeholder="Descreva o motivo da viagem"
             value={tripData.reason}
-            onChange={(e) => setTripData({ ...tripData, reason: e.target.value })}
+            onChange={(e) =>
+              setTripData((prev) => ({ ...prev, reason: e.target.value }))
+            }
             className="min-h-24 resize-none"
           />
         </CardContent>
@@ -442,7 +482,12 @@ export const TripForm = () => {
             id="observation"
             placeholder="Registre observações, danos ou situações atípicas"
             value={tripData.observation}
-            onChange={(e) => setTripData({ ...tripData, observation: e.target.value })}
+            onChange={(e) =>
+              setTripData((prev) => ({
+                ...prev,
+                observation: e.target.value,
+              }))
+            }
             className="min-h-24 resize-none"
           />
         </CardContent>
@@ -476,7 +521,10 @@ export const TripForm = () => {
           {tripData.images.length > 0 && (
             <div className="grid grid-cols-3 gap-2 mt-3">
               {tripData.images.map((img, idx) => (
-                <div key={idx} className="aspect-square bg-muted rounded-md overflow-hidden">
+                <div
+                  key={idx}
+                  className="aspect-square bg-muted rounded-md overflow-hidden"
+                >
                   <img
                     src={URL.createObjectURL(img)}
                     alt={`Foto ${idx + 1}`}
@@ -494,12 +542,14 @@ export const TripForm = () => {
         <Card className="bg-muted/50">
           <CardContent className="pt-4 pb-4">
             <p className="text-sm text-muted-foreground">
-              <strong>Localização inicial:</strong> {tripData.startLocation.lat.toFixed(6)},{" "}
+              <strong>Localização inicial:</strong>{" "}
+              {tripData.startLocation.lat.toFixed(6)},{" "}
               {tripData.startLocation.lng.toFixed(6)}
             </p>
             {tripData.endLocation && (
               <p className="text-sm text-muted-foreground mt-1">
-                <strong>Localização final:</strong> {tripData.endLocation.lat.toFixed(6)},{" "}
+                <strong>Localização final:</strong>{" "}
+                {tripData.endLocation.lat.toFixed(6)},{" "}
                 {tripData.endLocation.lng.toFixed(6)}
               </p>
             )}
