@@ -8,6 +8,8 @@ import { Combobox } from "@/components/ui/combobox";
 import { toast } from "sonner";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useVehicles } from "@/hooks/useVehicles";
+import { BarcodeScanner } from "@capacitor-community/barcode-scanner";
+import { Geolocation } from "@capacitor/geolocation";
 import {
   User,
   Car,
@@ -85,25 +87,30 @@ export const TripForm = () => {
     return `${hrs.toString().padStart(2, "0")}:${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const getCurrentLocation = (): Promise<{ lat: number; lng: number }> => {
-    return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
-        reject(new Error("Geolocalização não suportada"));
-        return;
+  const getCurrentLocation = async (): Promise<{ lat: number; lng: number }> => {
+    try {
+      // Solicitar permissão para usar localização
+      const permission = await Geolocation.checkPermissions();
+      
+      if (permission.location !== 'granted') {
+        const requestPermission = await Geolocation.requestPermissions();
+        if (requestPermission.location !== 'granted') {
+          throw new Error("Permissão de localização negada");
+        }
       }
 
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          resolve({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-        },
-        (error) => {
-          reject(error);
-        }
-      );
-    });
+      const position = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 10000,
+      });
+
+      return {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      };
+    } catch (error) {
+      throw new Error("Erro ao obter localização");
+    }
   };
 
   const handleStartTrip = async () => {
@@ -199,12 +206,47 @@ export const TripForm = () => {
     }
   };
 
-  const handleBarcodeScanner = () => {
-    // Implementação do scanner seria feita aqui
-    // Por enquanto, vamos simular
-    toast.info("Abrir scanner de código de barras", {
-      description: "Funcionalidade disponível em dispositivos móveis",
-    });
+  const handleBarcodeScanner = async () => {
+    try {
+      // Solicitar permissão para usar a câmera
+      const permission = await BarcodeScanner.checkPermission({ force: true });
+      
+      if (!permission.granted) {
+        toast.error("Permissão de câmera necessária para scanner de código de barras");
+        return;
+      }
+
+      // Preparar o scanner
+      await BarcodeScanner.prepare();
+      
+      // Esconder o background da web
+      document.body.classList.add("scanner-active");
+      
+      // Iniciar o scanner
+      const result = await BarcodeScanner.startScan();
+      
+      // Remover a classe do body
+      document.body.classList.remove("scanner-active");
+      
+      if (result.hasContent) {
+        // Buscar o funcionário pelo código escaneado (matrícula)
+        const employee = employees.find((emp) => emp.matricula === result.content);
+        
+        if (employee) {
+          setTripData({ ...tripData, employeeId: employee.id });
+          toast.success("Motorista identificado", {
+            description: employee.nome_completo,
+          });
+        } else {
+          toast.error("Motorista não encontrado", {
+            description: `Matrícula ${result.content} não cadastrada`,
+          });
+        }
+      }
+    } catch (error) {
+      document.body.classList.remove("scanner-active");
+      toast.error("Erro ao escanear código de barras");
+    }
   };
 
   return (

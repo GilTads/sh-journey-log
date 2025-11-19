@@ -105,4 +105,12 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+
+  body.scanner-active {
+    visibility: hidden;
+  }
+
+  body.scanner-active .scanner-ui {
+    visibility: visible;
+  }
 }
