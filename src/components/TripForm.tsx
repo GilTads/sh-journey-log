@@ -19,6 +19,9 @@ import { toast } from "sonner";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useVehicles } from "@/hooks/useVehicles";
 import { useTrips } from "@/hooks/useTrips";
+import { useSQLite } from "@/hooks/useSQLite";
+import { useNetworkSync } from "@/hooks/useNetworkSync";
+import { Capacitor } from "@capacitor/core";
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerTypeHintALLOption,
@@ -58,6 +61,8 @@ export const TripForm = () => {
   const { data: employees = [], isLoading: isLoadingEmployees } = useEmployees();
   const { data: vehicles = [], isLoading: isLoadingVehicles } = useVehicles();
   const { uploadPhoto, createTrip } = useTrips();
+  const { isReady: isSQLiteReady, saveTrip: saveTripOffline } = useSQLite();
+  const { isOnline, isSyncing } = useNetworkSync();
 
   const [tripData, setTripData] = useState<TripData>({
     employeeId: "",
@@ -178,6 +183,15 @@ export const TripForm = () => {
     setShowEndTripDialog(true);
   };
 
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
   const confirmEndTrip = async () => {
     if (!tempFinalKm || tempFinalKm.trim() === "") {
       toast.error("Preencha o Km Final para finalizar a viagem");
@@ -191,55 +205,103 @@ export const TripForm = () => {
       const location = await getCurrentLocation();
       const endTime = new Date();
 
-      // Upload employee photo
-      let employeePhotoUrl: string | null = null;
-      if (tripData.employeePhoto) {
-        const photoPath = `employees/${tripData.employeeId}/${Date.now()}.jpg`;
-        employeePhotoUrl = await uploadPhoto(tripData.employeePhoto, photoPath);
+      // Check if we're online or on native platform
+      const shouldSaveOffline = Capacitor.isNativePlatform() && !isOnline && isSQLiteReady;
+
+      if (shouldSaveOffline) {
+        // Save offline using SQLite
+        let employeePhotoBase64: string | undefined;
+        if (tripData.employeePhoto) {
+          employeePhotoBase64 = await fileToBase64(tripData.employeePhoto);
+        }
+
+        const tripPhotosBase64: string[] = [];
+        for (const img of tripData.images) {
+          const base64 = await fileToBase64(img);
+          tripPhotosBase64.push(base64);
+        }
+
+        const offlineTrip = {
+          employee_id: tripData.employeeId,
+          vehicle_id: tripData.vehicleId,
+          km_inicial: parseFloat(tripData.initialKm),
+          km_final: parseFloat(tempFinalKm),
+          start_time: tripData.startTime!.toISOString(),
+          end_time: endTime.toISOString(),
+          start_latitude: tripData.startLocation?.lat,
+          start_longitude: tripData.startLocation?.lng,
+          end_latitude: location.lat,
+          end_longitude: location.lng,
+          duration_seconds: elapsedTime,
+          origem: tripData.origin || null,
+          destino: tripData.destination || null,
+          motivo: tripData.reason || null,
+          observacao: tripData.observation || null,
+          status: "finalizada",
+          employee_photo_base64: employeePhotoBase64,
+          trip_photos_base64: tripPhotosBase64.length > 0 ? JSON.stringify(tripPhotosBase64) : undefined,
+          synced: 0,
+        };
+
+        const saved = await saveTripOffline(offlineTrip);
+
+        if (!saved) {
+          throw new Error("Erro ao salvar viagem offline");
+        }
+
+        setIsActive(false);
+        
+        toast.success("Viagem salva offline!", {
+          description: "Será sincronizada quando houver internet",
+        });
+      } else {
+        // Save online
+        let employeePhotoUrl: string | null = null;
+        if (tripData.employeePhoto) {
+          const photoPath = `employees/${tripData.employeeId}/${Date.now()}.jpg`;
+          employeePhotoUrl = await uploadPhoto(tripData.employeePhoto, photoPath);
+        }
+
+        const tripPhotosUrls: string[] = [];
+        for (let i = 0; i < tripData.images.length; i++) {
+          const photoPath = `trips/${Date.now()}_${i}.jpg`;
+          const url = await uploadPhoto(tripData.images[i], photoPath);
+          if (url) tripPhotosUrls.push(url);
+        }
+
+        const tripRecord = {
+          employee_id: tripData.employeeId,
+          vehicle_id: tripData.vehicleId,
+          km_inicial: parseFloat(tripData.initialKm),
+          km_final: parseFloat(tempFinalKm),
+          start_time: tripData.startTime!.toISOString(),
+          end_time: endTime.toISOString(),
+          start_latitude: tripData.startLocation?.lat,
+          start_longitude: tripData.startLocation?.lng,
+          end_latitude: location.lat,
+          end_longitude: location.lng,
+          duration_seconds: elapsedTime,
+          origem: tripData.origin || null,
+          destino: tripData.destination || null,
+          motivo: tripData.reason || null,
+          observacao: tripData.observation || null,
+          status: "finalizada",
+          employee_photo_url: employeePhotoUrl || undefined,
+          trip_photos_urls: tripPhotosUrls.length > 0 ? tripPhotosUrls : undefined,
+        };
+
+        const { data, error } = await createTrip(tripRecord);
+
+        if (error) {
+          throw new Error("Erro ao salvar viagem no banco de dados");
+        }
+
+        setIsActive(false);
+        
+        toast.success("Viagem finalizada e salva!", {
+          description: `Duração: ${formatTime(elapsedTime)}`,
+        });
       }
-
-      // Upload trip photos
-      const tripPhotosUrls: string[] = [];
-      for (let i = 0; i < tripData.images.length; i++) {
-        const photoPath = `trips/${Date.now()}_${i}.jpg`;
-        const url = await uploadPhoto(tripData.images[i], photoPath);
-        if (url) tripPhotosUrls.push(url);
-      }
-
-      // Prepare trip record
-      const tripRecord = {
-        employee_id: tripData.employeeId,
-        vehicle_id: tripData.vehicleId,
-        km_inicial: parseFloat(tripData.initialKm),
-        km_final: parseFloat(tempFinalKm),
-        start_time: tripData.startTime!.toISOString(),
-        end_time: endTime.toISOString(),
-        start_latitude: tripData.startLocation?.lat,
-        start_longitude: tripData.startLocation?.lng,
-        end_latitude: location.lat,
-        end_longitude: location.lng,
-        duration_seconds: elapsedTime,
-        origem: tripData.origin || null,
-        destino: tripData.destination || null,
-        motivo: tripData.reason || null,
-        observacao: tripData.observation || null,
-        status: "finalizada",
-        employee_photo_url: employeePhotoUrl || undefined,
-        trip_photos_urls: tripPhotosUrls.length > 0 ? tripPhotosUrls : undefined,
-      };
-
-      // Save to database
-      const { data, error } = await createTrip(tripRecord);
-
-      if (error) {
-        throw new Error("Erro ao salvar viagem no banco de dados");
-      }
-
-      setIsActive(false);
-      
-      toast.success("Viagem finalizada e salva!", {
-        description: `Duração: ${formatTime(elapsedTime)}`,
-      });
 
       // Reset form
       setTripData({
@@ -328,6 +390,28 @@ export const TripForm = () => {
 
   return (
     <div className="max-w-2xl mx-auto p-4 space-y-4">
+      {/* Network Status Banner */}
+      {Capacitor.isNativePlatform() && !isOnline && (
+        <Card className="bg-yellow-500/10 border-yellow-500/50">
+          <CardContent className="py-3">
+            <p className="text-center text-sm font-medium">
+              📡 Modo Offline - Viagens serão sincronizadas quando houver internet
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Sync Status Banner */}
+      {isSyncing && (
+        <Card className="bg-blue-500/10 border-blue-500/50">
+          <CardContent className="py-3">
+            <p className="text-center text-sm font-medium">
+              🔄 Sincronizando viagens pendentes...
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Timer Display */}
       {isActive && (
         <Card className="bg-gradient-to-r from-trip-active to-secondary">
