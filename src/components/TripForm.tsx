@@ -31,6 +31,7 @@ interface TripData {
   employeePhoto: File | null;
   vehicleId: string;
   initialKm: string;
+  finalKm: string;
   origin: string;
   destination: string;
   reason: string;
@@ -51,6 +52,7 @@ export const TripForm = () => {
     employeePhoto: null,
     vehicleId: "",
     initialKm: "",
+    finalKm: "",
     origin: "",
     destination: "",
     reason: "",
@@ -159,6 +161,11 @@ export const TripForm = () => {
   };
 
   const handleEndTrip = async () => {
+    if (!tripData.finalKm) {
+      toast.error("Preencha o campo obrigatório: Km Final");
+      return;
+    }
+
     setIsCapturingLocation(true);
     try {
       const location = await getCurrentLocation();
@@ -399,6 +406,29 @@ export const TripForm = () => {
               }))
             }
             disabled={isActive}
+            className="h-12"
+          />
+        </CardContent>
+      </Card>
+
+      {/* Final KM Field */}
+      <Card>
+        <CardContent className="pt-6 space-y-3">
+          <Label htmlFor="finalKm" className="text-base font-semibold">
+            Km Final {isActive && "*"}
+          </Label>
+          <Input
+            id="finalKm"
+            type="number"
+            placeholder="Quilometragem final"
+            value={tripData.finalKm}
+            onChange={(e) =>
+              setTripData((prev) => ({
+                ...prev,
+                finalKm: e.target.value,
+              }))
+            }
+            disabled={!isActive}
             className="h-12"
           />
         </CardContent>
