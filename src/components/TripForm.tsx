@@ -5,6 +5,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useVehicles } from "@/hooks/useVehicles";
@@ -63,6 +73,8 @@ export const TripForm = () => {
   const [isActive, setIsActive] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isCapturingLocation, setIsCapturingLocation] = useState(false);
+  const [showEndTripDialog, setShowEndTripDialog] = useState(false);
+  const [tempFinalKm, setTempFinalKm] = useState("");
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const employeePhotoInputRef = useRef<HTMLInputElement>(null);
@@ -160,19 +172,27 @@ export const TripForm = () => {
     }
   };
 
-  const handleEndTrip = async () => {
-    if (!tripData.finalKm) {
-      toast.error("Preencha o campo obrigatório: Km Final");
+  const handleEndTrip = () => {
+    setShowEndTripDialog(true);
+  };
+
+  const confirmEndTrip = async () => {
+    if (!tempFinalKm || tempFinalKm.trim() === "") {
+      toast.error("Preencha o Km Final para finalizar a viagem");
       return;
     }
 
+    setTripData((prev) => ({ ...prev, finalKm: tempFinalKm }));
+    setShowEndTripDialog(false);
     setIsCapturingLocation(true);
+
     try {
       const location = await getCurrentLocation();
       const endTime = new Date();
 
       setTripData((prev) => ({
         ...prev,
+        finalKm: tempFinalKm,
         endLocation: location,
         endTime,
       }));
@@ -181,6 +201,7 @@ export const TripForm = () => {
 
       const tripRecord = {
         ...tripData,
+        finalKm: tempFinalKm,
         endLocation: location,
         endTime,
         duration: elapsedTime,
@@ -192,7 +213,7 @@ export const TripForm = () => {
         description: `Duração: ${formatTime(elapsedTime)}`,
       });
 
-      // resetForm() (se quiser limpar tudo aqui)
+      setTempFinalKm("");
     } catch (error) {
       toast.error("Erro ao capturar localização final");
     } finally {
@@ -411,29 +432,6 @@ export const TripForm = () => {
         </CardContent>
       </Card>
 
-      {/* Final KM Field */}
-      <Card>
-        <CardContent className="pt-6 space-y-3">
-          <Label htmlFor="finalKm" className="text-base font-semibold">
-            Km Final {isActive && "*"}
-          </Label>
-          <Input
-            id="finalKm"
-            type="number"
-            placeholder="Quilometragem final"
-            value={tripData.finalKm}
-            onChange={(e) =>
-              setTripData((prev) => ({
-                ...prev,
-                finalKm: e.target.value,
-              }))
-            }
-            disabled={!isActive}
-            className="h-12"
-          />
-        </CardContent>
-      </Card>
-
       {/* Origin & Destination */}
       <Card>
         <CardContent className="pt-6 space-y-4">
@@ -614,6 +612,38 @@ export const TripForm = () => {
           )}
         </Button>
       </div>
+
+      {/* End Trip Dialog */}
+      <AlertDialog open={showEndTripDialog} onOpenChange={setShowEndTripDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Finalizar Viagem</AlertDialogTitle>
+            <AlertDialogDescription>
+              Insira a quilometragem final do veículo para finalizar a viagem.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3 py-4">
+            <Label htmlFor="dialogFinalKm" className="text-base font-semibold">
+              Km Final *
+            </Label>
+            <Input
+              id="dialogFinalKm"
+              type="number"
+              placeholder="Quilometragem final"
+              value={tempFinalKm}
+              onChange={(e) => setTempFinalKm(e.target.value)}
+              className="h-12"
+              autoFocus
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmEndTrip}>
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
