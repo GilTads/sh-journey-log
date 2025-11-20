@@ -18,6 +18,7 @@ import {
 import { toast } from "sonner";
 import { useEmployees } from "@/hooks/useEmployees";
 import { useVehicles } from "@/hooks/useVehicles";
+import { useTrips } from "@/hooks/useTrips";
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerTypeHintALLOption,
@@ -56,6 +57,7 @@ interface TripData {
 export const TripForm = () => {
   const { data: employees = [], isLoading: isLoadingEmployees } = useEmployees();
   const { data: vehicles = [], isLoading: isLoadingVehicles } = useVehicles();
+  const { uploadPhoto, createTrip } = useTrips();
 
   const [tripData, setTripData] = useState<TripData>({
     employeeId: "",
@@ -182,7 +184,6 @@ export const TripForm = () => {
       return;
     }
 
-    setTripData((prev) => ({ ...prev, finalKm: tempFinalKm }));
     setShowEndTripDialog(false);
     setIsCapturingLocation(true);
 
@@ -190,32 +191,76 @@ export const TripForm = () => {
       const location = await getCurrentLocation();
       const endTime = new Date();
 
-      setTripData((prev) => ({
-        ...prev,
-        finalKm: tempFinalKm,
-        endLocation: location,
-        endTime,
-      }));
+      // Upload employee photo
+      let employeePhotoUrl: string | null = null;
+      if (tripData.employeePhoto) {
+        const photoPath = `employees/${tripData.employeeId}/${Date.now()}.jpg`;
+        employeePhotoUrl = await uploadPhoto(tripData.employeePhoto, photoPath);
+      }
 
-      setIsActive(false);
+      // Upload trip photos
+      const tripPhotosUrls: string[] = [];
+      for (let i = 0; i < tripData.images.length; i++) {
+        const photoPath = `trips/${Date.now()}_${i}.jpg`;
+        const url = await uploadPhoto(tripData.images[i], photoPath);
+        if (url) tripPhotosUrls.push(url);
+      }
 
+      // Prepare trip record
       const tripRecord = {
-        ...tripData,
-        finalKm: tempFinalKm,
-        endLocation: location,
-        endTime,
-        duration: elapsedTime,
+        employee_id: tripData.employeeId,
+        vehicle_id: tripData.vehicleId,
+        km_inicial: parseFloat(tripData.initialKm),
+        km_final: parseFloat(tempFinalKm),
+        start_time: tripData.startTime!.toISOString(),
+        end_time: endTime.toISOString(),
+        start_latitude: tripData.startLocation?.lat,
+        start_longitude: tripData.startLocation?.lng,
+        end_latitude: location.lat,
+        end_longitude: location.lng,
+        duration_seconds: elapsedTime,
+        origem: tripData.origin || null,
+        destino: tripData.destination || null,
+        motivo: tripData.reason || null,
+        observacao: tripData.observation || null,
+        status: "finalizada",
+        employee_photo_url: employeePhotoUrl || undefined,
+        trip_photos_urls: tripPhotosUrls.length > 0 ? tripPhotosUrls : undefined,
       };
 
-      console.log("Viagem finalizada:", tripRecord);
+      // Save to database
+      const { data, error } = await createTrip(tripRecord);
 
-      toast.success("Viagem finalizada!", {
+      if (error) {
+        throw new Error("Erro ao salvar viagem no banco de dados");
+      }
+
+      setIsActive(false);
+      
+      toast.success("Viagem finalizada e salva!", {
         description: `Duração: ${formatTime(elapsedTime)}`,
       });
 
+      // Reset form
+      setTripData({
+        employeeId: "",
+        employeePhoto: null,
+        vehicleId: "",
+        initialKm: "",
+        finalKm: "",
+        origin: "",
+        destination: "",
+        reason: "",
+        observation: "",
+        images: [],
+      });
       setTempFinalKm("");
+      setElapsedTime(0);
     } catch (error) {
-      toast.error("Erro ao capturar localização final");
+      console.error("Error ending trip:", error);
+      toast.error("Erro ao finalizar viagem", {
+        description: error instanceof Error ? error.message : "Tente novamente",
+      });
     } finally {
       setIsCapturingLocation(false);
     }

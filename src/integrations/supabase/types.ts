@@ -44,10 +44,12 @@ export type Database = {
           destino: string | null
           duration_seconds: number | null
           employee_id: string
+          employee_photo_url: string | null
           end_latitude: number | null
           end_longitude: number | null
           end_time: string | null
           id: string
+          km_final: number | null
           km_inicial: number
           motivo: string | null
           observacao: string | null
@@ -56,6 +58,7 @@ export type Database = {
           start_longitude: number | null
           start_time: string
           status: string | null
+          trip_photos_urls: string[] | null
           updated_at: string | null
           vehicle_id: string
         }
@@ -64,10 +67,12 @@ export type Database = {
           destino?: string | null
           duration_seconds?: number | null
           employee_id: string
+          employee_photo_url?: string | null
           end_latitude?: number | null
           end_longitude?: number | null
           end_time?: string | null
           id?: string
+          km_final?: number | null
           km_inicial: number
           motivo?: string | null
           observacao?: string | null
@@ -76,6 +81,7 @@ export type Database = {
           start_longitude?: number | null
           start_time: string
           status?: string | null
+          trip_photos_urls?: string[] | null
           updated_at?: string | null
           vehicle_id: string
         }
@@ -84,10 +90,12 @@ export type Database = {
           destino?: string | null
           duration_seconds?: number | null
           employee_id?: string
+          employee_photo_url?: string | null
           end_latitude?: number | null
           end_longitude?: number | null
           end_time?: string | null
           id?: string
+          km_final?: number | null
           km_inicial?: number
           motivo?: string | null
           observacao?: string | null
@@ -96,6 +104,7 @@ export type Database = {
           start_longitude?: number | null
           start_time?: string
           status?: string | null
+          trip_photos_urls?: string[] | null
           updated_at?: string | null
           vehicle_id?: string
         }
