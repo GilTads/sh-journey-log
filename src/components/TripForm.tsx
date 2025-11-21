@@ -65,7 +65,9 @@ export const TripForm = () => {
     isReady: isSQLiteReady, 
     saveTrip: saveTripOffline,
     getEmployees: getEmployeesOffline,
-    getVehicles: getVehiclesOffline 
+    getVehicles: getVehiclesOffline,
+    saveEmployees: saveEmployeesOffline,
+    saveVehicles: saveVehiclesOffline
   } = useSQLite();
   const { isOnline, isSyncing } = useNetworkSync();
 
@@ -94,22 +96,40 @@ export const TripForm = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const employeePhotoInputRef = useRef<HTMLInputElement>(null);
 
-  // Load offline data when SQLite is ready
+  // Sync online data to SQLite when it loads
+  useEffect(() => {
+    if (isSQLiteReady && Capacitor.isNativePlatform() && employeesOnline.length > 0) {
+      console.log("Syncing employees to SQLite:", employeesOnline.length);
+      saveEmployeesOffline(employeesOnline);
+    }
+  }, [isSQLiteReady, employeesOnline, saveEmployeesOffline]);
+
+  useEffect(() => {
+    if (isSQLiteReady && Capacitor.isNativePlatform() && vehiclesOnline.length > 0) {
+      console.log("Syncing vehicles to SQLite:", vehiclesOnline.length);
+      saveVehiclesOffline(vehiclesOnline);
+    }
+  }, [isSQLiteReady, vehiclesOnline, saveVehiclesOffline]);
+
+  // Load offline data when SQLite is ready or when going offline
   useEffect(() => {
     if (isSQLiteReady && Capacitor.isNativePlatform()) {
       const loadOfflineData = async () => {
+        console.log("Loading offline data..., isOnline:", isOnline);
         const offlineEmps = await getEmployeesOffline();
         const offlineVehs = await getVehiclesOffline();
+        console.log("Offline employees:", offlineEmps.length);
+        console.log("Offline vehicles:", offlineVehs.length);
         setEmployeesOffline(offlineEmps);
         setVehiclesOffline(offlineVehs);
       };
       loadOfflineData();
     }
-  }, [isSQLiteReady]);
+  }, [isSQLiteReady, isOnline]);
 
   // Determine which data to use
-  const employees = isOnline ? employeesOnline : employeesOffline;
-  const vehicles = isOnline ? vehiclesOnline : vehiclesOffline;
+  const employees = (Capacitor.isNativePlatform() && !isOnline) ? employeesOffline : employeesOnline;
+  const vehicles = (Capacitor.isNativePlatform() && !isOnline) ? vehiclesOffline : vehiclesOnline;
 
   useEffect(() => {
     if (isActive) {
