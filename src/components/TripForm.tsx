@@ -58,11 +58,19 @@ interface TripData {
 }
 
 export const TripForm = () => {
-  const { data: employees = [], isLoading: isLoadingEmployees } = useEmployees();
-  const { data: vehicles = [], isLoading: isLoadingVehicles } = useVehicles();
+  const { data: employeesOnline = [], isLoading: isLoadingEmployees } = useEmployees();
+  const { data: vehiclesOnline = [], isLoading: isLoadingVehicles } = useVehicles();
   const { uploadPhoto, createTrip } = useTrips();
-  const { isReady: isSQLiteReady, saveTrip: saveTripOffline } = useSQLite();
+  const { 
+    isReady: isSQLiteReady, 
+    saveTrip: saveTripOffline,
+    getEmployees: getEmployeesOffline,
+    getVehicles: getVehiclesOffline 
+  } = useSQLite();
   const { isOnline, isSyncing } = useNetworkSync();
+
+  const [employeesOffline, setEmployeesOffline] = useState<typeof employeesOnline>([]);
+  const [vehiclesOffline, setVehiclesOffline] = useState<typeof vehiclesOnline>([]);
 
   const [tripData, setTripData] = useState<TripData>({
     employeeId: "",
@@ -85,6 +93,23 @@ export const TripForm = () => {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const employeePhotoInputRef = useRef<HTMLInputElement>(null);
+
+  // Load offline data when SQLite is ready
+  useEffect(() => {
+    if (isSQLiteReady && Capacitor.isNativePlatform()) {
+      const loadOfflineData = async () => {
+        const offlineEmps = await getEmployeesOffline();
+        const offlineVehs = await getVehiclesOffline();
+        setEmployeesOffline(offlineEmps);
+        setVehiclesOffline(offlineVehs);
+      };
+      loadOfflineData();
+    }
+  }, [isSQLiteReady]);
+
+  // Determine which data to use
+  const employees = isOnline ? employeesOnline : employeesOffline;
+  const vehicles = isOnline ? vehiclesOnline : vehiclesOffline;
 
   useEffect(() => {
     if (isActive) {

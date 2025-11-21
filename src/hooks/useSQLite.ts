@@ -27,6 +27,20 @@ export interface OfflineTrip {
   synced: number; // 0 = not synced, 1 = synced
 }
 
+export interface OfflineEmployee {
+  id: string;
+  matricula: string;
+  nome_completo: string;
+  cargo: string;
+}
+
+export interface OfflineVehicle {
+  id: string;
+  placa: string;
+  marca: string;
+  modelo: string;
+}
+
 export const useSQLite = () => {
   const [db, setDb] = useState<SQLiteDBConnection | null>(null);
   const [isReady, setIsReady] = useState(false);
@@ -80,6 +94,26 @@ export const useSQLite = () => {
           employee_photo_base64 TEXT,
           trip_photos_base64 TEXT,
           synced INTEGER DEFAULT 0
+        );
+      `);
+
+      // Create employees table
+      await dbConnection.execute(`
+        CREATE TABLE IF NOT EXISTS offline_employees (
+          id TEXT PRIMARY KEY,
+          matricula TEXT NOT NULL,
+          nome_completo TEXT NOT NULL,
+          cargo TEXT NOT NULL
+        );
+      `);
+
+      // Create vehicles table
+      await dbConnection.execute(`
+        CREATE TABLE IF NOT EXISTS offline_vehicles (
+          id TEXT PRIMARY KEY,
+          placa TEXT NOT NULL,
+          marca TEXT NOT NULL,
+          modelo TEXT NOT NULL
         );
       `);
 
@@ -187,11 +221,93 @@ export const useSQLite = () => {
     }
   };
 
+  const saveEmployees = async (employees: OfflineEmployee[]): Promise<boolean> => {
+    if (!db || !Capacitor.isNativePlatform()) {
+      return false;
+    }
+
+    try {
+      // Clear existing employees
+      await db.run("DELETE FROM offline_employees;");
+
+      // Insert all employees
+      for (const employee of employees) {
+        await db.run(
+          "INSERT INTO offline_employees (id, matricula, nome_completo, cargo) VALUES (?, ?, ?, ?);",
+          [employee.id, employee.matricula, employee.nome_completo, employee.cargo]
+        );
+      }
+
+      console.log(`${employees.length} employees saved to local database`);
+      return true;
+    } catch (error) {
+      console.error("Error saving employees to SQLite:", error);
+      return false;
+    }
+  };
+
+  const getEmployees = async (): Promise<OfflineEmployee[]> => {
+    if (!db || !Capacitor.isNativePlatform()) {
+      return [];
+    }
+
+    try {
+      const result = await db.query("SELECT * FROM offline_employees;");
+      return result.values || [];
+    } catch (error) {
+      console.error("Error getting employees from SQLite:", error);
+      return [];
+    }
+  };
+
+  const saveVehicles = async (vehicles: OfflineVehicle[]): Promise<boolean> => {
+    if (!db || !Capacitor.isNativePlatform()) {
+      return false;
+    }
+
+    try {
+      // Clear existing vehicles
+      await db.run("DELETE FROM offline_vehicles;");
+
+      // Insert all vehicles
+      for (const vehicle of vehicles) {
+        await db.run(
+          "INSERT INTO offline_vehicles (id, placa, marca, modelo) VALUES (?, ?, ?, ?);",
+          [vehicle.id, vehicle.placa, vehicle.marca, vehicle.modelo]
+        );
+      }
+
+      console.log(`${vehicles.length} vehicles saved to local database`);
+      return true;
+    } catch (error) {
+      console.error("Error saving vehicles to SQLite:", error);
+      return false;
+    }
+  };
+
+  const getVehicles = async (): Promise<OfflineVehicle[]> => {
+    if (!db || !Capacitor.isNativePlatform()) {
+      return [];
+    }
+
+    try {
+      const result = await db.query("SELECT * FROM offline_vehicles;");
+      return result.values || [];
+    } catch (error) {
+      console.error("Error getting vehicles from SQLite:", error);
+      return [];
+    }
+  };
+
   return {
     isReady,
     saveTrip,
     getUnsyncedTrips,
     markTripAsSynced,
     deleteTrip,
+    saveEmployees,
+    getEmployees,
+    saveVehicles,
+    getVehicles,
   };
 };

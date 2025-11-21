@@ -3,12 +3,13 @@ import { Network } from "@capacitor/network";
 import { Capacitor } from "@capacitor/core";
 import { useSQLite, OfflineTrip } from "./useSQLite";
 import { useTrips } from "./useTrips";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export const useNetworkSync = () => {
   const [isOnline, setIsOnline] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
-  const { getUnsyncedTrips, markTripAsSynced, deleteTrip } = useSQLite();
+  const { getUnsyncedTrips, markTripAsSynced, deleteTrip, saveEmployees, saveVehicles } = useSQLite();
   const { uploadPhoto, createTrip } = useTrips();
 
   useEffect(() => {
@@ -38,6 +39,7 @@ export const useNetworkSync = () => {
         
         if (status.connected) {
           // Automatically sync when coming back online
+          syncMasterData();
           syncPendingTrips();
         }
       });
@@ -60,6 +62,36 @@ export const useNetworkSync = () => {
       u8arr[n] = bstr.charCodeAt(n);
     }
     return new File([u8arr], filename, { type: mime });
+  };
+
+  const syncMasterData = async () => {
+    if (!isOnline) return;
+
+    try {
+      // Fetch and save employees
+      const { data: employees, error: employeesError } = await supabase
+        .from("employees")
+        .select("*")
+        .order("nome_completo");
+
+      if (!employeesError && employees) {
+        await saveEmployees(employees);
+        console.log("Employees synced to SQLite");
+      }
+
+      // Fetch and save vehicles
+      const { data: vehicles, error: vehiclesError } = await supabase
+        .from("vehicles")
+        .select("*")
+        .order("placa");
+
+      if (!vehiclesError && vehicles) {
+        await saveVehicles(vehicles);
+        console.log("Vehicles synced to SQLite");
+      }
+    } catch (error) {
+      console.error("Error syncing master data:", error);
+    }
   };
 
   const syncPendingTrips = async () => {
@@ -149,9 +181,17 @@ export const useNetworkSync = () => {
     }
   };
 
+  // Initial sync of master data when component mounts and is online
+  useEffect(() => {
+    if (isOnline && Capacitor.isNativePlatform()) {
+      syncMasterData();
+    }
+  }, [isOnline]);
+
   return {
     isOnline,
     isSyncing,
     syncPendingTrips,
+    syncMasterData,
   };
 };
