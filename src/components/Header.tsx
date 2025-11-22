@@ -1,4 +1,4 @@
-import { Menu } from "lucide-react";
+import { Menu, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
 import logo from "@/assets/icon.png";
 import {
@@ -9,8 +9,29 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { useOfflineData } from "@/contexts/OfflineContext";
+import { Capacitor } from "@capacitor/core";
 
 export const Header = () => {
+  const { syncNow, isSyncing, isOnline, lastSyncAt } = useOfflineData();
+
+  const handleSync = () => {
+    syncNow();
+  };
+
+  const formatLastSync = (date: Date | null) => {
+    if (!date) return "Nunca";
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    
+    if (diffMins < 1) return "Agora";
+    if (diffMins < 60) return `${diffMins} min atrás`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h atrás`;
+    return date.toLocaleDateString();
+  };
+
   return (
     <header className="bg-primary text-primary-foreground shadow-md sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 py-3">
@@ -38,6 +59,37 @@ export const Header = () => {
                 >
                   Histórico de Viagens
                 </Link>
+
+                {Capacitor.isNativePlatform() && (
+                  <div className="mt-6 pt-6 border-t border-border">
+                    <div className="px-4 mb-3">
+                      <p className="text-xs text-muted-foreground mb-1">
+                        Status: {isOnline ? "Online" : "Offline"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Última sinc.: {formatLastSync(lastSyncAt)}
+                      </p>
+                    </div>
+                    <Button
+                      onClick={handleSync}
+                      disabled={isSyncing || !isOnline}
+                      className="w-full"
+                      variant="outline"
+                    >
+                      {isSyncing ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          Sincronizando...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                          Sincronizar Agora
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
               </nav>
             </SheetContent>
           </Sheet>

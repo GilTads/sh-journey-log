@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Combobox } from "@/components/ui/combobox";
+import { SearchableCombobox } from "@/components/ui/searchable-combobox";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,11 +16,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { useEmployees } from "@/hooks/useEmployees";
-import { useVehicles } from "@/hooks/useVehicles";
+import { useOfflineData } from "@/contexts/OfflineContext";
 import { useTrips } from "@/hooks/useTrips";
 import { useSQLite } from "@/hooks/useSQLite";
-import { useNetworkSync } from "@/hooks/useNetworkSync";
 import { Capacitor } from "@capacitor/core";
 import {
   CapacitorBarcodeScanner,
@@ -58,21 +56,12 @@ interface TripData {
 }
 
 export const TripForm = () => {
-  const { data: employeesOnline = [], isLoading: isLoadingEmployees } = useEmployees();
-  const { data: vehiclesOnline = [], isLoading: isLoadingVehicles } = useVehicles();
+  const { isOnline, isSyncing, getMotoristas, getVeiculos } = useOfflineData();
   const { uploadPhoto, createTrip } = useTrips();
-  const { 
-    isReady: isSQLiteReady, 
-    saveTrip: saveTripOffline,
-    getEmployees: getEmployeesOffline,
-    getVehicles: getVehiclesOffline,
-    saveEmployees: saveEmployeesOffline,
-    saveVehicles: saveVehiclesOffline
-  } = useSQLite();
-  const { isOnline, isSyncing } = useNetworkSync();
+  const { isReady: isSQLiteReady, saveTrip: saveTripOffline } = useSQLite();
 
-  const [employeesOffline, setEmployeesOffline] = useState<typeof employeesOnline>([]);
-  const [vehiclesOffline, setVehiclesOffline] = useState<typeof vehiclesOnline>([]);
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [vehicles, setVehicles] = useState<any[]>([]);
 
   const [tripData, setTripData] = useState<TripData>({
     employeeId: "",
@@ -96,40 +85,16 @@ export const TripForm = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const employeePhotoInputRef = useRef<HTMLInputElement>(null);
 
-  // Sync online data to SQLite when it loads
+  // Load employees and vehicles from offline context
   useEffect(() => {
-    if (isSQLiteReady && Capacitor.isNativePlatform() && employeesOnline.length > 0) {
-      console.log("Syncing employees to SQLite:", employeesOnline.length);
-      saveEmployeesOffline(employeesOnline);
-    }
-  }, [isSQLiteReady, employeesOnline, saveEmployeesOffline]);
-
-  useEffect(() => {
-    if (isSQLiteReady && Capacitor.isNativePlatform() && vehiclesOnline.length > 0) {
-      console.log("Syncing vehicles to SQLite:", vehiclesOnline.length);
-      saveVehiclesOffline(vehiclesOnline);
-    }
-  }, [isSQLiteReady, vehiclesOnline, saveVehiclesOffline]);
-
-  // Load offline data when SQLite is ready or when going offline
-  useEffect(() => {
-    if (isSQLiteReady && Capacitor.isNativePlatform()) {
-      const loadOfflineData = async () => {
-        console.log("Loading offline data..., isOnline:", isOnline);
-        const offlineEmps = await getEmployeesOffline();
-        const offlineVehs = await getVehiclesOffline();
-        console.log("Offline employees:", offlineEmps.length);
-        console.log("Offline vehicles:", offlineVehs.length);
-        setEmployeesOffline(offlineEmps);
-        setVehiclesOffline(offlineVehs);
-      };
-      loadOfflineData();
-    }
-  }, [isSQLiteReady, isOnline]);
-
-  // Determine which data to use
-  const employees = (Capacitor.isNativePlatform() && !isOnline) ? employeesOffline : employeesOnline;
-  const vehicles = (Capacitor.isNativePlatform() && !isOnline) ? vehiclesOffline : vehiclesOnline;
+    const loadData = async () => {
+      const emps = await getMotoristas();
+      const vehs = await getVeiculos();
+      setEmployees(emps);
+      setVehicles(vehs);
+    };
+    loadData();
+  }, [getMotoristas, getVeiculos]);
 
   useEffect(() => {
     if (isActive) {
@@ -286,6 +251,7 @@ export const TripForm = () => {
           employee_photo_base64: employeePhotoBase64,
           trip_photos_base64: tripPhotosBase64.length > 0 ? JSON.stringify(tripPhotosBase64) : undefined,
           synced: 0,
+          deleted: 0,
         };
 
         const saved = await saveTripOffline(offlineTrip);
@@ -486,19 +452,20 @@ export const TripForm = () => {
               <QrCode className="h-4 w-4" />
             </Button>
           </div>
-          <Combobox
+          <SearchableCombobox
             options={employees.map((emp) => ({
               value: emp.id,
-              label: `${emp.nome_completo} (${emp.matricula}) - ${emp.cargo}`,
+              label: `${emp.nome_completo} (${emp.matricula})`,
+              searchText: `${emp.nome_completo} ${emp.matricula} ${emp.cargo}`,
             }))}
             value={tripData.employeeId}
             onChange={(value) =>
               setTripData((prev) => ({ ...prev, employeeId: value }))
             }
-            placeholder="Selecione um motorista"
-            searchPlaceholder="Buscar por nome ou matrícula..."
+            placeholder="Digite nome ou matrícula..."
             emptyText="Nenhum motorista encontrado."
-            disabled={isActive || isLoadingEmployees}
+            disabled={isActive}
+            minCharsToSearch={2}
           />
         </CardContent>
       </Card>
@@ -566,19 +533,20 @@ export const TripForm = () => {
             <Car className="h-4 w-4 text-primary" />
             Veículo *
           </Label>
-          <Combobox
+          <SearchableCombobox
             options={vehicles.map((veh) => ({
               value: veh.id,
               label: `${veh.placa} - ${veh.marca} ${veh.modelo}`,
+              searchText: `${veh.placa} ${veh.marca} ${veh.modelo}`,
             }))}
             value={tripData.vehicleId}
             onChange={(value) =>
               setTripData((prev) => ({ ...prev, vehicleId: value }))
             }
-            placeholder="Selecione um veículo"
-            searchPlaceholder="Buscar por placa ou modelo..."
+            placeholder="Digite placa ou modelo..."
             emptyText="Nenhum veículo encontrado."
-            disabled={isActive || isLoadingVehicles}
+            disabled={isActive}
+            minCharsToSearch={2}
           />
         </CardContent>
       </Card>
