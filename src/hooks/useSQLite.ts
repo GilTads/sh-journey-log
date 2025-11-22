@@ -17,14 +17,17 @@ export interface OfflineTrip {
   end_latitude?: number;
   end_longitude?: number;
   duration_seconds: number;
-  origem?: string;
-  destino?: string;
-  motivo?: string;
-  observacao?: string;
+  origem?: string | null;
+  destino?: string | null;
+  motivo?: string | null;
+  observacao?: string | null;
   status: string;
   employee_photo_base64?: string;
   trip_photos_base64?: string;
-  synced: number; // 0 = not synced, 1 = synced
+  synced?: number; // 0 = not synced, 1 = synced
+  deleted?: number; // 0 = not deleted, 1 = deleted (soft delete)
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface OfflineEmployee {
@@ -93,7 +96,10 @@ export const useSQLite = () => {
           status TEXT NOT NULL,
           employee_photo_base64 TEXT,
           trip_photos_base64 TEXT,
-          synced INTEGER DEFAULT 0
+          synced INTEGER DEFAULT 0,
+          deleted INTEGER DEFAULT 0,
+          created_at TEXT DEFAULT (datetime('now')),
+          updated_at TEXT DEFAULT (datetime('now'))
         );
       `);
 
