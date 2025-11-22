@@ -33,11 +33,17 @@ interface UseTripsHistoryParams {
   vehicleId?: string;
   startDate?: string;
   endDate?: string;
+  /** Permite habilitar/desabilitar a query (ex.: offline) */
+  enabled?: boolean;
 }
 
 export const useTripsHistory = (params: UseTripsHistoryParams = {}) => {
+  // separa o enabled do resto dos filtros
+  const { enabled = true, ...filters } = params;
+
   return useQuery({
-    queryKey: ["trips-history", params],
+    queryKey: ["trips-history", filters],
+    enabled, // <- agora o React Query respeita se deve ou não buscar
     queryFn: async () => {
       let query = supabase
         .from("trips")
@@ -48,20 +54,20 @@ export const useTripsHistory = (params: UseTripsHistoryParams = {}) => {
         `)
         .order("start_time", { ascending: false });
 
-      if (params.employeeId) {
-        query = query.eq("employee_id", params.employeeId);
+      if (filters.employeeId) {
+        query = query.eq("employee_id", filters.employeeId);
       }
 
-      if (params.vehicleId) {
-        query = query.eq("vehicle_id", params.vehicleId);
+      if (filters.vehicleId) {
+        query = query.eq("vehicle_id", filters.vehicleId);
       }
 
-      if (params.startDate) {
-        query = query.gte("start_time", params.startDate);
+      if (filters.startDate) {
+        query = query.gte("start_time", filters.startDate);
       }
 
-      if (params.endDate) {
-        query = query.lte("start_time", params.endDate);
+      if (filters.endDate) {
+        query = query.lte("start_time", filters.endDate);
       }
 
       const { data, error } = await query;

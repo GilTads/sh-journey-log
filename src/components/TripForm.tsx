@@ -56,7 +56,8 @@ interface TripData {
 }
 
 export const TripForm = () => {
-  const { isOnline, isSyncing, getMotoristas, getVeiculos } = useOfflineData();
+  const { isOnline, isSyncing, getMotoristas, getVeiculos, lastSyncAt } = useOfflineData();
+
   const { uploadPhoto, createTrip } = useTrips();
   const { isReady: isSQLiteReady, saveTrip: saveTripOffline } = useSQLite();
 
@@ -86,15 +87,20 @@ export const TripForm = () => {
   const employeePhotoInputRef = useRef<HTMLInputElement>(null);
 
   // Load employees and vehicles from offline context
+
   useEffect(() => {
     const loadData = async () => {
       const emps = await getMotoristas();
       const vehs = await getVeiculos();
+      console.log("[TripForm] Loaded employees:", emps.length);
+      console.log("[TripForm] Loaded vehicles:", vehs.length);
       setEmployees(emps);
       setVehicles(vehs);
     };
     loadData();
-  }, [getMotoristas, getVeiculos]);
+  }, [getMotoristas, getVeiculos, lastSyncAt]);
+
+
 
   useEffect(() => {
     if (isActive) {
