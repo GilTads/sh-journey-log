@@ -1,5 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
+import { Capacitor } from "@capacitor/core";
 import { supabase } from "@/integrations/supabase/client";
+import { useOfflineData } from "@/contexts/OfflineContext";
+import { OfflineTrip } from "@/hooks/useSQLite";
 
 export interface TripHistory {
   id: string;
@@ -33,18 +36,80 @@ interface UseTripsHistoryParams {
   vehicleId?: string;
   startDate?: string;
   endDate?: string;
-  /** Permite habilitar/desabilitar a query (ex.: offline) */
   enabled?: boolean;
 }
 
+// converte a trip do SQLite pro formato da tela
+const mapOfflineTripToHistory = (trip: OfflineTrip): TripHistory => ({
+  id: String(trip.id),
+  employee_id: trip.employee_id,
+  vehicle_id: trip.vehicle_id,
+  km_inicial: trip.km_inicial,
+  km_final: trip.km_final ?? null,
+  start_time: trip.start_time,
+  end_time: trip.end_time ?? null,
+  duration_seconds: trip.duration_seconds ?? null,
+  origem: trip.origem ?? null,
+  destino: trip.destino ?? null,
+  motivo: trip.motivo ?? null,
+  observacao: trip.observacao ?? null,
+  status: trip.status ?? null,
+  employee_photo_url: null,
+  trip_photos_urls: null,
+  employee: undefined,
+  vehicle: undefined,
+});
+
 export const useTripsHistory = (params: UseTripsHistoryParams = {}) => {
-  // separa o enabled do resto dos filtros
   const { enabled = true, ...filters } = params;
 
+  const { isOnline, isReady, hasDb, getViagens } = useOfflineData();
+  const isNative = Capacitor.isNativePlatform();
+
   return useQuery({
-    queryKey: ["trips-history", filters],
-    enabled, // <- agora o React Query respeita se deve ou não buscar
+    queryKey: ["trips-history", filters, { isNative, isOnline }],
+    enabled,
     queryFn: async () => {
+      // caminho OFFLINE: app nativo, com SQLite pronto e sem internet
+      if (isNative && !isOnline && isReady && hasDb) {
+        console.log("[useTripsHistory] OFFLINE -> usando SQLite");
+
+        let trips = await getViagens();
+
+        if (filters.employeeId) {
+          trips = trips.filter((t) => t.employee_id === filters.employeeId);
+        }
+
+        if (filters.vehicleId) {
+          trips = trips.filter((t) => t.vehicle_id === filters.vehicleId);
+        }
+
+        if (filters.startDate) {
+          const start = new Date(filters.startDate).getTime();
+          trips = trips.filter(
+            (t) => new Date(t.start_time).getTime() >= start
+          );
+        }
+
+        if (filters.endDate) {
+          const end = new Date(filters.endDate).getTime();
+          trips = trips.filter(
+            (t) => new Date(t.start_time).getTime() <= end
+          );
+        }
+
+        trips.sort(
+          (a, b) =>
+            new Date(b.start_time).getTime() -
+            new Date(a.start_time).getTime()
+        );
+
+        return trips.map(mapOfflineTripToHistory);
+      }
+
+      // caminho ONLINE (web ou app com internet): Supabase
+      console.log("[useTripsHistory] ONLINE -> usando Supabase");
+
       let query = supabase
         .from("trips")
         .select(`
@@ -71,8 +136,8 @@ export const useTripsHistory = (params: UseTripsHistoryParams = {}) => {
       }
 
       const { data, error } = await query;
-
       if (error) throw error;
+
       return data as TripHistory[];
     },
   });

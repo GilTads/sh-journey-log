@@ -99,10 +99,9 @@ const createConnectionIfNeeded = async () => {
 
     globalIsReady = true;
     globalHasDb = true;
-    console.log("[useSQLite] DB inicializado com sucesso");
   } catch (error) {
-    console.error("[useSQLite] Erro ao inicializar SQLite:", error);
-    globalIsReady = true;  // app não quebra
+    console.error("[useSQLite] Erro ao criar conexão/tabelas:", error);
+    globalIsReady = false;
     globalHasDb = false;
   }
 };
@@ -178,12 +177,21 @@ export const useSQLite = () => {
     };
   }, []);
 
-  // ----- helpers internos -----
-  const requireDb = (caller: string): SQLiteDBConnection | null => {
-    if (!dbConnection || !globalHasDb) {
-      console.warn(`[useSQLite] DB não disponível em ${caller}`);
+  const requireDb = (fnName: string): SQLiteDBConnection | null => {
+    if (!Capacitor.isNativePlatform()) {
+      console.warn(
+        `[useSQLite] ${fnName} chamado em plataforma web (sem SQLite nativo)`
+      );
       return null;
     }
+
+    if (!dbConnection || !globalHasDb) {
+      console.error(
+        `[useSQLite] DB não inicializado em ${fnName} (hasDb=${globalHasDb})`
+      );
+      return null;
+    }
+
     return dbConnection;
   };
 
@@ -196,10 +204,13 @@ export const useSQLite = () => {
       const query = `
         INSERT INTO offline_trips (
           employee_id, vehicle_id, km_inicial, km_final,
-          start_time, end_time, start_latitude, start_longitude,
-          end_latitude, end_longitude, duration_seconds,
+          start_time, end_time,
+          start_latitude, start_longitude,
+          end_latitude, end_longitude,
+          duration_seconds,
           origem, destino, motivo, observacao, status,
-          employee_photo_base64, trip_photos_base64, synced, deleted
+          employee_photo_base64, trip_photos_base64,
+          synced, deleted
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
       `;
 
@@ -250,6 +261,22 @@ export const useSQLite = () => {
     }
   };
 
+  // Todas as viagens não deletadas (para debug / histórico offline)
+  const getAllTrips = async (): Promise<OfflineTrip[]> => {
+    const db = requireDb("getAllTrips");
+    if (!db) return [];
+
+    try {
+      const result = await db.query(
+        "SELECT * FROM offline_trips WHERE deleted = 0;"
+      );
+      return (result.values || []) as OfflineTrip[];
+    } catch (error) {
+      console.error("[useSQLite] Erro ao buscar trips:", error);
+      return [];
+    }
+  };
+
   const markTripAsSynced = async (id: number): Promise<boolean> => {
     const db = requireDb("markTripAsSynced");
     if (!db) return false;
@@ -274,6 +301,87 @@ export const useSQLite = () => {
       return true;
     } catch (error) {
       console.error("[useSQLite] Erro ao deletar trip:", error);
+      return false;
+    }
+  };
+
+  /**
+   * Trips vindas do Supabase (histórico completo) usando a mesma filosofia
+   * de saveEmployees/saveVehicles:
+   *
+   * - remove somente as viagens com synced = 1 (cópias do servidor)
+   * - mantém as viagens locais pendentes (synced = 0)
+   * - insere o histórico vindo do Supabase com synced = 1
+   */
+  const replaceSyncedTripsFromServer = async (
+    tripsFromServer: any[]
+  ): Promise<boolean> => {
+    const db = requireDb("replaceSyncedTripsFromServer");
+    if (!db) return false;
+
+    try {
+      // apaga apenas cópias sincronizadas previamente
+      await db.execute("DELETE FROM offline_trips WHERE synced = 1;");
+
+      if (!tripsFromServer.length) {
+        console.log("[useSQLite] Nenhuma trip do servidor para salvar");
+        return true;
+      }
+
+      await db.execute("BEGIN TRANSACTION;");
+
+      for (const t of tripsFromServer) {
+        await db.run(
+          `
+          INSERT INTO offline_trips (
+            employee_id, vehicle_id, km_inicial, km_final,
+            start_time, end_time,
+            start_latitude, start_longitude,
+            end_latitude, end_longitude,
+            duration_seconds,
+            origem, destino, motivo, observacao, status,
+            employee_photo_base64, trip_photos_base64,
+            synced, deleted
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        `,
+          [
+            t.employee_id,
+            t.vehicle_id,
+            t.km_inicial,
+            t.km_final,
+            t.start_time,
+            t.end_time,
+            t.start_latitude ?? null,
+            t.start_longitude ?? null,
+            t.end_latitude ?? null,
+            t.end_longitude ?? null,
+            t.duration_seconds ?? 0,
+            t.origem ?? null,
+            t.destino ?? null,
+            t.motivo ?? null,
+            t.observacao ?? null,
+            t.status ?? "CONCLUIDA",
+            null, // employee_photo_base64 (não precisamos pro histórico)
+            null, // trip_photos_base64
+            1, // synced -> veio do servidor
+            0, // deleted
+          ]
+        );
+      }
+
+      await db.execute("COMMIT;");
+      console.log(
+        `[useSQLite] ${tripsFromServer.length} trips do servidor salvas no SQLite`
+      );
+      return true;
+    } catch (error) {
+      console.error(
+        "[useSQLite] Erro ao salvar trips do servidor no SQLite:",
+        error
+      );
+      try {
+        await db.execute("ROLLBACK;");
+      } catch {}
       return false;
     }
   };
@@ -390,8 +498,10 @@ export const useSQLite = () => {
     // trips
     saveTrip,
     getUnsyncedTrips,
+    getAllTrips,
     markTripAsSynced,
     deleteTrip,
+    replaceSyncedTripsFromServer, // 🔹 usado no OfflineContext
     // master data
     saveEmployees,
     getEmployees,

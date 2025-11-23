@@ -1,9 +1,10 @@
 // src/contexts/OfflineContext.tsx
-import React, {
+import React,
+{
   createContext,
   useContext,
-  useState,
   useEffect,
+  useState,
   useCallback,
   ReactNode,
 } from "react";
@@ -20,20 +21,16 @@ import { useTrips } from "@/hooks/useTrips";
 import { toast } from "sonner";
 
 interface OfflineContextType {
-  // Estado de rede / sync
   isOnline: boolean;
   isSyncing: boolean;
   lastSyncAt: Date | null;
 
-  // Dados
   getMotoristas: (filtro?: string) => Promise<OfflineEmployee[]>;
   getVeiculos: (filtro?: string) => Promise<OfflineVehicle[]>;
-  getViagens: (filtro?: any) => Promise<OfflineTrip[]>;
+  getViagens: () => Promise<OfflineTrip[]>;
 
-  // Ações
   syncNow: () => Promise<void>;
 
-  // Estado do SQLite
   isReady: boolean;
   hasDb: boolean;
 }
@@ -41,7 +38,7 @@ interface OfflineContextType {
 const OfflineContext = createContext<OfflineContextType | undefined>(undefined);
 
 export const OfflineProvider = ({ children }: { children: ReactNode }) => {
-  const [isOnline, setIsOnline] = useState(true);
+  const [isOnline, setIsOnline] = useState<boolean>(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
   const [hasInitialSyncRun, setHasInitialSyncRun] = useState(false);
@@ -54,12 +51,14 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
     saveVehicles,
     getVehicles,
     getUnsyncedTrips,
+    getAllTrips,
     markTripAsSynced,
+    replaceSyncedTripsFromServer,
   } = useSQLite();
 
   const { uploadPhoto, createTrip } = useTrips();
 
-  // Utilitário base64 -> File
+  // ========= utils =========
   const base64ToFile = (base64: string, filename: string): File => {
     const arr = base64.split(",");
     const mime = arr[0].match(/:(.*?);/)?.[1] || "image/jpeg";
@@ -72,10 +71,8 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
     return new File([u8arr], filename, { type: mime });
   };
 
-  // 🔁 Funcionários + veículos (Supabase -> SQLite)
+  // ========= sincronização master data (Supabase -> SQLite) =========
   const syncMasterData = useCallback(async () => {
-    // ⬇️ não bloqueia mais pelo hasDb; se o DB não estiver pronto,
-    // os métodos de save vão simplesmente logar erro e retornar false.
     if (!isOnline || !isReady) {
       console.log(
         "[OfflineContext] syncMasterData abortado -> isOnline:",
@@ -87,54 +84,59 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      console.log(
-        "[OfflineContext] Syncing master data... (hasDb:",
-        hasDb,
-        ")"
-      );
+      console.log("[OfflineContext] Sincronizando employees/vehicles/trips...");
 
-      // Employees
-      const { data: employees, error: employeesError } = await supabase
+      // EMPLOYEES
+      const { data: employees, error: empError } = await supabase
         .from("employees")
         .select("*")
         .order("nome_completo");
 
-      if (employeesError) {
-        console.error(
-          "[OfflineContext] Error fetching employees:",
-          employeesError
-        );
+      if (empError) {
+        console.error("[OfflineContext] Erro ao buscar employees:", empError);
       } else if (employees) {
         await saveEmployees(employees as OfflineEmployee[]);
         console.log(
-          `[OfflineContext] ${employees.length} employees saved to SQLite`
+          `[OfflineContext] ${employees.length} employees salvos no SQLite`
         );
       }
 
-      // Vehicles
-      const { data: vehicles, error: vehiclesError } = await supabase
+      // VEHICLES
+      const { data: vehicles, error: vehError } = await supabase
         .from("vehicles")
         .select("*")
         .order("placa");
 
-      if (vehiclesError) {
-        console.error(
-          "[OfflineContext] Error fetching vehicles:",
-          vehiclesError
-        );
+      if (vehError) {
+        console.error("[OfflineContext] Erro ao buscar vehicles:", vehError);
       } else if (vehicles) {
         await saveVehicles(vehicles as OfflineVehicle[]);
         console.log(
-          `[OfflineContext] ${vehicles.length} vehicles saved to SQLite`
+          `[OfflineContext] ${vehicles.length} vehicles salvos no SQLite`
+        );
+      }
+
+      // TRIPS – histórico completo vindo do Supabase
+      const { data: trips, error: tripsError } = await supabase
+        .from("trips")
+        .select("*")
+        .order("start_time", { ascending: false });
+
+      if (tripsError) {
+        console.error("[OfflineContext] Erro ao buscar trips:", tripsError);
+      } else if (trips) {
+        await replaceSyncedTripsFromServer(trips);
+        console.log(
+          `[OfflineContext] ${trips.length} trips do servidor salvas no SQLite`
         );
       }
     } catch (err) {
-      console.error("[OfflineContext] Error in syncMasterData:", err);
+      console.error("[OfflineContext] Erro em syncMasterData:", err);
       throw err;
     }
-  }, [isOnline, isReady, hasDb, saveEmployees, saveVehicles]);
+  }, [isOnline, isReady, saveEmployees, saveVehicles, replaceSyncedTripsFromServer]);
 
-  // 🔁 Viagens pendentes (SQLite -> Supabase)
+  // ========= sincronização trips pendentes (SQLite -> Supabase) =========
   const syncTripsToServer = useCallback(async () => {
     if (!isOnline || !isReady) {
       console.log(
@@ -147,19 +149,18 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
     }
 
     try {
-      const unsyncedTrips = await getUnsyncedTrips();
-      if (!unsyncedTrips.length) {
-        console.log("[OfflineContext] No trips to sync");
+      const unsynced = await getUnsyncedTrips();
+      if (!unsynced.length) {
+        console.log("[OfflineContext] Nenhuma trip pendente para sync");
         return;
       }
 
       console.log(
-        `[OfflineContext] Syncing ${unsyncedTrips.length} trips to server... (hasDb: ${hasDb})`
+        `[OfflineContext] Enviando ${unsynced.length} trips pendentes para o servidor...`
       );
 
-      for (const trip of unsyncedTrips) {
+      for (const trip of unsynced) {
         try {
-          // Foto do motorista
           let employeePhotoUrl: string | null = null;
           if (trip.employee_photo_base64) {
             const photoFile = base64ToFile(
@@ -170,7 +171,6 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
             employeePhotoUrl = await uploadPhoto(photoFile, photoPath);
           }
 
-          // Fotos da viagem
           const tripPhotosUrls: string[] = [];
           if (trip.trip_photos_base64) {
             const photosArray = JSON.parse(
@@ -187,7 +187,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
             }
           }
 
-          const tripRecord = {
+          const record = {
             employee_id: trip.employee_id,
             vehicle_id: trip.vehicle_id,
             km_inicial: trip.km_inicial,
@@ -199,51 +199,45 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
             end_latitude: trip.end_latitude,
             end_longitude: trip.end_longitude,
             duration_seconds: trip.duration_seconds,
-            origem: trip.origem || null,
-            destino: trip.destino || null,
-            motivo: trip.motivo || null,
-            observacao: trip.observacao || null,
+            origem: trip.origem ?? null,
+            destino: trip.destino ?? null,
+            motivo: trip.motivo ?? null,
+            observacao: trip.observacao ?? null,
             status: trip.status,
             employee_photo_url: employeePhotoUrl || undefined,
             trip_photos_urls:
               tripPhotosUrls.length > 0 ? tripPhotosUrls : undefined,
           };
 
-          const { error } = await createTrip(tripRecord);
-
+          const { error } = await createTrip(record);
           if (!error) {
             await markTripAsSynced(trip.id!);
             console.log(
-              `[OfflineContext] Trip ${trip.id} synced successfully`
+              `[OfflineContext] Trip ${trip.id} sincronizada com sucesso`
             );
           } else {
-            console.error("[OfflineContext] Error syncing trip:", error);
+            console.error(
+              "[OfflineContext] Erro ao sincronizar trip no Supabase:",
+              error
+            );
           }
         } catch (err) {
           console.error(
-            "[OfflineContext] Error syncing individual trip:",
+            "[OfflineContext] Erro ao sincronizar trip individual:",
             err
           );
         }
       }
     } catch (err) {
-      console.error("[OfflineContext] Error in syncTripsToServer:", err);
+      console.error("[OfflineContext] Erro em syncTripsToServer:", err);
       throw err;
     }
-  }, [
-    isOnline,
-    isReady,
-    hasDb,
-    getUnsyncedTrips,
-    uploadPhoto,
-    createTrip,
-    markTripAsSynced,
-  ]);
+  }, [isOnline, isReady, getUnsyncedTrips, uploadPhoto, createTrip, markTripAsSynced]);
 
-  // 🔄 Função principal de sincronização (botão + automática)
+  // ========= função principal de sync =========
   const syncNow = useCallback(async () => {
     console.log(
-      "[OfflineContext] syncNow called -> isOnline:",
+      "[OfflineContext] syncNow -> isOnline:",
       isOnline,
       "isReady:",
       isReady,
@@ -258,14 +252,10 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    if (!isReady) {
+    if (!isReady || !hasDb) {
       toast.error("SQLite ainda está inicializando, tente novamente");
       return;
     }
-
-    // ⬇️ não bloqueia mais pela flag hasDb.
-    // Se por algum motivo o DB não estiver conectado, as funções de save vão logar/retornar erro,
-    // mas o fluxo de sync em si não fica travado aqui.
 
     if (isSyncing) return;
 
@@ -277,14 +267,14 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
       setLastSyncAt(new Date());
       toast.success("Sincronização concluída!");
     } catch (err) {
-      console.error("[OfflineContext] Sync error:", err);
+      console.error("[OfflineContext] Erro geral de sync:", err);
       toast.error("Erro ao sincronizar dados");
     } finally {
       setIsSyncing(false);
     }
   }, [isOnline, isReady, hasDb, isSyncing, syncMasterData, syncTripsToServer]);
 
-  // 🔌 Monitor de rede (web + nativo)
+  // ========= monitor de rede =========
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) {
       setIsOnline(navigator.onLine);
@@ -304,7 +294,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
     let canceled = false;
     let listener: any | null = null;
 
-    const setupNetworkListener = async () => {
+    const setup = async () => {
       const status = await Network.getStatus();
       if (!canceled) setIsOnline(status.connected);
 
@@ -315,14 +305,16 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
           setIsOnline(status.connected);
 
           if (status.connected) {
-            console.log("[OfflineContext] Network restored - triggering sync");
+            console.log(
+              "[OfflineContext] Rede restaurada, disparando syncNow()"
+            );
             await syncNow();
           }
         }
       );
     };
 
-    setupNetworkListener();
+    setup();
 
     return () => {
       canceled = true;
@@ -330,77 +322,54 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [syncNow]);
 
-  // ▶️ Sync inicial no app nativo (apenas 1 vez)
+  // ========= sync inicial (apenas app nativo) =========
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
-    if (!isOnline || !isReady) return;
+    if (!isOnline || !isReady || !hasDb) return;
     if (hasInitialSyncRun) return;
 
     setHasInitialSyncRun(true);
     syncNow();
-  }, [isOnline, isReady, hasInitialSyncRun, syncNow]);
+  }, [isOnline, isReady, hasDb, hasInitialSyncRun, syncNow]);
 
-  // 🔍 Motoristas (SQLite no app / Supabase no web)
+  // ========= Motoristas =========
   const getMotoristas = useCallback(
     async (filtro?: string): Promise<OfflineEmployee[]> => {
       if (!isReady && !isOnline) return [];
 
-      let allEmployees: OfflineEmployee[] = [];
+      let all: OfflineEmployee[] = [];
 
       if (Capacitor.isNativePlatform()) {
         if (isReady && hasDb) {
           try {
-            allEmployees = await getEmployees();
-            console.log(
-              "[getMotoristas] Employees from SQLite:",
-              allEmployees.length
-            );
+            all = await getEmployees();
+            console.log("[getMotoristas] from SQLite:", all.length);
           } catch (err) {
-            console.error(
-              "[getMotoristas] Error reading employees from SQLite:",
-              err
-            );
+            console.error("[getMotoristas] erro ao ler SQLite:", err);
           }
         }
 
-        if (allEmployees.length === 0 && isOnline) {
+        // fallback: se não achou nada no SQLite e está online, busca do Supabase
+        if (!all.length && isOnline) {
+          const { data, error } = await supabase
+            .from("employees")
+            .select("*")
+            .order("nome_completo");
+
+          if (error) {
+            console.error("[getMotoristas] erro Supabase:", error);
+            return [];
+          }
+
+          all = (data || []) as OfflineEmployee[];
+          console.log("[getMotoristas] from Supabase:", all.length);
+
           try {
-            const { data, error } = await supabase
-              .from("employees")
-              .select("*")
-              .order("nome_completo");
-
-            if (error) {
-              console.error(
-                "[getMotoristas] Error fetching from Supabase:",
-                error
-              );
-              return [];
-            }
-
-            allEmployees = (data || []) as OfflineEmployee[];
-            console.log(
-              "[getMotoristas] Employees from Supabase:",
-              allEmployees.length
-            );
-
-            try {
-              if (hasDb) {
-                await saveEmployees(allEmployees);
-              } else {
-                console.warn(
-                  "[getMotoristas] DB not ready, skipping saveEmployees"
-                );
-              }
-            } catch (err) {
-              console.error(
-                "[getMotoristas] Error saving employees to SQLite:",
-                err
-              );
+            if (hasDb) {
+              await saveEmployees(all);
             }
           } catch (err) {
-            console.error("[getMotoristas] Unexpected error:", err);
-            return [];
+            console.error("[getMotoristas] erro ao salvar no SQLite:", err);
           }
         }
       } else {
@@ -410,90 +379,62 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
           .order("nome_completo");
 
         if (error) {
-          console.error(
-            "[getMotoristas][web] Error fetching from Supabase:",
-            error
-          );
+          console.error("[getMotoristas][web] erro Supabase:", error);
           return [];
         }
-
-        allEmployees = (data || []) as OfflineEmployee[];
+        all = (data || []) as OfflineEmployee[];
       }
 
-      if (!filtro) return allEmployees;
+      if (!filtro) return all;
 
-      const lowerFilter = filtro.toLowerCase();
-      return allEmployees.filter(
+      const f = filtro.toLowerCase();
+      return all.filter(
         (emp) =>
-          emp.nome_completo.toLowerCase().includes(lowerFilter) ||
-          emp.matricula.toLowerCase().includes(lowerFilter) ||
-          emp.cargo.toLowerCase().includes(lowerFilter)
+          emp.nome_completo.toLowerCase().includes(f) ||
+          emp.matricula.toLowerCase().includes(f) ||
+          emp.cargo.toLowerCase().includes(f)
       );
     },
     [isReady, hasDb, isOnline, getEmployees, saveEmployees]
   );
 
-  // 🚗 Veículos (SQLite no app / Supabase no web)
+  // ========= Veículos =========
   const getVeiculos = useCallback(
     async (filtro?: string): Promise<OfflineVehicle[]> => {
       if (!isReady && !isOnline) return [];
 
-      let allVehicles: OfflineVehicle[] = [];
+      let all: OfflineVehicle[] = [];
 
       if (Capacitor.isNativePlatform()) {
         if (isReady && hasDb) {
           try {
-            allVehicles = await getVehicles();
-            console.log(
-              "[getVeiculos] Vehicles from SQLite:",
-              allVehicles.length
-            );
+            all = await getVehicles();
+            console.log("[getVeiculos] from SQLite:", all.length);
           } catch (err) {
-            console.error(
-              "[getVeiculos] Error reading vehicles from SQLite:",
-              err
-            );
+            console.error("[getVeiculos] erro ao ler SQLite:", err);
           }
         }
 
-        if (allVehicles.length === 0 && isOnline) {
+        if (!all.length && isOnline) {
+          const { data, error } = await supabase
+            .from("vehicles")
+            .select("*")
+            .order("placa");
+
+          if (error) {
+            console.error("[getVeiculos] erro Supabase:", error);
+            return [];
+          }
+
+          all = (data || []) as OfflineVehicle[];
+          console.log("[getVeiculos] from Supabase:", all.length);
+
           try {
-            const { data, error } = await supabase
-              .from("vehicles")
-              .select("*")
-              .order("placa");
-
-            if (error) {
-              console.error(
-                "[getVeiculos] Error fetching from Supabase:",
-                error
-              );
-              return [];
-            }
-
-            allVehicles = (data || []) as OfflineVehicle[];
-            console.log(
-              "[getVeiculos] Vehicles from Supabase:",
-              allVehicles.length
-            );
-
-            try {
-              if (hasDb) {
-                await saveVehicles(allVehicles);
-              } else {
-                console.warn(
-                  "[getVeiculos] DB not ready, skipping saveVehicles"
-                );
-              }
-            } catch (err) {
-              console.error(
-                "[getVeiculos] Error saving vehicles to SQLite:",
-                err
-              );
+            if (hasDb) {
+              await saveVehicles(all);
             }
           } catch (err) {
-            console.error("[getVeiculos] Unexpected error:", err);
-            return [];
+            console.error("[getVeiculos] erro ao salvar no SQLite:", err);
           }
         }
       } else {
@@ -503,36 +444,34 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
           .order("placa");
 
         if (error) {
-          console.error(
-            "[getVeiculos][web] Error fetching from Supabase:",
-            error
-          );
+          console.error("[getVeiculos][web] erro Supabase:", error);
           return [];
         }
-
-        allVehicles = (data || []) as OfflineVehicle[];
+        all = (data || []) as OfflineVehicle[];
       }
 
-      if (!filtro) return allVehicles;
+      if (!filtro) return all;
 
-      const lowerFilter = filtro.toLowerCase();
-      return allVehicles.filter((veh) => {
-        const text = `${veh.placa} ${veh.marca} ${veh.modelo}`.toLowerCase();
-        return text.includes(lowerFilter);
-      });
+      const f = filtro.toLowerCase();
+      return all.filter((v) =>
+        `${v.placa} ${v.marca} ${v.modelo}`.toLowerCase().includes(f)
+      );
     },
     [isReady, hasDb, isOnline, getVehicles, saveVehicles]
   );
 
-  // 🧾 Viagens pendentes no SQLite (para histórico offline se quiser)
-  const getViagens = useCallback(
-    async (_filtro?: any): Promise<OfflineTrip[]> => {
-      if (!isReady || !hasDb) return [];
-      const unsynced = await getUnsyncedTrips();
-      return unsynced;
-    },
-    [isReady, hasDb, getUnsyncedTrips]
-  );
+  // ========= Viagens (sempre do SQLite; já vem do syncMasterData) =========
+  const getViagens = useCallback(async (): Promise<OfflineTrip[]> => {
+    if (!isReady || !hasDb) return [];
+    try {
+      const trips = await getAllTrips();
+      console.log("[getViagens] Trips from SQLite:", trips.length);
+      return trips;
+    } catch (err) {
+      console.error("[getViagens] erro ao ler trips do SQLite:", err);
+      return [];
+    }
+  }, [isReady, hasDb, getAllTrips]);
 
   const value: OfflineContextType = {
     isOnline,
@@ -555,6 +494,8 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
 
 export const useOfflineData = () => {
   const ctx = useContext(OfflineContext);
-  if (!ctx) throw new Error("useOfflineData must be used within OfflineProvider");
+  if (!ctx) {
+    throw new Error("useOfflineData must be used within OfflineProvider");
+  }
   return ctx;
 };
