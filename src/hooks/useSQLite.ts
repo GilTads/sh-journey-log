@@ -68,10 +68,17 @@ export const useSQLite = () => {
         return;
       }
 
-      console.log("[SQLite] Iniciando criação do banco...");
+      console.log("[SQLite] ========================================");
+      console.log("[SQLite] Iniciando inicialização do banco...");
+      console.log("[SQLite] Plataforma:", Capacitor.getPlatform());
+      
       const sqlite = new SQLiteConnection(CapacitorSQLite);
 
-      console.log("[SQLite] Criando conexão com o banco:", DB_NAME);
+      // Verifica se o banco já existe
+      const isDBExists = await sqlite.isDatabase(DB_NAME);
+      console.log("[SQLite] Banco", DB_NAME, "já existe?", isDBExists.result);
+
+      console.log("[SQLite] Criando/abrindo conexão com o banco:", DB_NAME);
       const dbConnection = await sqlite.createConnection(
         DB_NAME,
         false,
@@ -80,8 +87,9 @@ export const useSQLite = () => {
         false
       );
 
-      console.log("[SQLite] Abrindo conexão...");
+      console.log("[SQLite] Abrindo banco de dados...");
       await dbConnection.open();
+      console.log("[SQLite] Banco aberto com sucesso");
 
       console.log("[SQLite] Criando tabelas...");
       await dbConnection.execute(`
@@ -130,12 +138,24 @@ export const useSQLite = () => {
         );
       `);
 
-      console.log("[SQLite] Tabelas criadas com sucesso");
+      console.log("[SQLite] Tabelas criadas/verificadas com sucesso");
+      
+      // Verifica quantos registros existem
+      const empCount = await dbConnection.query("SELECT COUNT(*) as count FROM offline_employees;");
+      const vehCount = await dbConnection.query("SELECT COUNT(*) as count FROM offline_vehicles;");
+      const tripCount = await dbConnection.query("SELECT COUNT(*) as count FROM offline_trips;");
+      
+      console.log("[SQLite] ========================================");
+      console.log("[SQLite] Registros existentes no banco:");
+      console.log("[SQLite]   - Employees:", empCount.values?.[0]?.count || 0);
+      console.log("[SQLite]   - Vehicles:", vehCount.values?.[0]?.count || 0);
+      console.log("[SQLite]   - Trips:", tripCount.values?.[0]?.count || 0);
+      console.log("[SQLite] ========================================");
       
       setDb(dbConnection);
       setHasDb(true);
       setIsReady(true);
-      console.log("[SQLite] Banco inicializado com sucesso - db:", !!dbConnection);
+      console.log("[SQLite] ✅ Banco inicializado com sucesso - conexão ativa:", !!dbConnection);
     } catch (error: any) {
       console.error("[SQLite] Erro inicializando banco:", error);
       toast.error("Erro inicializando SQLite", {
@@ -251,52 +271,76 @@ export const useSQLite = () => {
     employees: OfflineEmployee[]
   ): Promise<boolean> => {
     if (!db) {
-      console.error("[SQLite] saveEmployees: db nulo");
+      console.error("[SQLite] ❌ saveEmployees: db é NULL!");
       return false;
     }
 
     try {
-      console.log("[SQLite] saveEmployees start, qtd:", employees.length);
+      console.log("[SQLite] 💾 saveEmployees iniciando, quantidade:", employees.length);
 
       if (employees.length === 0) {
-        console.warn("[SQLite] saveEmployees recebeu lista vazia, ignorando");
+        console.warn("[SQLite] ⚠️ saveEmployees recebeu lista vazia, ignorando");
         return true;
       }
 
+      // Deleta todos os registros antigos
+      console.log("[SQLite] 🗑️ Limpando tabela offline_employees...");
       await db.run("DELETE FROM offline_employees;");
-      console.log("[SQLite] Tabela offline_employees limpa");
+      
+      // Verifica se limpou
+      const afterDelete = await db.query("SELECT COUNT(*) as count FROM offline_employees;");
+      console.log("[SQLite] Registros após DELETE:", afterDelete.values?.[0]?.count || 0);
 
+      // Insere os novos registros
+      console.log("[SQLite] 📝 Inserindo", employees.length, "funcionários...");
+      let insertedCount = 0;
       for (const emp of employees) {
         await db.run(
           "INSERT INTO offline_employees (id, matricula, nome_completo, cargo) VALUES (?, ?, ?, ?);",
           [emp.id, emp.matricula, emp.nome_completo, emp.cargo]
         );
+        insertedCount++;
+        if (insertedCount % 5 === 0) {
+          console.log(`[SQLite] Inseridos ${insertedCount}/${employees.length}...`);
+        }
       }
 
+      // Verifica quantos foram salvos
       const verify = await db.query("SELECT COUNT(*) as count FROM offline_employees;");
-      console.log("[SQLite] Funcionários salvos no banco local:", verify.values?.[0]?.count || 0);
+      const finalCount = verify.values?.[0]?.count || 0;
+      console.log("[SQLite] ✅ Funcionários salvos no banco:", finalCount, "de", employees.length);
+      
+      if (finalCount !== employees.length) {
+        console.error("[SQLite] ❌ ERRO: Número de registros salvos diferente do esperado!");
+        return false;
+      }
       
       return true;
     } catch (error: any) {
-      console.error("[SQLite] Erro em saveEmployees:", error);
+      console.error("[SQLite] ❌ Erro em saveEmployees:", error);
       return false;
     }
   };
 
   const getEmployees = async (): Promise<OfflineEmployee[]> => {
     if (!db) {
-      console.error("[SQLite] getEmployees: db é NULL!");
+      console.error("[SQLite] ❌ getEmployees: db é NULL!");
       return [];
     }
 
     try {
-      console.log("[SQLite] getEmployees: executando query...");
+      console.log("[SQLite] 🔍 getEmployees: executando SELECT...");
       const result = await db.query("SELECT * FROM offline_employees;");
       const count = result.values?.length || 0;
-      console.log("[SQLite] getEmployees: query concluída, registros:", count);
+      console.log("[SQLite] ✅ getEmployees retornou:", count, "registros");
+      
+      if (count > 0) {
+        console.log("[SQLite] 📋 Primeiros 3 registros:", result.values?.slice(0, 3));
+      }
+      
       return result.values || [];
     } catch (error: any) {
-      console.error("[SQLite] Erro lendo employees:", error);
+      console.error("[SQLite] ❌ Erro lendo employees:", error);
       toast.error("Erro lendo funcionários do SQLite", {
         description: error?.message ?? String(error),
       });
@@ -308,52 +352,76 @@ export const useSQLite = () => {
     vehicles: OfflineVehicle[]
   ): Promise<boolean> => {
     if (!db) {
-      console.error("[SQLite] saveVehicles: db nulo");
+      console.error("[SQLite] ❌ saveVehicles: db é NULL!");
       return false;
     }
 
     try {
-      console.log("[SQLite] saveVehicles start, qtd:", vehicles.length);
+      console.log("[SQLite] 💾 saveVehicles iniciando, quantidade:", vehicles.length);
 
       if (vehicles.length === 0) {
-        console.warn("[SQLite] saveVehicles recebeu lista vazia, ignorando");
+        console.warn("[SQLite] ⚠️ saveVehicles recebeu lista vazia, ignorando");
         return true;
       }
 
+      // Deleta todos os registros antigos
+      console.log("[SQLite] 🗑️ Limpando tabela offline_vehicles...");
       await db.run("DELETE FROM offline_vehicles;");
-      console.log("[SQLite] Tabela offline_vehicles limpa");
+      
+      // Verifica se limpou
+      const afterDelete = await db.query("SELECT COUNT(*) as count FROM offline_vehicles;");
+      console.log("[SQLite] Registros após DELETE:", afterDelete.values?.[0]?.count || 0);
 
+      // Insere os novos registros
+      console.log("[SQLite] 📝 Inserindo", vehicles.length, "veículos...");
+      let insertedCount = 0;
       for (const veh of vehicles) {
         await db.run(
           "INSERT INTO offline_vehicles (id, placa, marca, modelo) VALUES (?, ?, ?, ?);",
           [veh.id, veh.placa, veh.marca, veh.modelo]
         );
+        insertedCount++;
+        if (insertedCount % 5 === 0) {
+          console.log(`[SQLite] Inseridos ${insertedCount}/${vehicles.length}...`);
+        }
       }
 
+      // Verifica quantos foram salvos
       const verify = await db.query("SELECT COUNT(*) as count FROM offline_vehicles;");
-      console.log("[SQLite] Veículos salvos no banco local:", verify.values?.[0]?.count || 0);
+      const finalCount = verify.values?.[0]?.count || 0;
+      console.log("[SQLite] ✅ Veículos salvos no banco:", finalCount, "de", vehicles.length);
+      
+      if (finalCount !== vehicles.length) {
+        console.error("[SQLite] ❌ ERRO: Número de registros salvos diferente do esperado!");
+        return false;
+      }
       
       return true;
     } catch (error: any) {
-      console.error("[SQLite] Erro em saveVehicles:", error);
+      console.error("[SQLite] ❌ Erro em saveVehicles:", error);
       return false;
     }
   };
 
   const getVehicles = async (): Promise<OfflineVehicle[]> => {
     if (!db) {
-      console.error("[SQLite] getVehicles: db é NULL!");
+      console.error("[SQLite] ❌ getVehicles: db é NULL!");
       return [];
     }
 
     try {
-      console.log("[SQLite] getVehicles: executando query...");
+      console.log("[SQLite] 🔍 getVehicles: executando SELECT...");
       const result = await db.query("SELECT * FROM offline_vehicles;");
       const count = result.values?.length || 0;
-      console.log("[SQLite] getVehicles: query concluída, registros:", count);
+      console.log("[SQLite] ✅ getVehicles retornou:", count, "registros");
+      
+      if (count > 0) {
+        console.log("[SQLite] 📋 Primeiros 3 registros:", result.values?.slice(0, 3));
+      }
+      
       return result.values || [];
     } catch (error: any) {
-      console.error("[SQLite] Erro lendo vehicles:", error);
+      console.error("[SQLite] ❌ Erro lendo vehicles:", error);
       toast.error("Erro lendo veículos do SQLite", {
         description: error?.message ?? String(error),
       });
