@@ -245,20 +245,20 @@ export const useSQLite = () => {
     employees: OfflineEmployee[]
   ): Promise<boolean> => {
     if (!db) {
-      toast.error("SQLite não disponível (saveEmployees)");
+      console.error("[SQLite] saveEmployees: db nulo");
       return false;
     }
 
     try {
       console.log("[SQLite] saveEmployees start, qtd:", employees.length);
 
-      // se vier vazio, não apagamos o que já existe
       if (employees.length === 0) {
         console.warn("[SQLite] saveEmployees recebeu lista vazia, ignorando");
         return true;
       }
 
       await db.run("DELETE FROM offline_employees;");
+      console.log("[SQLite] Tabela offline_employees limpa");
 
       for (const emp of employees) {
         await db.run(
@@ -267,18 +267,12 @@ export const useSQLite = () => {
         );
       }
 
-      console.log(
-        `[SQLite] ${employees.length} funcionários salvos no banco local`
-      );
-      toast.success("Funcionários salvos no SQLite", {
-        description: `${employees.length} registros`,
-      });
+      const verify = await db.query("SELECT COUNT(*) as count FROM offline_employees;");
+      console.log("[SQLite] Funcionários salvos no banco local:", verify.values?.[0]?.count || 0);
+      
       return true;
     } catch (error: any) {
       console.error("[SQLite] Erro em saveEmployees:", error);
-      toast.error("Erro salvando funcionários no SQLite", {
-        description: error?.message ?? String(error),
-      });
       return false;
     }
   };
@@ -302,7 +296,7 @@ export const useSQLite = () => {
     vehicles: OfflineVehicle[]
   ): Promise<boolean> => {
     if (!db) {
-      toast.error("SQLite não disponível (saveVehicles)");
+      console.error("[SQLite] saveVehicles: db nulo");
       return false;
     }
 
@@ -315,6 +309,7 @@ export const useSQLite = () => {
       }
 
       await db.run("DELETE FROM offline_vehicles;");
+      console.log("[SQLite] Tabela offline_vehicles limpa");
 
       for (const veh of vehicles) {
         await db.run(
@@ -323,18 +318,12 @@ export const useSQLite = () => {
         );
       }
 
-      console.log(
-        `[SQLite] ${vehicles.length} veículos salvos no banco local`
-      );
-      toast.success("Veículos salvos no SQLite", {
-        description: `${vehicles.length} registros`,
-      });
+      const verify = await db.query("SELECT COUNT(*) as count FROM offline_vehicles;");
+      console.log("[SQLite] Veículos salvos no banco local:", verify.values?.[0]?.count || 0);
+      
       return true;
     } catch (error: any) {
       console.error("[SQLite] Erro em saveVehicles:", error);
-      toast.error("Erro salvando veículos no SQLite", {
-        description: error?.message ?? String(error),
-      });
       return false;
     }
   };

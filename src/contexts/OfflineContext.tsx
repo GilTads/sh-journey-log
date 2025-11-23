@@ -69,10 +69,13 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
   // SYNC MASTER DATA (EMPLOYEES + VEHICLES)
   // =============================================
   const syncMasterData = async () => {
-    if (!isOnline || !isReady) return;
+    if (!isOnline || !isReady) {
+      console.log("[OfflineContext] syncMasterData: não executado (online:", isOnline, "ready:", isReady, ")");
+      return;
+    }
 
     try {
-      console.log("[OfflineContext] Syncing master data...");
+      console.log("[OfflineContext] Iniciando sync master data...");
 
       // EMPLOYEES
       const { data: employees, error: empErr } = await supabase
@@ -80,13 +83,14 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
         .select("*")
         .order("nome_completo");
 
-      if (!empErr && employees) {
-        // BLINDAGEM — NÃO apagar se vier vazio
+      if (empErr) {
+        console.error("[OfflineContext] Erro buscando employees:", empErr);
+      } else if (employees) {
         if (employees.length > 0) {
-          await saveEmployees(employees as OfflineEmployee[]);
-          console.log(`[OfflineContext] Saved ${employees.length} employees`);
+          const saved = await saveEmployees(employees as OfflineEmployee[]);
+          console.log(`[OfflineContext] Employees salvos: ${saved ? 'SIM' : 'NÃO'} (${employees.length} registros)`);
         } else {
-          console.warn("[OfflineContext] Employees list empty — ignored!");
+          console.warn("[OfflineContext] Employees list empty!");
         }
       }
 
@@ -96,14 +100,18 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
         .select("*")
         .order("placa");
 
-      if (!vehErr && vehicles) {
+      if (vehErr) {
+        console.error("[OfflineContext] Erro buscando vehicles:", vehErr);
+      } else if (vehicles) {
         if (vehicles.length > 0) {
-          await saveVehicles(vehicles as OfflineVehicle[]);
-          console.log(`[OfflineContext] Saved ${vehicles.length} vehicles`);
+          const saved = await saveVehicles(vehicles as OfflineVehicle[]);
+          console.log(`[OfflineContext] Vehicles salvos: ${saved ? 'SIM' : 'NÃO'} (${vehicles.length} registros)`);
         } else {
-          console.warn("[OfflineContext] Vehicles list empty — ignored!");
+          console.warn("[OfflineContext] Vehicles list empty!");
         }
       }
+
+      console.log("[OfflineContext] Sync master data concluído");
     } catch (err) {
       console.error("[OfflineContext] Error syncing master data:", err);
     }
@@ -283,28 +291,27 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
       let all: OfflineEmployee[] = [];
 
       try {
-        // 1) SEMPRE tenta SQLite primeiro
         all = await getEmployees();
-        console.log("[getMotoristas] SQLite →", all.length);
+        console.log("[getMotoristas] SQLite retornou:", all.length, "registros");
       } catch (e) {
-        console.error("[getMotoristas] SQLite error:", e);
+        console.error("[getMotoristas] Erro ao buscar do SQLite:", e);
       }
 
-      // 2) Se estiver vazio e houver internet, baixa e salva
       if (all.length === 0 && isOnline) {
+        console.log("[getMotoristas] SQLite vazio, buscando do Supabase...");
         const { data, error } = await supabase
           .from("employees")
           .select("*")
           .order("nome_completo");
 
-        if (!error && data) {
-          if (data.length > 0) {
-            await saveEmployees(data as OfflineEmployee[]);
-            all = data as OfflineEmployee[];
-            console.log("[getMotoristas] Supabase →", all.length);
-          } else {
-            console.warn("[getMotoristas] Supabase returned empty list");
-          }
+        if (error) {
+          console.error("[getMotoristas] Erro Supabase:", error);
+        } else if (data && data.length > 0) {
+          const saved = await saveEmployees(data as OfflineEmployee[]);
+          console.log("[getMotoristas] Dados salvos no SQLite:", saved);
+          all = data as OfflineEmployee[];
+        } else {
+          console.warn("[getMotoristas] Supabase retornou lista vazia");
         }
       }
 
@@ -330,25 +337,26 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
 
       try {
         all = await getVehicles();
-        console.log("[getVeiculos] SQLite →", all.length);
+        console.log("[getVeiculos] SQLite retornou:", all.length, "registros");
       } catch (e) {
-        console.error("[getVeiculos] SQLite error:", e);
+        console.error("[getVeiculos] Erro ao buscar do SQLite:", e);
       }
 
       if (all.length === 0 && isOnline) {
+        console.log("[getVeiculos] SQLite vazio, buscando do Supabase...");
         const { data, error } = await supabase
           .from("vehicles")
           .select("*")
           .order("placa");
 
-        if (!error && data) {
-          if (data.length > 0) {
-            await saveVehicles(data as OfflineVehicle[]);
-            all = data as OfflineVehicle[];
-            console.log("[getVeiculos] Supabase →", all.length);
-          } else {
-            console.warn("[getVeiculos] Supabase returned empty list");
-          }
+        if (error) {
+          console.error("[getVeiculos] Erro Supabase:", error);
+        } else if (data && data.length > 0) {
+          const saved = await saveVehicles(data as OfflineVehicle[]);
+          console.log("[getVeiculos] Dados salvos no SQLite:", saved);
+          all = data as OfflineVehicle[];
+        } else {
+          console.warn("[getVeiculos] Supabase retornou lista vazia");
         }
       }
 
