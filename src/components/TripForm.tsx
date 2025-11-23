@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 import { CapacitorSQLite } from "@capacitor-community/sqlite"; // ⬅️ NOVO IMPORT
 
+
 interface TripData {
   employeeId: string;
   employeePhoto: File | null;
@@ -779,106 +780,6 @@ export const TripForm = () => {
           </CardContent>
         </Card>
       )}
-
-      {/* 🔍 CARD DE DEBUG DO SQLITE */}
-      <Card>
-        <CardContent className="pt-6 space-y-3">
-          <Label className="text-base font-semibold">
-            Debug do Banco Offline (SQLite)
-          </Label>
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full h-11"
-            onClick={handleTestSQLite}
-          >
-            Testar SQLite
-          </Button>
-          <p className="text-xs text-muted-foreground break-words mt-2">
-            <strong>Status:</strong> {sqliteStatus}
-          </p>
-        </CardContent>
-      </Card>
-
-            {/* 🔍 CARD DE DEBUG DE DADOS OFFLINE */}
-      <Card>
-        <CardContent className="pt-6 space-y-3">
-          <Label className="text-base font-semibold">
-            Debug dos Dados Offline
-          </Label>
-
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full h-11"
-            onClick={async () => {
-              try {
-                const emps = await getMotoristas();
-                const vehs = await getVeiculos();
-
-                toast.success("Dados offline carregados", {
-                  description: `Motoristas: ${emps.length} | Veículos: ${vehs.length}`,
-                });
-              } catch (err: any) {
-                toast.error("Erro ao buscar dados offline", {
-                  description:
-                    err?.message ?? String(err) ?? "Erro desconhecido",
-                });
-              }
-            }}
-          >
-            Ver quantos registros locais existem
-          </Button>
-        </CardContent>
-      </Card>
-
-            {/* 🔍 DEBUG BRUTO DO SQLITE (SEM OfflineContext) */}
-      <Card>
-        <CardContent className="pt-6 space-y-3">
-          <Label className="text-base font-semibold">
-            Debug bruto do SQLite
-          </Label>
-
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full h-11"
-            onClick={async () => {
-              try {
-                // 1) Se estiver online, força uma sincronização antes
-                if (isOnline) {
-                  toast.info("Forçando sincronização antes de ler o SQLite...");
-                  await syncNow();
-                }
-
-                // 2) Garante que o hook local de SQLite está pronto
-                if (!isSQLiteReady) {
-                  toast.error("SQLite ainda não está pronto");
-                  return;
-                }
-
-                // 3) Lê DIRETO do SQLite desta instância
-                const emps = await getEmployeesRaw();
-                const vehs = await getVehiclesRaw();
-
-                toast.success("Leitura direta do SQLite", {
-                  description: `hasDb: ${hasSQLiteDb} | Employees: ${emps.length} | Vehicles: ${vehs.length}`,
-                });
-              } catch (err: any) {
-                toast.error("Erro ao ler direto do SQLite", {
-                  description: err?.message ?? String(err) ?? "Erro desconhecido",
-                });
-              }
-            }}
-          >
-            Ver registros DIRETO do SQLite
-          </Button>
-
-        </CardContent>
-      </Card>
-
-
-
       <div className="pt-2 pb-6">
         <Button
           variant={isActive ? "trip-end" : "trip-start"}

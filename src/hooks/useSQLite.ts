@@ -5,10 +5,116 @@ import {
   SQLiteDBConnection,
 } from "@capacitor-community/sqlite";
 import { Capacitor } from "@capacitor/core";
-import { toast } from "sonner";
 
 const DB_NAME = "trips_offline";
 
+// ======= ESTADO GLOBAL (singleton) =======
+let sqliteConnection: SQLiteConnection | null = null;
+let dbConnection: SQLiteDBConnection | null = null;
+let initPromise: Promise<void> | null = null;
+let globalIsReady = false;
+let globalHasDb = false;
+
+const createConnectionIfNeeded = async () => {
+  if (!Capacitor.isNativePlatform()) {
+    // Web: não tem SQLite nativo
+    globalIsReady = true;
+    globalHasDb = false;
+    return;
+  }
+
+  if (dbConnection && globalHasDb) {
+    // Já existe conexão aberta
+    globalIsReady = true;
+    return;
+  }
+
+  try {
+    if (!sqliteConnection) {
+      sqliteConnection = new SQLiteConnection(CapacitorSQLite);
+    }
+
+    // Se já existir uma connection com esse nome, reusa
+    const isConn = await sqliteConnection.isConnection(DB_NAME, false);
+    if (isConn.result) {
+      dbConnection = await sqliteConnection.retrieveConnection(DB_NAME, false);
+    } else {
+      dbConnection = await sqliteConnection.createConnection(
+        DB_NAME,
+        false,
+        "no-encryption",
+        1,
+        false
+      );
+    }
+
+    await dbConnection.open();
+
+    // Cria tabelas
+    await dbConnection.execute(`
+      CREATE TABLE IF NOT EXISTS offline_trips (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        employee_id TEXT NOT NULL,
+        vehicle_id TEXT NOT NULL,
+        km_inicial REAL NOT NULL,
+        km_final REAL NOT NULL,
+        start_time TEXT NOT NULL,
+        end_time TEXT NOT NULL,
+        start_latitude REAL,
+        start_longitude REAL,
+        end_latitude REAL,
+        end_longitude REAL,
+        duration_seconds INTEGER NOT NULL,
+        origem TEXT,
+        destino TEXT,
+        motivo TEXT,
+        observacao TEXT,
+        status TEXT NOT NULL,
+        employee_photo_base64 TEXT,
+        trip_photos_base64 TEXT,
+        synced INTEGER DEFAULT 0,
+        deleted INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT (datetime('now')),
+        updated_at TEXT DEFAULT (datetime('now'))
+      );
+    `);
+
+    await dbConnection.execute(`
+      CREATE TABLE IF NOT EXISTS offline_employees (
+        id TEXT PRIMARY KEY,
+        matricula TEXT NOT NULL,
+        nome_completo TEXT NOT NULL,
+        cargo TEXT NOT NULL
+      );
+    `);
+
+    await dbConnection.execute(`
+      CREATE TABLE IF NOT EXISTS offline_vehicles (
+        id TEXT PRIMARY KEY,
+        placa TEXT NOT NULL,
+        marca TEXT NOT NULL,
+        modelo TEXT NOT NULL
+      );
+    `);
+
+    globalIsReady = true;
+    globalHasDb = true;
+    console.log("[useSQLite] DB inicializado com sucesso");
+  } catch (error) {
+    console.error("[useSQLite] Erro ao inicializar SQLite:", error);
+    globalIsReady = true;  // app não quebra
+    globalHasDb = false;
+  }
+};
+
+const ensureInit = async () => {
+  if (!initPromise) {
+    initPromise = createConnectionIfNeeded();
+  }
+  await initPromise;
+};
+
+// ======= TIPOS =======
 export interface OfflineTrip {
   id?: number;
   employee_id: string;
@@ -29,8 +135,8 @@ export interface OfflineTrip {
   status: string;
   employee_photo_base64?: string;
   trip_photos_base64?: string;
-  synced?: number;
-  deleted?: number;
+  synced?: number; // 0 = not synced, 1 = synced
+  deleted?: number; // 0 = not deleted, 1 = deleted (soft delete)
   created_at?: string;
   updated_at?: string;
 }
@@ -49,129 +155,42 @@ export interface OfflineVehicle {
   modelo: string;
 }
 
+// ======= HOOK =======
 export const useSQLite = () => {
-  const [db, setDb] = useState<SQLiteDBConnection | null>(null);
-  const [isReady, setIsReady] = useState(false);
-  const [hasDb, setHasDb] = useState(false); // <- para debug
+  const [isReady, setIsReady] = useState(globalIsReady);
+  const [hasDb, setHasDb] = useState(globalHasDb);
 
   useEffect(() => {
-    initializeDatabase();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    let canceled = false;
+
+    const init = async () => {
+      await ensureInit();
+      if (!canceled) {
+        setIsReady(globalIsReady);
+        setHasDb(globalHasDb);
+      }
+    };
+
+    init();
+
+    return () => {
+      canceled = true;
+    };
   }, []);
 
-  const initializeDatabase = async () => {
-    try {
-      if (!Capacitor.isNativePlatform()) {
-        console.log("[SQLite] Web: não inicializa banco nativo");
-        setIsReady(true);
-        setHasDb(false);
-        return;
-      }
-
-      console.log("[SQLite] ========================================");
-      console.log("[SQLite] Iniciando inicialização do banco...");
-      console.log("[SQLite] Plataforma:", Capacitor.getPlatform());
-      
-      const sqlite = new SQLiteConnection(CapacitorSQLite);
-
-      // Verifica se o banco já existe
-      const isDBExists = await sqlite.isDatabase(DB_NAME);
-      console.log("[SQLite] Banco", DB_NAME, "já existe?", isDBExists.result);
-
-      console.log("[SQLite] Criando/abrindo conexão com o banco:", DB_NAME);
-      const dbConnection = await sqlite.createConnection(
-        DB_NAME,
-        false,
-        "no-encryption",
-        1,
-        false
-      );
-
-      console.log("[SQLite] Abrindo banco de dados...");
-      await dbConnection.open();
-      console.log("[SQLite] Banco aberto com sucesso");
-
-      console.log("[SQLite] Criando tabelas...");
-      await dbConnection.execute(`
-        CREATE TABLE IF NOT EXISTS offline_trips (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          employee_id TEXT NOT NULL,
-          vehicle_id TEXT NOT NULL,
-          km_inicial REAL NOT NULL,
-          km_final REAL NOT NULL,
-          start_time TEXT NOT NULL,
-          end_time TEXT NOT NULL,
-          start_latitude REAL,
-          start_longitude REAL,
-          end_latitude REAL,
-          end_longitude REAL,
-          duration_seconds INTEGER NOT NULL,
-          origem TEXT,
-          destino TEXT,
-          motivo TEXT,
-          observacao TEXT,
-          status TEXT NOT NULL,
-          employee_photo_base64 TEXT,
-          trip_photos_base64 TEXT,
-          synced INTEGER DEFAULT 0,
-          deleted INTEGER DEFAULT 0,
-          created_at TEXT DEFAULT (datetime('now')),
-          updated_at TEXT DEFAULT (datetime('now'))
-        );
-      `);
-
-      await dbConnection.execute(`
-        CREATE TABLE IF NOT EXISTS offline_employees (
-          id TEXT PRIMARY KEY,
-          matricula TEXT NOT NULL,
-          nome_completo TEXT NOT NULL,
-          cargo TEXT NOT NULL
-        );
-      `);
-
-      await dbConnection.execute(`
-        CREATE TABLE IF NOT EXISTS offline_vehicles (
-          id TEXT PRIMARY KEY,
-          placa TEXT NOT NULL,
-          marca TEXT NOT NULL,
-          modelo TEXT NOT NULL
-        );
-      `);
-
-      console.log("[SQLite] Tabelas criadas/verificadas com sucesso");
-      
-      // Verifica quantos registros existem
-      const empCount = await dbConnection.query("SELECT COUNT(*) as count FROM offline_employees;");
-      const vehCount = await dbConnection.query("SELECT COUNT(*) as count FROM offline_vehicles;");
-      const tripCount = await dbConnection.query("SELECT COUNT(*) as count FROM offline_trips;");
-      
-      console.log("[SQLite] ========================================");
-      console.log("[SQLite] Registros existentes no banco:");
-      console.log("[SQLite]   - Employees:", empCount.values?.[0]?.count || 0);
-      console.log("[SQLite]   - Vehicles:", vehCount.values?.[0]?.count || 0);
-      console.log("[SQLite]   - Trips:", tripCount.values?.[0]?.count || 0);
-      console.log("[SQLite] ========================================");
-      
-      setDb(dbConnection);
-      setHasDb(true);
-      setIsReady(true);
-      console.log("[SQLite] ✅ Banco inicializado com sucesso - conexão ativa:", !!dbConnection);
-    } catch (error: any) {
-      console.error("[SQLite] Erro inicializando banco:", error);
-      toast.error("Erro inicializando SQLite", {
-        description: error?.message ?? String(error),
-      });
-      setIsReady(true); // deixa a app seguir, mas hasDb fica false
-      setHasDb(false);
+  // ----- helpers internos -----
+  const requireDb = (caller: string): SQLiteDBConnection | null => {
+    if (!dbConnection || !globalHasDb) {
+      console.warn(`[useSQLite] DB não disponível em ${caller}`);
+      return null;
     }
+    return dbConnection;
   };
 
+  // ===== TRIPS =====
   const saveTrip = async (trip: OfflineTrip): Promise<boolean> => {
-    if (!db) {
-      console.log("[SQLite] saveTrip: db nulo");
-      toast.error("SQLite não disponível (saveTrip)");
-      return false;
-    }
+    const db = requireDb("saveTrip");
+    if (!db) return false;
 
     try {
       const query = `
@@ -180,8 +199,8 @@ export const useSQLite = () => {
           start_time, end_time, start_latitude, start_longitude,
           end_latitude, end_longitude, duration_seconds,
           origem, destino, motivo, observacao, status,
-          employee_photo_base64, trip_photos_base64, synced
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+          employee_photo_base64, trip_photos_base64, synced, deleted
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
       `;
 
       const values = [
@@ -204,238 +223,176 @@ export const useSQLite = () => {
         trip.employee_photo_base64 ?? null,
         trip.trip_photos_base64 ?? null,
         trip.synced ?? 0,
+        trip.deleted ?? 0,
       ];
 
       await db.run(query, values);
-      console.log("[SQLite] Trip salva no banco local");
+      console.log("[useSQLite] Trip salva no SQLite");
       return true;
-    } catch (error: any) {
-      console.error("[SQLite] Erro salvando trip:", error);
-      toast.error("Erro salvando viagem no SQLite", {
-        description: error?.message ?? String(error),
-      });
+    } catch (error) {
+      console.error("[useSQLite] Erro ao salvar trip:", error);
       return false;
     }
   };
 
   const getUnsyncedTrips = async (): Promise<OfflineTrip[]> => {
+    const db = requireDb("getUnsyncedTrips");
     if (!db) return [];
 
     try {
       const result = await db.query(
-        "SELECT * FROM offline_trips WHERE synced = 0;"
+        "SELECT * FROM offline_trips WHERE synced = 0 AND deleted = 0;"
       );
-      return result.values || [];
-    } catch (error: any) {
-      console.error("[SQLite] Erro lendo trips:", error);
-      toast.error("Erro lendo viagens do SQLite", {
-        description: error?.message ?? String(error),
-      });
+      return (result.values || []) as OfflineTrip[];
+    } catch (error) {
+      console.error("[useSQLite] Erro ao buscar trips não sincronizadas:", error);
       return [];
     }
   };
 
   const markTripAsSynced = async (id: number): Promise<boolean> => {
+    const db = requireDb("markTripAsSynced");
     if (!db) return false;
 
     try {
       await db.run("UPDATE offline_trips SET synced = 1 WHERE id = ?;", [id]);
-      console.log(`[SQLite] Trip ${id} marcada como sincronizada`);
+      console.log("[useSQLite] Trip marcada como sincronizada:", id);
       return true;
-    } catch (error: any) {
-      console.error("[SQLite] Erro marcando trip:", error);
-      toast.error("Erro marcando viagem como sincronizada", {
-        description: error?.message ?? String(error),
-      });
+    } catch (error) {
+      console.error("[useSQLite] Erro ao marcar trip como sincronizada:", error);
       return false;
     }
   };
 
   const deleteTrip = async (id: number): Promise<boolean> => {
+    const db = requireDb("deleteTrip");
     if (!db) return false;
 
     try {
       await db.run("DELETE FROM offline_trips WHERE id = ?;", [id]);
-      console.log(`[SQLite] Trip ${id} removida do banco local`);
+      console.log("[useSQLite] Trip deletada:", id);
       return true;
-    } catch (error: any) {
-      console.error("[SQLite] Erro deletando trip:", error);
-      toast.error("Erro deletando viagem do SQLite", {
-        description: error?.message ?? String(error),
-      });
+    } catch (error) {
+      console.error("[useSQLite] Erro ao deletar trip:", error);
       return false;
     }
   };
 
+  // ===== EMPLOYEES =====
   const saveEmployees = async (
     employees: OfflineEmployee[]
   ): Promise<boolean> => {
-    if (!db) {
-      console.error("[SQLite] ❌ saveEmployees: db é NULL!");
-      return false;
-    }
+    const db = requireDb("saveEmployees");
+    if (!db) return false;
 
     try {
-      console.log("[SQLite] 💾 saveEmployees iniciando, quantidade:", employees.length);
+      await db.execute("DELETE FROM offline_employees;");
 
-      if (employees.length === 0) {
-        console.warn("[SQLite] ⚠️ saveEmployees recebeu lista vazia, ignorando");
+      if (!employees.length) {
+        console.log("[useSQLite] Nenhum employee para salvar (lista vazia)");
         return true;
       }
 
-      // Deleta todos os registros antigos
-      console.log("[SQLite] 🗑️ Limpando tabela offline_employees...");
-      await db.run("DELETE FROM offline_employees;");
-      
-      // Verifica se limpou
-      const afterDelete = await db.query("SELECT COUNT(*) as count FROM offline_employees;");
-      console.log("[SQLite] Registros após DELETE:", afterDelete.values?.[0]?.count || 0);
-
-      // Insere os novos registros
-      console.log("[SQLite] 📝 Inserindo", employees.length, "funcionários...");
-      let insertedCount = 0;
-      for (const emp of employees) {
+      await db.execute("BEGIN TRANSACTION;");
+      for (const employee of employees) {
         await db.run(
           "INSERT INTO offline_employees (id, matricula, nome_completo, cargo) VALUES (?, ?, ?, ?);",
-          [emp.id, emp.matricula, emp.nome_completo, emp.cargo]
+          [
+            employee.id,
+            employee.matricula,
+            employee.nome_completo,
+            employee.cargo,
+          ]
         );
-        insertedCount++;
-        if (insertedCount % 5 === 0) {
-          console.log(`[SQLite] Inseridos ${insertedCount}/${employees.length}...`);
-        }
       }
+      await db.execute("COMMIT;");
 
-      // Verifica quantos foram salvos
-      const verify = await db.query("SELECT COUNT(*) as count FROM offline_employees;");
-      const finalCount = verify.values?.[0]?.count || 0;
-      console.log("[SQLite] ✅ Funcionários salvos no banco:", finalCount, "de", employees.length);
-      
-      if (finalCount !== employees.length) {
-        console.error("[SQLite] ❌ ERRO: Número de registros salvos diferente do esperado!");
-        return false;
-      }
-      
+      console.log(
+        `[useSQLite] ${employees.length} employees salvos no SQLite`
+      );
       return true;
-    } catch (error: any) {
-      console.error("[SQLite] ❌ Erro em saveEmployees:", error);
+    } catch (error) {
+      console.error("[useSQLite] Erro ao salvar employees:", error);
+      try {
+        await db.execute("ROLLBACK;");
+      } catch {}
       return false;
     }
   };
 
   const getEmployees = async (): Promise<OfflineEmployee[]> => {
-    if (!db) {
-      console.error("[SQLite] ❌ getEmployees: db é NULL!");
-      return [];
-    }
+    const db = requireDb("getEmployees");
+    if (!db) return [];
 
     try {
-      console.log("[SQLite] 🔍 getEmployees: executando SELECT...");
       const result = await db.query("SELECT * FROM offline_employees;");
-      const count = result.values?.length || 0;
-      console.log("[SQLite] ✅ getEmployees retornou:", count, "registros");
-      
-      if (count > 0) {
-        console.log("[SQLite] 📋 Primeiros 3 registros:", result.values?.slice(0, 3));
-      }
-      
-      return result.values || [];
-    } catch (error: any) {
-      console.error("[SQLite] ❌ Erro lendo employees:", error);
-      toast.error("Erro lendo funcionários do SQLite", {
-        description: error?.message ?? String(error),
-      });
+      return (result.values || []) as OfflineEmployee[];
+    } catch (error) {
+      console.error("[useSQLite] Erro ao buscar employees:", error);
       return [];
     }
   };
 
+  // ===== VEHICLES =====
   const saveVehicles = async (
     vehicles: OfflineVehicle[]
   ): Promise<boolean> => {
-    if (!db) {
-      console.error("[SQLite] ❌ saveVehicles: db é NULL!");
-      return false;
-    }
+    const db = requireDb("saveVehicles");
+    if (!db) return false;
 
     try {
-      console.log("[SQLite] 💾 saveVehicles iniciando, quantidade:", vehicles.length);
+      await db.execute("DELETE FROM offline_vehicles;");
 
-      if (vehicles.length === 0) {
-        console.warn("[SQLite] ⚠️ saveVehicles recebeu lista vazia, ignorando");
+      if (!vehicles.length) {
+        console.log("[useSQLite] Nenhum vehicle para salvar (lista vazia)");
         return true;
       }
 
-      // Deleta todos os registros antigos
-      console.log("[SQLite] 🗑️ Limpando tabela offline_vehicles...");
-      await db.run("DELETE FROM offline_vehicles;");
-      
-      // Verifica se limpou
-      const afterDelete = await db.query("SELECT COUNT(*) as count FROM offline_vehicles;");
-      console.log("[SQLite] Registros após DELETE:", afterDelete.values?.[0]?.count || 0);
-
-      // Insere os novos registros
-      console.log("[SQLite] 📝 Inserindo", vehicles.length, "veículos...");
-      let insertedCount = 0;
-      for (const veh of vehicles) {
+      await db.execute("BEGIN TRANSACTION;");
+      for (const vehicle of vehicles) {
         await db.run(
           "INSERT INTO offline_vehicles (id, placa, marca, modelo) VALUES (?, ?, ?, ?);",
-          [veh.id, veh.placa, veh.marca, veh.modelo]
+          [vehicle.id, vehicle.placa, vehicle.marca, vehicle.modelo]
         );
-        insertedCount++;
-        if (insertedCount % 5 === 0) {
-          console.log(`[SQLite] Inseridos ${insertedCount}/${vehicles.length}...`);
-        }
       }
+      await db.execute("COMMIT;");
 
-      // Verifica quantos foram salvos
-      const verify = await db.query("SELECT COUNT(*) as count FROM offline_vehicles;");
-      const finalCount = verify.values?.[0]?.count || 0;
-      console.log("[SQLite] ✅ Veículos salvos no banco:", finalCount, "de", vehicles.length);
-      
-      if (finalCount !== vehicles.length) {
-        console.error("[SQLite] ❌ ERRO: Número de registros salvos diferente do esperado!");
-        return false;
-      }
-      
+      console.log(
+        `[useSQLite] ${vehicles.length} vehicles salvos no SQLite`
+      );
       return true;
-    } catch (error: any) {
-      console.error("[SQLite] ❌ Erro em saveVehicles:", error);
+    } catch (error) {
+      console.error("[useSQLite] Erro ao salvar vehicles:", error);
+      try {
+        await db.execute("ROLLBACK;");
+      } catch {}
       return false;
     }
   };
 
   const getVehicles = async (): Promise<OfflineVehicle[]> => {
-    if (!db) {
-      console.error("[SQLite] ❌ getVehicles: db é NULL!");
-      return [];
-    }
+    const db = requireDb("getVehicles");
+    if (!db) return [];
 
     try {
-      console.log("[SQLite] 🔍 getVehicles: executando SELECT...");
       const result = await db.query("SELECT * FROM offline_vehicles;");
-      const count = result.values?.length || 0;
-      console.log("[SQLite] ✅ getVehicles retornou:", count, "registros");
-      
-      if (count > 0) {
-        console.log("[SQLite] 📋 Primeiros 3 registros:", result.values?.slice(0, 3));
-      }
-      
-      return result.values || [];
-    } catch (error: any) {
-      console.error("[SQLite] ❌ Erro lendo vehicles:", error);
-      toast.error("Erro lendo veículos do SQLite", {
-        description: error?.message ?? String(error),
-      });
+      return (result.values || []) as OfflineVehicle[];
+    } catch (error) {
+      console.error("[useSQLite] Erro ao buscar vehicles:", error);
       return [];
     }
   };
 
   return {
+    // estado
     isReady,
-    hasDb, // <- NOVO, pra você ver se a conexão existe
+    hasDb,
+    // trips
     saveTrip,
     getUnsyncedTrips,
     markTripAsSynced,
     deleteTrip,
+    // master data
     saveEmployees,
     getEmployees,
     saveVehicles,
