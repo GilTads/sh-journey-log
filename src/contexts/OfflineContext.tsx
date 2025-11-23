@@ -19,20 +19,16 @@ import { useTrips } from "@/hooks/useTrips";
 import { toast } from "sonner";
 
 interface OfflineContextType {
-  // Estado de rede/sync
   isOnline: boolean;
   isSyncing: boolean;
   lastSyncAt: Date | null;
 
-  // Dados
   getMotoristas: (filtro?: string) => Promise<OfflineEmployee[]>;
   getVeiculos: (filtro?: string) => Promise<OfflineVehicle[]>;
-  getViagens: (filtro?: any) => Promise<OfflineTrip[]>;
+  getViagens: () => Promise<OfflineTrip[]>;
 
-  // Ações
   syncNow: () => Promise<void>;
 
-  // Estado do SQLite
   isReady: boolean;
 }
 
@@ -46,81 +42,82 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
 
   const {
     isReady,
-    getUnsyncedTrips,
-    markTripAsSynced,
     saveEmployees,
     getEmployees,
     saveVehicles,
     getVehicles,
+    getUnsyncedTrips,
+    markTripAsSynced,
   } = useSQLite();
 
   const { uploadPhoto, createTrip } = useTrips();
 
-  // Utilitário: base64 -> File
+  // =============================================
+  // BASE64 -> FILE
+  // =============================================
   const base64ToFile = (base64: string, filename: string): File => {
     const arr = base64.split(",");
     const mime = arr[0].match(/:(.*?);/)?.[1] || "image/jpeg";
     const bstr = atob(arr[1]);
     let n = bstr.length;
     const u8arr = new Uint8Array(n);
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
-    }
+    while (n--) u8arr[n] = bstr.charCodeAt(n);
     return new File([u8arr], filename, { type: mime });
   };
 
-  // 🔁 Master data: employees + vehicles (Supabase -> SQLite)
+  // =============================================
+  // SYNC MASTER DATA (EMPLOYEES + VEHICLES)
+  // =============================================
   const syncMasterData = async () => {
     if (!isOnline || !isReady) return;
 
     try {
       console.log("[OfflineContext] Syncing master data...");
 
-      // Employees
-      const { data: employees, error: empError } = await supabase
+      // EMPLOYEES
+      const { data: employees, error: empErr } = await supabase
         .from("employees")
         .select("*")
         .order("nome_completo");
 
-      if (empError) {
-        console.error("[OfflineContext] Error fetching employees:", empError);
-      } else if (employees) {
-        await saveEmployees(employees as OfflineEmployee[]);
-        console.log(
-          `[OfflineContext] ${employees.length} employees saved to SQLite`
-        );
+      if (!empErr && employees) {
+        // BLINDAGEM — NÃO apagar se vier vazio
+        if (employees.length > 0) {
+          await saveEmployees(employees as OfflineEmployee[]);
+          console.log(`[OfflineContext] Saved ${employees.length} employees`);
+        } else {
+          console.warn("[OfflineContext] Employees list empty — ignored!");
+        }
       }
 
-      // Vehicles
-      const { data: vehicles, error: vehError } = await supabase
+      // VEHICLES
+      const { data: vehicles, error: vehErr } = await supabase
         .from("vehicles")
         .select("*")
         .order("placa");
 
-      if (vehError) {
-        console.error("[OfflineContext] Error fetching vehicles:", vehError);
-      } else if (vehicles) {
-        await saveVehicles(vehicles as OfflineVehicle[]);
-        console.log(
-          `[OfflineContext] ${vehicles.length} vehicles saved to SQLite`
-        );
+      if (!vehErr && vehicles) {
+        if (vehicles.length > 0) {
+          await saveVehicles(vehicles as OfflineVehicle[]);
+          console.log(`[OfflineContext] Saved ${vehicles.length} vehicles`);
+        } else {
+          console.warn("[OfflineContext] Vehicles list empty — ignored!");
+        }
       }
     } catch (err) {
-      console.error("[OfflineContext] Error in syncMasterData:", err);
-      throw err;
+      console.error("[OfflineContext] Error syncing master data:", err);
     }
   };
 
-  // 🔁 Trips pendentes: SQLite -> Supabase
+  // =============================================
+  // SYNC TRIPS FROM SQLITE -> SUPABASE
+  // =============================================
   const syncTripsToServer = async () => {
     if (!isOnline || !isReady) return;
 
     try {
       const unsyncedTrips = await getUnsyncedTrips();
-      if (!unsyncedTrips.length) {
-        console.log("[OfflineContext] No trips to sync");
-        return;
-      }
+      if (!unsyncedTrips.length) return;
 
       console.log(
         `[OfflineContext] Syncing ${unsyncedTrips.length} trips to server...`
@@ -128,35 +125,33 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
 
       for (const trip of unsyncedTrips) {
         try {
-          // Foto do motorista
           let employeePhotoUrl: string | null = null;
+
           if (trip.employee_photo_base64) {
-            const photoFile = base64ToFile(
+            const file = base64ToFile(
               trip.employee_photo_base64,
               `employee_${trip.employee_id}.jpg`
             );
-            const photoPath = `employees/${trip.employee_id}/${Date.now()}.jpg`;
-            employeePhotoUrl = await uploadPhoto(photoFile, photoPath);
+            employeePhotoUrl = await uploadPhoto(
+              file,
+              `employees/${trip.employee_id}/${Date.now()}.jpg`
+            );
           }
 
-          // Fotos da viagem
           const tripPhotosUrls: string[] = [];
           if (trip.trip_photos_base64) {
-            const photosArray = JSON.parse(
-              trip.trip_photos_base64
-            ) as string[];
-            for (let i = 0; i < photosArray.length; i++) {
-              const photoFile = base64ToFile(
-                photosArray[i],
-                `trip_${trip.id}_${i}.jpg`
+            const arr = JSON.parse(trip.trip_photos_base64) as string[];
+            for (let i = 0; i < arr.length; i++) {
+              const file = base64ToFile(arr[i], `trip_${trip.id}_${i}.jpg`);
+              const url = await uploadPhoto(
+                file,
+                `trips/${Date.now()}_${i}.jpg`
               );
-              const photoPath = `trips/${Date.now()}_${i}.jpg`;
-              const url = await uploadPhoto(photoFile, photoPath);
               if (url) tripPhotosUrls.push(url);
             }
           }
 
-          const tripRecord = {
+          const record = {
             employee_id: trip.employee_id,
             vehicle_id: trip.vehicle_id,
             km_inicial: trip.km_inicial,
@@ -168,23 +163,20 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
             end_latitude: trip.end_latitude,
             end_longitude: trip.end_longitude,
             duration_seconds: trip.duration_seconds,
-            origem: trip.origem || null,
-            destino: trip.destino || null,
-            motivo: trip.motivo || null,
-            observacao: trip.observacao || null,
-            status: trip.status,
+            origem: trip.origem,
+            destino: trip.destino,
+            motivo: trip.motivo,
+            observacao: trip.observacao,
+            status: "finalizada",
             employee_photo_url: employeePhotoUrl || undefined,
             trip_photos_urls:
               tripPhotosUrls.length > 0 ? tripPhotosUrls : undefined,
           };
 
-          const { error } = await createTrip(tripRecord);
+          const { error } = await createTrip(record);
 
           if (!error) {
             await markTripAsSynced(trip.id!);
-            console.log(
-              `[OfflineContext] Trip ${trip.id} synced successfully`
-            );
           } else {
             console.error("[OfflineContext] Error syncing trip:", error);
           }
@@ -197,16 +189,15 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (err) {
       console.error("[OfflineContext] Error in syncTripsToServer:", err);
-      throw err;
     }
   };
 
-  // 🔄 Função principal de sincronização (botão + automático)
+  // =============================================
+  // SYNC NOW (triggered manually or when online)
+  // =============================================
   const syncNow = useCallback(async () => {
     if (!isOnline || !isReady) {
-      if (!isOnline) {
-        toast.error("Sem conexão com a internet");
-      }
+      if (!isOnline) toast.error("Sem conexão com a internet");
       return;
     }
 
@@ -214,7 +205,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
 
     setIsSyncing(true);
     try {
-      toast.info("Sincronizando dados...");
+      toast.info("Sincronizando...");
       await syncMasterData();
       await syncTripsToServer();
       setLastSyncAt(new Date());
@@ -227,63 +218,54 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [isOnline, isReady, isSyncing]);
 
-  // 🌐 Monitor de rede (web + nativo)
+  // =============================================
+  // NETWORK LISTENER (Android/iOS + Web)
+  // =============================================
   useEffect(() => {
-    // Web
     if (!Capacitor.isNativePlatform()) {
       setIsOnline(navigator.onLine);
 
-      const handleOnline = () => setIsOnline(true);
-      const handleOffline = () => setIsOnline(false);
+      const online = () => setIsOnline(true);
+      const offline = () => setIsOnline(false);
 
-      window.addEventListener("online", handleOnline);
-      window.addEventListener("offline", handleOffline);
+      window.addEventListener("online", online);
+      window.addEventListener("offline", offline);
 
       return () => {
-        window.removeEventListener("online", handleOnline);
-        window.removeEventListener("offline", handleOffline);
+        window.removeEventListener("online", online);
+        window.removeEventListener("offline", offline);
       };
     }
 
-    // Nativo
-    let canceled = false;
+    let listener: any;
 
-    const setupNetworkListener = async () => {
+    const init = async () => {
       const status = await Network.getStatus();
-      if (!canceled) setIsOnline(status.connected);
+      setIsOnline(status.connected);
 
-      const listener = await Network.addListener(
+      listener = await Network.addListener(
         "networkStatusChange",
-        async (status) => {
-          if (canceled) return;
-          setIsOnline(status.connected);
+        async (st) => {
+          setIsOnline(st.connected);
 
-          if (status.connected) {
-            console.log("[OfflineContext] Network restored, syncing...");
+          if (st.connected) {
+            console.log("[OfflineContext] Network restored → Sync now");
             await syncNow();
           }
         }
       );
-
-      return () => {
-        listener.remove();
-      };
     };
 
-    let cleanup: (() => void) | undefined;
-
-    setupNetworkListener().then((fn) => {
-      cleanup = fn;
-    });
+    init();
 
     return () => {
-      canceled = true;
-      if (cleanup) cleanup();
-      Network.removeAllListeners();
+      listener?.remove?.();
     };
   }, [syncNow]);
 
-  // ▶️ Sync inicial no app nativo (apenas 1 vez, quando online e SQLite pronto)
+  // =============================================
+  // INITIAL SYNC ONCE (ONLY IF ONLINE)
+  // =============================================
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
     if (!isOnline || !isReady) return;
@@ -293,200 +275,99 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
     syncNow();
   }, [isOnline, isReady, hasInitialSyncRun, syncNow]);
 
-  // 🔍 Motoristas (SQLite nativo, Supabase web)
+  // =============================================
+  // GET MOTORISTAS (OFFLINE FIRST)
+  // =============================================
   const getMotoristas = useCallback(
     async (filtro?: string): Promise<OfflineEmployee[]> => {
-      let allEmployees: OfflineEmployee[] = [];
+      let all: OfflineEmployee[] = [];
 
-      if (Capacitor.isNativePlatform()) {
-        if (!isReady) return [];
+      try {
+        // 1) SEMPRE tenta SQLite primeiro
+        all = await getEmployees();
+        console.log("[getMotoristas] SQLite →", all.length);
+      } catch (e) {
+        console.error("[getMotoristas] SQLite error:", e);
+      }
 
-        // 1) Tenta SQLite
-        try {
-          allEmployees = await getEmployees();
-          console.log(
-            "[OfflineContext] getMotoristas -> SQLite:",
-            allEmployees.length
-          );
-        } catch (err) {
-          console.error(
-            "[OfflineContext] Error reading employees from SQLite:",
-            err
-          );
-        }
-
-        // 2) Se vier vazio e estiver online, busca Supabase + cache
-        if (allEmployees.length === 0 && isOnline) {
-          try {
-            const { data, error } = await supabase
-              .from("employees")
-              .select("*")
-              .order("nome_completo");
-
-            if (error) {
-              console.error(
-                "[OfflineContext] Error fetching employees from Supabase:",
-                error
-              );
-              return [];
-            }
-
-            allEmployees = (data || []) as OfflineEmployee[];
-            console.log(
-              "[OfflineContext] getMotoristas -> Supabase:",
-              allEmployees.length
-            );
-
-            try {
-              await saveEmployees(allEmployees);
-            } catch (err) {
-              console.error(
-                "[OfflineContext] Error saving employees to SQLite:",
-                err
-              );
-            }
-          } catch (err) {
-            console.error(
-              "[OfflineContext] Unexpected error fetching employees:",
-              err
-            );
-            return [];
-          }
-        }
-      } else {
-        // Web: sempre Supabase
+      // 2) Se estiver vazio e houver internet, baixa e salva
+      if (all.length === 0 && isOnline) {
         const { data, error } = await supabase
           .from("employees")
           .select("*")
           .order("nome_completo");
 
-        if (error) {
-          console.error(
-            "[OfflineContext][web] Error fetching employees:",
-            error
-          );
-          return [];
-        }
-
-        allEmployees = (data || []) as OfflineEmployee[];
-        console.log(
-          "[OfflineContext][web] getMotoristas -> Supabase:",
-          allEmployees.length
-        );
-      }
-
-      if (!filtro) return allEmployees;
-
-      const lower = filtro.toLowerCase();
-      return allEmployees.filter(
-        (emp) =>
-          emp.nome_completo.toLowerCase().includes(lower) ||
-          emp.matricula.toLowerCase().includes(lower) ||
-          emp.cargo.toLowerCase().includes(lower)
-      );
-    },
-    [isReady, isOnline, getEmployees, saveEmployees]
-  );
-
-  // 🚗 Veículos (SQLite nativo, Supabase web)
-  const getVeiculos = useCallback(
-    async (filtro?: string): Promise<OfflineVehicle[]> => {
-      let allVehicles: OfflineVehicle[] = [];
-
-      if (Capacitor.isNativePlatform()) {
-        if (!isReady) return [];
-
-        try {
-          allVehicles = await getVehicles();
-          console.log(
-            "[OfflineContext] getVeiculos -> SQLite:",
-            allVehicles.length
-          );
-        } catch (err) {
-          console.error(
-            "[OfflineContext] Error reading vehicles from SQLite:",
-            err
-          );
-        }
-
-        if (allVehicles.length === 0 && isOnline) {
-          try {
-            const { data, error } = await supabase
-              .from("vehicles")
-              .select("*")
-              .order("placa");
-
-            if (error) {
-              console.error(
-                "[OfflineContext] Error fetching vehicles from Supabase:",
-                error
-              );
-              return [];
-            }
-
-            allVehicles = (data || []) as OfflineVehicle[];
-            console.log(
-              "[OfflineContext] getVeiculos -> Supabase:",
-              allVehicles.length
-            );
-
-            try {
-              await saveVehicles(allVehicles);
-            } catch (err) {
-              console.error(
-                "[OfflineContext] Error saving vehicles to SQLite:",
-                err
-              );
-            }
-          } catch (err) {
-            console.error(
-              "[OfflineContext] Unexpected error fetching vehicles:",
-              err
-            );
-            return [];
+        if (!error && data) {
+          if (data.length > 0) {
+            await saveEmployees(data as OfflineEmployee[]);
+            all = data as OfflineEmployee[];
+            console.log("[getMotoristas] Supabase →", all.length);
+          } else {
+            console.warn("[getMotoristas] Supabase returned empty list");
           }
         }
-      } else {
+      }
+
+      if (!filtro) return all;
+
+      const f = filtro.toLowerCase();
+      return all.filter(
+        (emp) =>
+          emp.nome_completo.toLowerCase().includes(f) ||
+          emp.matricula.toLowerCase().includes(f) ||
+          emp.cargo.toLowerCase().includes(f)
+      );
+    },
+    [isOnline, getEmployees, saveEmployees]
+  );
+
+  // =============================================
+  // GET VEÍCULOS (OFFLINE FIRST)
+  // =============================================
+  const getVeiculos = useCallback(
+    async (filtro?: string): Promise<OfflineVehicle[]> => {
+      let all: OfflineVehicle[] = [];
+
+      try {
+        all = await getVehicles();
+        console.log("[getVeiculos] SQLite →", all.length);
+      } catch (e) {
+        console.error("[getVeiculos] SQLite error:", e);
+      }
+
+      if (all.length === 0 && isOnline) {
         const { data, error } = await supabase
           .from("vehicles")
           .select("*")
           .order("placa");
 
-        if (error) {
-          console.error(
-            "[OfflineContext][web] Error fetching vehicles:",
-            error
-          );
-          return [];
+        if (!error && data) {
+          if (data.length > 0) {
+            await saveVehicles(data as OfflineVehicle[]);
+            all = data as OfflineVehicle[];
+            console.log("[getVeiculos] Supabase →", all.length);
+          } else {
+            console.warn("[getVeiculos] Supabase returned empty list");
+          }
         }
-
-        allVehicles = (data || []) as OfflineVehicle[];
-        console.log(
-          "[OfflineContext][web] getVeiculos -> Supabase:",
-          allVehicles.length
-        );
       }
 
-      if (!filtro) return allVehicles;
+      if (!filtro) return all;
 
-      const lower = filtro.toLowerCase();
-      return allVehicles.filter((veh) => {
-        const text = `${veh.placa} ${veh.marca} ${veh.modelo}`.toLowerCase();
-        return text.includes(lower);
-      });
+      const f = filtro.toLowerCase();
+      return all.filter((veh) =>
+        `${veh.placa} ${veh.marca} ${veh.modelo}`.toLowerCase().includes(f)
+      );
     },
-    [isReady, isOnline, getVehicles, saveVehicles]
+    [isOnline, getVehicles, saveVehicles]
   );
 
-  // 🧾 Viagens locais (não sincronizadas)
-  const getViagens = useCallback(
-    async (_filtro?: any): Promise<OfflineTrip[]> => {
-      if (!isReady) return [];
-      const unsynced = await getUnsyncedTrips();
-      return unsynced;
-    },
-    [isReady, getUnsyncedTrips]
-  );
+  // =============================================
+  // GET UNSYNCED TRIPS
+  // =============================================
+  const getViagens = useCallback(async () => {
+    return await getUnsyncedTrips();
+  }, [getUnsyncedTrips]);
 
   const value: OfflineContextType = {
     isOnline,
@@ -507,9 +388,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
 };
 
 export const useOfflineData = () => {
-  const context = useContext(OfflineContext);
-  if (!context) {
-    throw new Error("useOfflineData must be used within OfflineProvider");
-  }
-  return context;
+  const ctx = useContext(OfflineContext);
+  if (!ctx) throw new Error("useOfflineData must be used within OfflineProvider");
+  return ctx;
 };

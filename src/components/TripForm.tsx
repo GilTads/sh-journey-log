@@ -37,6 +37,7 @@ import {
   Play,
   Square,
 } from "lucide-react";
+import { CapacitorSQLite } from "@capacitor-community/sqlite"; // ⬅️ NOVO IMPORT
 
 interface TripData {
   employeeId: string;
@@ -56,10 +57,26 @@ interface TripData {
 }
 
 export const TripForm = () => {
-  const { isOnline, isSyncing, getMotoristas, getVeiculos, lastSyncAt } = useOfflineData();
+  const {
+    isOnline,
+    isSyncing,
+    getMotoristas,
+    getVeiculos,
+    isReady,
+    lastSyncAt,
+    syncNow
+  } = useOfflineData();
 
   const { uploadPhoto, createTrip } = useTrips();
-  const { isReady: isSQLiteReady, saveTrip: saveTripOffline } = useSQLite();
+ const {
+  isReady: isSQLiteReady,
+  hasDb: hasSQLiteDb,
+  saveTrip: saveTripOffline,
+  getEmployees: getEmployeesRaw,
+  getVehicles: getVehiclesRaw,
+} = useSQLite();
+
+
 
   const [employees, setEmployees] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
@@ -86,31 +103,32 @@ export const TripForm = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const employeePhotoInputRef = useRef<HTMLInputElement>(null);
 
-  // Load employees and vehicles from offline context
+  // 🔍 STATUS DO TESTE DO SQLITE (DEBUG)
+  const [sqliteStatus, setSqliteStatus] = useState<string>(
+    "Aguardando teste..."
+  );
 
+  // Carrega employees/vehicles assim que o SQLite estiver pronto
   useEffect(() => {
+    if (!isReady) return;
+
     const loadData = async () => {
       const emps = await getMotoristas();
       const vehs = await getVeiculos();
-      console.log("[TripForm] Loaded employees:", emps.length);
-      console.log("[TripForm] Loaded vehicles:", vehs.length);
       setEmployees(emps);
       setVehicles(vehs);
     };
+
     loadData();
-  }, [getMotoristas, getVeiculos, lastSyncAt]);
-
-
+  }, [isReady, getMotoristas, getVeiculos, lastSyncAt]);
 
   useEffect(() => {
     if (isActive) {
       timerRef.current = setInterval(() => {
         setElapsedTime((prev) => prev + 1);
       }, 1000);
-    } else {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
+    } else if (timerRef.current) {
+      clearInterval(timerRef.current);
     }
 
     return () => {
@@ -199,14 +217,13 @@ export const TripForm = () => {
     setShowEndTripDialog(true);
   };
 
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
+  const fileToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
       reader.onload = () => resolve(reader.result as string);
       reader.onerror = (error) => reject(error);
     });
-  };
 
   const confirmEndTrip = async () => {
     if (!tempFinalKm || tempFinalKm.trim() === "") {
@@ -221,11 +238,10 @@ export const TripForm = () => {
       const location = await getCurrentLocation();
       const endTime = new Date();
 
-      // Check if we're online or on native platform
-      const shouldSaveOffline = Capacitor.isNativePlatform() && !isOnline && isSQLiteReady;
+      const shouldSaveOffline =
+        Capacitor.isNativePlatform() && !isOnline && isSQLiteReady;
 
       if (shouldSaveOffline) {
-        // Save offline using SQLite
         let employeePhotoBase64: string | undefined;
         if (tripData.employeePhoto) {
           employeePhotoBase64 = await fileToBase64(tripData.employeePhoto);
@@ -255,7 +271,10 @@ export const TripForm = () => {
           observacao: tripData.observation || null,
           status: "finalizada",
           employee_photo_base64: employeePhotoBase64,
-          trip_photos_base64: tripPhotosBase64.length > 0 ? JSON.stringify(tripPhotosBase64) : undefined,
+          trip_photos_base64:
+            tripPhotosBase64.length > 0
+              ? JSON.stringify(tripPhotosBase64)
+              : undefined,
           synced: 0,
           deleted: 0,
         };
@@ -267,12 +286,11 @@ export const TripForm = () => {
         }
 
         setIsActive(false);
-        
+
         toast.success("Viagem salva offline!", {
           description: "Será sincronizada quando houver internet",
         });
       } else {
-        // Save online
         let employeePhotoUrl: string | null = null;
         if (tripData.employeePhoto) {
           const photoPath = `employees/${tripData.employeeId}/${Date.now()}.jpg`;
@@ -304,23 +322,23 @@ export const TripForm = () => {
           observacao: tripData.observation || null,
           status: "finalizada",
           employee_photo_url: employeePhotoUrl || undefined,
-          trip_photos_urls: tripPhotosUrls.length > 0 ? tripPhotosUrls : undefined,
+          trip_photos_urls:
+            tripPhotosUrls.length > 0 ? tripPhotosUrls : undefined,
         };
 
-        const { data, error } = await createTrip(tripRecord);
+        const { error } = await createTrip(tripRecord);
 
         if (error) {
           throw new Error("Erro ao salvar viagem no banco de dados");
         }
 
         setIsActive(false);
-        
+
         toast.success("Viagem finalizada e salva!", {
           description: `Duração: ${formatTime(elapsedTime)}`,
         });
       }
 
-      // Reset form
       setTripData({
         employeeId: "",
         employeePhoto: null,
@@ -338,14 +356,17 @@ export const TripForm = () => {
     } catch (error) {
       console.error("Error ending trip:", error);
       toast.error("Erro ao finalizar viagem", {
-        description: error instanceof Error ? error.message : "Tente novamente",
+        description:
+          error instanceof Error ? error.message : "Tente novamente",
       });
     } finally {
       setIsCapturingLocation(false);
     }
   };
 
-  const handleEmployeePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEmployeePhotoUpload = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const files = e.target.files;
     if (files && files[0]) {
       setTripData((prev) => ({
@@ -405,20 +426,42 @@ export const TripForm = () => {
     }
   };
 
+  // 🔥 TESTE VISÍVEL DO SQLITE (OPÇÃO 2)
+  const handleTestSQLite = async () => {
+    try {
+      const result = await CapacitorSQLite.echo({ value: "test" });
+
+      const msg = `SQLite OK: ${JSON.stringify(result)}`;
+      setSqliteStatus(msg);
+
+      toast.success("SQLite Funcionou", {
+        description: msg,
+      });
+    } catch (error: any) {
+      const msg = `ERRO SQLite: ${
+        (error && (error as any).message) || String(error)
+      }`;
+      setSqliteStatus(msg);
+
+      toast.error("Erro no SQLite", {
+        description: msg,
+      });
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto p-4 space-y-4">
-      {/* Network Status Banner */}
       {Capacitor.isNativePlatform() && !isOnline && (
         <Card className="bg-yellow-500/10 border-yellow-500/50">
           <CardContent className="py-3">
             <p className="text-center text-sm font-medium">
-              📡 Modo Offline - Viagens serão sincronizadas quando houver internet
+              📡 Modo Offline - Viagens serão sincronizadas quando houver
+              internet
             </p>
           </CardContent>
         </Card>
       )}
 
-      {/* Sync Status Banner */}
       {isSyncing && (
         <Card className="bg-blue-500/10 border-blue-500/50">
           <CardContent className="py-3">
@@ -429,7 +472,6 @@ export const TripForm = () => {
         </Card>
       )}
 
-      {/* Timer Display */}
       {isActive && (
         <Card className="bg-gradient-to-r from-trip-active to-secondary">
           <CardContent className="py-4">
@@ -713,7 +755,6 @@ export const TripForm = () => {
         </CardContent>
       </Card>
 
-      {/* Location Info */}
       {tripData.startLocation && (
         <Card className="bg-muted/50">
           <CardContent className="pt-4 pb-4">
@@ -733,7 +774,105 @@ export const TripForm = () => {
         </Card>
       )}
 
-      {/* Action Button */}
+      {/* 🔍 CARD DE DEBUG DO SQLITE */}
+      <Card>
+        <CardContent className="pt-6 space-y-3">
+          <Label className="text-base font-semibold">
+            Debug do Banco Offline (SQLite)
+          </Label>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full h-11"
+            onClick={handleTestSQLite}
+          >
+            Testar SQLite
+          </Button>
+          <p className="text-xs text-muted-foreground break-words mt-2">
+            <strong>Status:</strong> {sqliteStatus}
+          </p>
+        </CardContent>
+      </Card>
+
+            {/* 🔍 CARD DE DEBUG DE DADOS OFFLINE */}
+      <Card>
+        <CardContent className="pt-6 space-y-3">
+          <Label className="text-base font-semibold">
+            Debug dos Dados Offline
+          </Label>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full h-11"
+            onClick={async () => {
+              try {
+                const emps = await getMotoristas();
+                const vehs = await getVeiculos();
+
+                toast.success("Dados offline carregados", {
+                  description: `Motoristas: ${emps.length} | Veículos: ${vehs.length}`,
+                });
+              } catch (err: any) {
+                toast.error("Erro ao buscar dados offline", {
+                  description:
+                    err?.message ?? String(err) ?? "Erro desconhecido",
+                });
+              }
+            }}
+          >
+            Ver quantos registros locais existem
+          </Button>
+        </CardContent>
+      </Card>
+
+            {/* 🔍 DEBUG BRUTO DO SQLITE (SEM OfflineContext) */}
+      <Card>
+        <CardContent className="pt-6 space-y-3">
+          <Label className="text-base font-semibold">
+            Debug bruto do SQLite
+          </Label>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full h-11"
+            onClick={async () => {
+              try {
+                // 1) Se estiver online, força uma sincronização antes
+                if (isOnline) {
+                  toast.info("Forçando sincronização antes de ler o SQLite...");
+                  await syncNow();
+                }
+
+                // 2) Garante que o hook local de SQLite está pronto
+                if (!isSQLiteReady) {
+                  toast.error("SQLite ainda não está pronto");
+                  return;
+                }
+
+                // 3) Lê DIRETO do SQLite desta instância
+                const emps = await getEmployeesRaw();
+                const vehs = await getVehiclesRaw();
+
+                toast.success("Leitura direta do SQLite", {
+                  description: `hasDb: ${hasSQLiteDb} | Employees: ${emps.length} | Vehicles: ${vehs.length}`,
+                });
+              } catch (err: any) {
+                toast.error("Erro ao ler direto do SQLite", {
+                  description: err?.message ?? String(err) ?? "Erro desconhecido",
+                });
+              }
+            }}
+          >
+            Ver registros DIRETO do SQLite
+          </Button>
+
+        </CardContent>
+      </Card>
+
+
+
       <div className="pt-2 pb-6">
         <Button
           variant={isActive ? "trip-end" : "trip-start"}
@@ -761,7 +900,6 @@ export const TripForm = () => {
         </Button>
       </div>
 
-      {/* End Trip Dialog */}
       <AlertDialog open={showEndTripDialog} onOpenChange={setShowEndTripDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>

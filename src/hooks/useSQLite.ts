@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react";
-import { CapacitorSQLite, SQLiteConnection, SQLiteDBConnection } from "@capacitor-community/sqlite";
+import {
+  CapacitorSQLite,
+  SQLiteConnection,
+  SQLiteDBConnection,
+} from "@capacitor-community/sqlite";
 import { Capacitor } from "@capacitor/core";
+import { toast } from "sonner";
 
 const DB_NAME = "trips_offline";
 
@@ -24,8 +29,8 @@ export interface OfflineTrip {
   status: string;
   employee_photo_base64?: string;
   trip_photos_base64?: string;
-  synced?: number; // 0 = not synced, 1 = synced
-  deleted?: number; // 0 = not deleted, 1 = deleted (soft delete)
+  synced?: number;
+  deleted?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -47,23 +52,24 @@ export interface OfflineVehicle {
 export const useSQLite = () => {
   const [db, setDb] = useState<SQLiteDBConnection | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const [hasDb, setHasDb] = useState(false); // <- para debug
 
   useEffect(() => {
     initializeDatabase();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const initializeDatabase = async () => {
     try {
-      // Only initialize on native platforms
       if (!Capacitor.isNativePlatform()) {
-        console.log("SQLite only works on native platforms");
+        console.log("[SQLite] Web: não inicializa banco nativo");
         setIsReady(true);
+        setHasDb(false);
         return;
       }
 
       const sqlite = new SQLiteConnection(CapacitorSQLite);
-      
-      // Create or open database
+
       const dbConnection = await sqlite.createConnection(
         DB_NAME,
         false,
@@ -74,7 +80,6 @@ export const useSQLite = () => {
 
       await dbConnection.open();
 
-      // Create trips table if it doesn't exist
       await dbConnection.execute(`
         CREATE TABLE IF NOT EXISTS offline_trips (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -103,7 +108,6 @@ export const useSQLite = () => {
         );
       `);
 
-      // Create employees table
       await dbConnection.execute(`
         CREATE TABLE IF NOT EXISTS offline_employees (
           id TEXT PRIMARY KEY,
@@ -113,7 +117,6 @@ export const useSQLite = () => {
         );
       `);
 
-      // Create vehicles table
       await dbConnection.execute(`
         CREATE TABLE IF NOT EXISTS offline_vehicles (
           id TEXT PRIMARY KEY,
@@ -124,17 +127,23 @@ export const useSQLite = () => {
       `);
 
       setDb(dbConnection);
+      setHasDb(true);
       setIsReady(true);
-      console.log("SQLite database initialized");
-    } catch (error) {
-      console.error("Error initializing SQLite:", error);
-      setIsReady(true); // Set ready even on error to allow app to continue
+      console.log("[SQLite] Banco inicializado com sucesso");
+    } catch (error: any) {
+      console.error("[SQLite] Erro inicializando banco:", error);
+      toast.error("Erro inicializando SQLite", {
+        description: error?.message ?? String(error),
+      });
+      setIsReady(true); // deixa a app seguir, mas hasDb fica false
+      setHasDb(false);
     }
   };
 
   const saveTrip = async (trip: OfflineTrip): Promise<boolean> => {
-    if (!db || !Capacitor.isNativePlatform()) {
-      console.log("SQLite not available");
+    if (!db) {
+      console.log("[SQLite] saveTrip: db nulo");
+      toast.error("SQLite não disponível (saveTrip)");
       return false;
     }
 
@@ -156,157 +165,198 @@ export const useSQLite = () => {
         trip.km_final,
         trip.start_time,
         trip.end_time,
-        trip.start_latitude || null,
-        trip.start_longitude || null,
-        trip.end_latitude || null,
-        trip.end_longitude || null,
+        trip.start_latitude ?? null,
+        trip.start_longitude ?? null,
+        trip.end_latitude ?? null,
+        trip.end_longitude ?? null,
         trip.duration_seconds,
-        trip.origem || null,
-        trip.destino || null,
-        trip.motivo || null,
-        trip.observacao || null,
+        trip.origem ?? null,
+        trip.destino ?? null,
+        trip.motivo ?? null,
+        trip.observacao ?? null,
         trip.status,
-        trip.employee_photo_base64 || null,
-        trip.trip_photos_base64 || null,
-        trip.synced || 0,
+        trip.employee_photo_base64 ?? null,
+        trip.trip_photos_base64 ?? null,
+        trip.synced ?? 0,
       ];
 
       await db.run(query, values);
-      console.log("Trip saved to local database");
+      console.log("[SQLite] Trip salva no banco local");
       return true;
-    } catch (error) {
-      console.error("Error saving trip to SQLite:", error);
+    } catch (error: any) {
+      console.error("[SQLite] Erro salvando trip:", error);
+      toast.error("Erro salvando viagem no SQLite", {
+        description: error?.message ?? String(error),
+      });
       return false;
     }
   };
 
   const getUnsyncedTrips = async (): Promise<OfflineTrip[]> => {
-    if (!db || !Capacitor.isNativePlatform()) {
-      return [];
-    }
+    if (!db) return [];
 
     try {
       const result = await db.query(
         "SELECT * FROM offline_trips WHERE synced = 0;"
       );
-
       return result.values || [];
-    } catch (error) {
-      console.error("Error getting unsynced trips:", error);
+    } catch (error: any) {
+      console.error("[SQLite] Erro lendo trips:", error);
+      toast.error("Erro lendo viagens do SQLite", {
+        description: error?.message ?? String(error),
+      });
       return [];
     }
   };
 
   const markTripAsSynced = async (id: number): Promise<boolean> => {
-    if (!db || !Capacitor.isNativePlatform()) {
-      return false;
-    }
+    if (!db) return false;
 
     try {
       await db.run("UPDATE offline_trips SET synced = 1 WHERE id = ?;", [id]);
-      console.log(`Trip ${id} marked as synced`);
+      console.log(`[SQLite] Trip ${id} marcada como sincronizada`);
       return true;
-    } catch (error) {
-      console.error("Error marking trip as synced:", error);
+    } catch (error: any) {
+      console.error("[SQLite] Erro marcando trip:", error);
+      toast.error("Erro marcando viagem como sincronizada", {
+        description: error?.message ?? String(error),
+      });
       return false;
     }
   };
 
   const deleteTrip = async (id: number): Promise<boolean> => {
-    if (!db || !Capacitor.isNativePlatform()) {
-      return false;
-    }
+    if (!db) return false;
 
     try {
       await db.run("DELETE FROM offline_trips WHERE id = ?;", [id]);
-      console.log(`Trip ${id} deleted from local database`);
+      console.log(`[SQLite] Trip ${id} removida do banco local`);
       return true;
-    } catch (error) {
-      console.error("Error deleting trip:", error);
+    } catch (error: any) {
+      console.error("[SQLite] Erro deletando trip:", error);
+      toast.error("Erro deletando viagem do SQLite", {
+        description: error?.message ?? String(error),
+      });
       return false;
     }
   };
 
-  const saveEmployees = async (employees: OfflineEmployee[]): Promise<boolean> => {
-    if (!db || !Capacitor.isNativePlatform()) {
+  const saveEmployees = async (
+    employees: OfflineEmployee[]
+  ): Promise<boolean> => {
+    if (!db) {
+      toast.error("SQLite não disponível (saveEmployees)");
       return false;
     }
 
     try {
-      // Clear existing employees
+      console.log("[SQLite] saveEmployees start, qtd:", employees.length);
+
+      // se vier vazio, não apagamos o que já existe
+      if (employees.length === 0) {
+        console.warn("[SQLite] saveEmployees recebeu lista vazia, ignorando");
+        return true;
+      }
+
       await db.run("DELETE FROM offline_employees;");
 
-      // Insert all employees
-      for (const employee of employees) {
+      for (const emp of employees) {
         await db.run(
           "INSERT INTO offline_employees (id, matricula, nome_completo, cargo) VALUES (?, ?, ?, ?);",
-          [employee.id, employee.matricula, employee.nome_completo, employee.cargo]
+          [emp.id, emp.matricula, emp.nome_completo, emp.cargo]
         );
       }
 
-      console.log(`${employees.length} employees saved to local database`);
+      console.log(
+        `[SQLite] ${employees.length} funcionários salvos no banco local`
+      );
+      toast.success("Funcionários salvos no SQLite", {
+        description: `${employees.length} registros`,
+      });
       return true;
-    } catch (error) {
-      console.error("Error saving employees to SQLite:", error);
+    } catch (error: any) {
+      console.error("[SQLite] Erro em saveEmployees:", error);
+      toast.error("Erro salvando funcionários no SQLite", {
+        description: error?.message ?? String(error),
+      });
       return false;
     }
   };
 
   const getEmployees = async (): Promise<OfflineEmployee[]> => {
-    if (!db || !Capacitor.isNativePlatform()) {
-      return [];
-    }
+    if (!db) return [];
 
     try {
       const result = await db.query("SELECT * FROM offline_employees;");
       return result.values || [];
-    } catch (error) {
-      console.error("Error getting employees from SQLite:", error);
+    } catch (error: any) {
+      console.error("[SQLite] Erro lendo employees:", error);
+      toast.error("Erro lendo funcionários do SQLite", {
+        description: error?.message ?? String(error),
+      });
       return [];
     }
   };
 
-  const saveVehicles = async (vehicles: OfflineVehicle[]): Promise<boolean> => {
-    if (!db || !Capacitor.isNativePlatform()) {
+  const saveVehicles = async (
+    vehicles: OfflineVehicle[]
+  ): Promise<boolean> => {
+    if (!db) {
+      toast.error("SQLite não disponível (saveVehicles)");
       return false;
     }
 
     try {
-      // Clear existing vehicles
+      console.log("[SQLite] saveVehicles start, qtd:", vehicles.length);
+
+      if (vehicles.length === 0) {
+        console.warn("[SQLite] saveVehicles recebeu lista vazia, ignorando");
+        return true;
+      }
+
       await db.run("DELETE FROM offline_vehicles;");
 
-      // Insert all vehicles
-      for (const vehicle of vehicles) {
+      for (const veh of vehicles) {
         await db.run(
           "INSERT INTO offline_vehicles (id, placa, marca, modelo) VALUES (?, ?, ?, ?);",
-          [vehicle.id, vehicle.placa, vehicle.marca, vehicle.modelo]
+          [veh.id, veh.placa, veh.marca, veh.modelo]
         );
       }
 
-      console.log(`${vehicles.length} vehicles saved to local database`);
+      console.log(
+        `[SQLite] ${vehicles.length} veículos salvos no banco local`
+      );
+      toast.success("Veículos salvos no SQLite", {
+        description: `${vehicles.length} registros`,
+      });
       return true;
-    } catch (error) {
-      console.error("Error saving vehicles to SQLite:", error);
+    } catch (error: any) {
+      console.error("[SQLite] Erro em saveVehicles:", error);
+      toast.error("Erro salvando veículos no SQLite", {
+        description: error?.message ?? String(error),
+      });
       return false;
     }
   };
 
   const getVehicles = async (): Promise<OfflineVehicle[]> => {
-    if (!db || !Capacitor.isNativePlatform()) {
-      return [];
-    }
+    if (!db) return [];
 
     try {
       const result = await db.query("SELECT * FROM offline_vehicles;");
       return result.values || [];
-    } catch (error) {
-      console.error("Error getting vehicles from SQLite:", error);
+    } catch (error: any) {
+      console.error("[SQLite] Erro lendo vehicles:", error);
+      toast.error("Erro lendo veículos do SQLite", {
+        description: error?.message ?? String(error),
+      });
       return [];
     }
   };
 
   return {
     isReady,
+    hasDb, // <- NOVO, pra você ver se a conexão existe
     saveTrip,
     getUnsyncedTrips,
     markTripAsSynced,
