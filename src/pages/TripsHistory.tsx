@@ -1,322 +1,296 @@
-import { useEffect, useMemo, useState } from "react";
+// src/pages/TripsHistory.tsx
+import { useEffect, useState } from "react";
+import { format } from "date-fns";
+
 import { Header } from "@/components/Header";
-import { useTripsHistory } from "@/hooks/useTripsHistory";
-import { useOfflineData } from "@/contexts/OfflineContext";
-import type {
-  OfflineEmployee,
-  OfflineVehicle,
-  OfflineTrip,
-} from "@/hooks/useSQLite";
-import { SearchableCombobox } from "@/components/ui/searchable-combobox";
+import { Combobox } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { format } from "date-fns";
+import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+
+import { useTripsHistory } from "@/hooks/useTripsHistory";
+import { useOfflineData } from "@/contexts/OfflineContext";
+import { OfflineEmployee, OfflineVehicle } from "@/hooks/useSQLite";
 import { Loader2 } from "lucide-react";
 
-type OfflineTripWithJoins = OfflineTrip & {
-  employee?: Pick<OfflineEmployee, "nome_completo" | "matricula">;
-  vehicle?: Pick<OfflineVehicle, "placa" | "marca" | "modelo">;
-};
-
 const TripsHistory = () => {
-  const [employeeFilter, setEmployeeFilter] = useState<string>("");
-  const [vehicleFilter, setVehicleFilter] = useState<string>("");
+  // filtros
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string>("");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
 
-  const {
-    isOnline,
-    isReady,
-    getMotoristas,
-    getVeiculos,
-    getViagens,
-    lastSyncAt,
-  } = useOfflineData();
+  // opções de combos (usando OfflineContext – mesma lógica de motoristas/veículos do formulário)
+  const { getMotoristas, getVeiculos } = useOfflineData();
+  const [employeeOptions, setEmployeeOptions] = useState<
+    { value: string; label: string }[]
+  >([]);
+  const [vehicleOptions, setVehicleOptions] = useState<
+    { value: string; label: string }[]
+  >([]);
 
-  const [employees, setEmployees] = useState<OfflineEmployee[]>([]);
-  const [vehicles, setVehicles] = useState<OfflineVehicle[]>([]);
-  const [offlineTrips, setOfflineTrips] = useState<OfflineTripWithJoins[]>([]);
-  const [isLoadingOfflineTrips, setIsLoadingOfflineTrips] = useState(false);
+  useEffect(() => {
+    const loadOptions = async () => {
+      const employees: OfflineEmployee[] = await getMotoristas();
+      const vehicles: OfflineVehicle[] = await getVeiculos();
 
-  // 🔄 Dados online (Supabase) – só quando tiver internet
+      setEmployeeOptions(
+        employees.map((emp) => ({
+          value: String(emp.id),
+          label: `${emp.nome_completo} (${emp.matricula})`,
+        }))
+      );
+
+      setVehicleOptions(
+        vehicles.map((veh) => ({
+          value: String(veh.id),
+          label: `${veh.placa} - ${veh.marca} ${veh.modelo}`,
+        }))
+      );
+    };
+
+    loadOptions();
+  }, [getMotoristas, getVeiculos]);
+
+  // hook que já trata online/offline
   const {
-    data: tripsOnline = [],
-    isLoading: isLoadingTripsOnline,
+    data: trips = [],
+    isLoading,
+    isError,
+    refetch,
   } = useTripsHistory({
-    employeeId: employeeFilter || undefined,
-    vehicleId: vehicleFilter || undefined,
+    employeeId: selectedEmployeeId || undefined,
+    vehicleId: selectedVehicleId || undefined,
     startDate: startDate || undefined,
     endDate: endDate || undefined,
-    enabled: isOnline,
   });
 
-  // 🔁 Carrega funcionários/veículos (mesma lógica do TripForm)
-  useEffect(() => {
-    if (!isReady) return;
-
-    const loadMaster = async () => {
-      const emps = await getMotoristas();
-      const vehs = await getVeiculos();
-      setEmployees(emps);
-      setVehicles(vehs);
-    };
-
-    loadMaster();
-  }, [getMotoristas, getVeiculos, lastSyncAt, isReady]);
-
-  // 🔁 Trips offline (SQLite) quando estiver sem internet
-  useEffect(() => {
-    if (!isReady) return;
-
-    if (isOnline) {
-      // Voltou a internet → usamos apenas o histórico online
-      setOfflineTrips([]);
-      return;
-    }
-
-    const loadOfflineTrips = async () => {
-      setIsLoadingOfflineTrips(true);
-      try {
-        const rawTrips = await getViagens();
-
-        // filtros em memória
-        let filtered = rawTrips;
-
-        if (employeeFilter) {
-          filtered = filtered.filter(
-            (t) => t.employee_id === employeeFilter
-          );
-        }
-
-        if (vehicleFilter) {
-          filtered = filtered.filter((t) => t.vehicle_id === vehicleFilter);
-        }
-
-        if (startDate) {
-          filtered = filtered.filter(
-            (t) => t.start_time.slice(0, 10) >= startDate
-          );
-        }
-
-        if (endDate) {
-          filtered = filtered.filter(
-            (t) => t.start_time.slice(0, 10) <= endDate
-          );
-        }
-
-        const joined: OfflineTripWithJoins[] = filtered.map((t) => ({
-          ...t,
-          employee: employees.find((e) => e.id === t.employee_id),
-          vehicle: vehicles.find((v) => v.id === t.vehicle_id),
-        }));
-
-        setOfflineTrips(joined);
-      } finally {
-        setIsLoadingOfflineTrips(false);
-      }
-    };
-
-    loadOfflineTrips();
-  }, [
-    isOnline,
-    isReady,
-    getViagens,
-    employeeFilter,
-    vehicleFilter,
-    startDate,
-    endDate,
-    employees,
-    vehicles,
-  ]);
-
-  // Opções para os combos (igual TripForm)
-  const employeeOptions = employees.map((emp) => ({
-    value: emp.id,
-    label: `${emp.nome_completo} (${emp.matricula})`,
-    searchText: `${emp.nome_completo} ${emp.matricula} ${emp.cargo}`,
-  }));
-
-  const vehicleOptions = vehicles.map((veh) => ({
-    value: veh.id,
-    label: `${veh.placa} - ${veh.marca} ${veh.modelo}`,
-    searchText: `${veh.placa} ${veh.marca} ${veh.modelo}`,
-  }));
-
-  const formatDuration = (seconds: number | null) => {
-    if (!seconds && seconds !== 0) return "-";
-    const s = seconds ?? 0;
-    const hours = Math.floor(s / 3600);
-    const minutes = Math.floor((s % 3600) / 60);
-    return `${hours}h ${minutes}m`;
-  };
-
   const handleClearFilters = () => {
-    setEmployeeFilter("");
-    setVehicleFilter("");
+    setSelectedEmployeeId("");
+    setSelectedVehicleId("");
     setStartDate("");
     setEndDate("");
+    refetch();
   };
 
-  const isLoadingTrips = isOnline
-    ? isLoadingTripsOnline
-    : isLoadingOfflineTrips;
+  const formatDateTime = (value: string | null) => {
+    if (!value) return "-";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return "-";
+    return format(d, "dd/MM/yyyy HH:mm");
+  };
 
-  const trips = useMemo(
-    () => (isOnline ? tripsOnline : offlineTrips),
-    [isOnline, tripsOnline, offlineTrips]
-  );
+  const formatDuration = (seconds: number | null) => {
+    if (!seconds || seconds <= 0) return "-";
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (h === 0) return `${m} min`;
+    return `${h}h ${m}min`;
+  };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-muted">
       <Header />
-      <main className="pb-8">
-        <div className="max-w-5xl mx-auto px-4 pt-4 space-y-4">
-          {/* Filtros */}
-          <div className="bg-card border border-border rounded-lg p-4">
-            <h2 className="text-lg font-semibold text-foreground mb-4">
-              Filtros
-            </h2>
+      <main className="max-w-3xl mx-auto px-4 py-4 space-y-4">
+        {/* FILTROS */}
+        <Card>
+          <CardHeader>
+            <h2 className="text-lg font-semibold">Filtros</h2>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>Motorista</Label>
+              <Combobox
+                options={employeeOptions}
+                value={selectedEmployeeId}
+                onChange={setSelectedEmployeeId}
+                placeholder="Digite nome ou matrícula..."
+                searchPlaceholder="Buscar motorista..."
+              />
+            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* Motorista */}
-              <div className="space-y-2">
-                <Label htmlFor="employee-filter">Motorista</Label>
-                <SearchableCombobox
-                  options={employeeOptions}
-                  value={employeeFilter}
-                  onChange={setEmployeeFilter}
-                  placeholder="Digite nome ou matrícula..."
-                  emptyText="Nenhum motorista encontrado"
-                  disabled={!employees.length}
-                  minCharsToSearch={2}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label>Veículo</Label>
+              <Combobox
+                options={vehicleOptions}
+                value={selectedVehicleId}
+                onChange={setSelectedVehicleId}
+                placeholder="Digite placa ou modelo..."
+                searchPlaceholder="Buscar veículo..."
+              />
+            </div>
 
-              {/* Veículo */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="vehicle-filter">Veículo</Label>
-                <SearchableCombobox
-                  options={vehicleOptions}
-                  value={vehicleFilter}
-                  onChange={setVehicleFilter}
-                  placeholder="Digite placa ou modelo..."
-                  emptyText="Nenhum veículo encontrado"
-                  disabled={!vehicles.length}
-                  minCharsToSearch={2}
-                />
-              </div>
-
-              {/* Datas */}
-              <div className="space-y-2">
-                <Label htmlFor="start-date">Data Inicial</Label>
+                <Label>Data Inicial</Label>
                 <Input
-                  id="start-date"
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                 />
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="end-date">Data Final</Label>
+                <Label>Data Final</Label>
                 <Input
-                  id="end-date"
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                 />
               </div>
             </div>
+          </CardContent>
+          <CardFooter className="flex justify-between gap-2">
+            <Button
+              variant="outline"
+              type="button"
+              onClick={handleClearFilters}
+            >
+              Limpar Filtros
+            </Button>
+            <Button type="button" onClick={() => refetch()}>
+              Aplicar
+            </Button>
+          </CardFooter>
+        </Card>
 
-            <div className="mt-4">
-              <Button variant="outline" onClick={handleClearFilters}>
-                Limpar Filtros
-              </Button>
+        {/* LISTA EM CARDS */}
+        <section className="space-y-3">
+          {isLoading && (
+            <div className="flex justify-center items-center py-8 text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin mr-2" />
+              Carregando viagens...
             </div>
-          </div>
+          )}
 
-          {/* Resultados */}
-          <div className="bg-card border border-border rounded-lg overflow-hidden">
-            {isLoadingTrips ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : trips.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
+          {isError && (
+            <div className="text-center text-sm text-red-500 py-4">
+              Ocorreu um erro ao carregar as viagens.
+            </div>
+          )}
+
+          {!isLoading && !isError && trips.length === 0 && (
+            <Card>
+              <CardContent className="py-6 text-center text-sm text-muted-foreground">
                 Nenhuma viagem encontrada
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Motorista</TableHead>
-                      <TableHead>Veículo</TableHead>
-                      <TableHead>KM Inicial</TableHead>
-                      <TableHead>KM Final</TableHead>
-                      <TableHead>Duração</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Origem</TableHead>
-                      <TableHead>Destino</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {trips.map((trip) => (
-                      <TableRow key={trip.id}>
-                        <TableCell>
-                          {trip.start_time
-                            ? format(
-                                new Date(trip.start_time),
-                                "dd/MM/yyyy HH:mm"
-                              )
-                            : "-"}
-                        </TableCell>
-                        <TableCell>
-                          {trip.employee?.nome_completo || "-"}
-                        </TableCell>
-                        <TableCell>
-                          {trip.vehicle
-                            ? `${trip.vehicle.placa} - ${trip.vehicle.marca} ${trip.vehicle.modelo}`
-                            : "-"}
-                        </TableCell>
-                        <TableCell>{trip.km_inicial}</TableCell>
-                        <TableCell>{trip.km_final ?? "-"}</TableCell>
-                        <TableCell>
-                          {formatDuration(trip.duration_seconds)}
-                        </TableCell>
-                        <TableCell>
-                          <span
-                            className={`inline-block px-2 py-1 text-xs rounded ${
-                              trip.status === "finalizada"
-                                ? "bg-green-100 text-green-800"
-                                : "bg-yellow-100 text-yellow-800"
-                            }`}
-                          >
-                            {trip.status === "finalizada"
-                              ? "Finalizada"
-                              : "Em Andamento"}
-                          </span>
-                        </TableCell>
-                        <TableCell>{trip.origem || "-"}</TableCell>
-                        <TableCell>{trip.destino || "-"}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </div>
-        </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {!isLoading &&
+            !isError &&
+            trips.length > 0 &&
+            trips.map((trip) => {
+              const driverLabel =
+                trip.employee?.nome_completo && trip.employee?.matricula
+                  ? `${trip.employee.nome_completo} (${trip.employee.matricula})`
+                  : trip.employee_id;
+
+              const vehicleLabel =
+                trip.vehicle?.placa && trip.vehicle?.modelo
+                  ? `${trip.vehicle.placa} - ${trip.vehicle.marca} ${trip.vehicle.modelo}`
+                  : trip.vehicle_id;
+
+              return (
+                <Card key={trip.id} className="shadow-sm">
+                  <CardHeader className="pb-2 flex flex-row items-center justify-between gap-2">
+                    <div className="space-y-1">
+                      <div className="text-xs uppercase text-muted-foreground">
+                        Viagem #{trip.id}
+                      </div>
+                      <div className="text-sm font-semibold">
+                        {driverLabel || "Motorista não informado"}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {vehicleLabel || "Veículo não informado"}
+                      </div>
+                    </div>
+                    {trip.status && (
+                      <Badge
+                        variant={
+                          trip.status === "FINALIZADA" ||
+                          trip.status === "COMPLETED"
+                            ? "default"
+                            : "outline"
+                        }
+                      >
+                        {trip.status}
+                      </Badge>
+                    )}
+                  </CardHeader>
+
+                  <CardContent className="grid grid-cols-2 gap-3 text-xs sm:text-sm">
+                    <div className="space-y-1">
+                      <div className="font-medium text-muted-foreground">
+                        Início
+                      </div>
+                      <div>{formatDateTime(trip.start_time)}</div>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="font-medium text-muted-foreground">
+                        Fim
+                      </div>
+                      <div>{formatDateTime(trip.end_time)}</div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="font-medium text-muted-foreground">
+                        Km
+                      </div>
+                      <div>
+                        {trip.km_inicial}
+                        {trip.km_final != null && ` ➜ ${trip.km_final}`}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="font-medium text-muted-foreground">
+                        Duração
+                      </div>
+                      <div>{formatDuration(trip.duration_seconds)}</div>
+                    </div>
+
+                    {trip.origem && (
+                      <div className="space-y-1 col-span-2">
+                        <div className="font-medium text-muted-foreground">
+                          Origem
+                        </div>
+                        <div>{trip.origem}</div>
+                      </div>
+                    )}
+
+                    {trip.destino && (
+                      <div className="space-y-1 col-span-2">
+                        <div className="font-medium text-muted-foreground">
+                          Destino
+                        </div>
+                        <div>{trip.destino}</div>
+                      </div>
+                    )}
+
+                    {trip.motivo && (
+                      <div className="space-y-1 col-span-2">
+                        <div className="font-medium text-muted-foreground">
+                          Motivo da viagem
+                        </div>
+                        <div>{trip.motivo}</div>
+                      </div>
+                    )}
+
+                    {trip.observacao && (
+                      <div className="space-y-1 col-span-2">
+                        <div className="font-medium text-muted-foreground">
+                          Observação
+                        </div>
+                        <div>{trip.observacao}</div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+        </section>
       </main>
     </div>
   );

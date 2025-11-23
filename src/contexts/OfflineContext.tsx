@@ -308,7 +308,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
             console.log(
               "[OfflineContext] Rede restaurada, disparando syncNow()"
             );
-            await syncNow();
+            // await syncNow();
           }
         }
       );
@@ -320,7 +320,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
       canceled = true;
       if (listener) listener.remove();
     };
-  }, [syncNow]);
+  }, /*[syncNow]*/);
 
   // ========= sync inicial (apenas app nativo) =========
   useEffect(() => {
@@ -329,8 +329,8 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
     if (hasInitialSyncRun) return;
 
     setHasInitialSyncRun(true);
-    syncNow();
-  }, [isOnline, isReady, hasDb, hasInitialSyncRun, syncNow]);
+    // syncNow();
+  }, [isOnline, isReady, hasDb, hasInitialSyncRun /*, syncNow*/]);
 
   // ========= Motoristas =========
   const getMotoristas = useCallback(

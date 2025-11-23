@@ -17,6 +17,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import { PullToRefresh } from "@/components/PullToRefresh";
 import { useOfflineData } from "@/contexts/OfflineContext";
 import { useTrips } from "@/hooks/useTrips";
 import { useSQLite } from "@/hooks/useSQLite";
@@ -39,7 +40,6 @@ import {
   Square,
 } from "lucide-react";
 import { CapacitorSQLite } from "@capacitor-community/sqlite"; // ⬅️ NOVO IMPORT
-
 
 interface TripData {
   employeeId: string;
@@ -66,19 +66,17 @@ export const TripForm = () => {
     getVeiculos,
     isReady,
     lastSyncAt,
-    syncNow
+    syncNow,
   } = useOfflineData();
 
   const { uploadPhoto, createTrip } = useTrips();
- const {
-  isReady: isSQLiteReady,
-  hasDb: hasSQLiteDb,
-  saveTrip: saveTripOffline,
-  getEmployees: getEmployeesRaw,
-  getVehicles: getVehiclesRaw,
-} = useSQLite();
-
-
+  const {
+    isReady: isSQLiteReady,
+    hasDb: hasSQLiteDb,
+    saveTrip: saveTripOffline,
+    getEmployees: getEmployeesRaw,
+    getVehicles: getVehiclesRaw,
+  } = useSQLite();
 
   const [employees, setEmployees] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
@@ -451,24 +449,19 @@ export const TripForm = () => {
     }
   };
 
+  // 🔽 AQUI entra apenas o PullToRefresh envolvendo o conteúdo
   return (
-    <div className="max-w-2xl mx-auto p-4 space-y-4">
+    <PullToRefresh
+      onRefresh={syncNow}
+      isRefreshing={isSyncing}
+      className="max-w-2xl mx-auto p-4 space-y-4"
+    >
       {Capacitor.isNativePlatform() && !isOnline && (
         <Card className="bg-yellow-500/10 border-yellow-500/50">
           <CardContent className="py-3">
             <p className="text-center text-sm font-medium">
               📡 Modo Offline - Viagens serão sincronizadas quando houver
               internet
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {isSyncing && (
-        <Card className="bg-blue-500/10 border-blue-500/50">
-          <CardContent className="py-3">
-            <p className="text-center text-sm font-medium">
-              🔄 Sincronizando viagens pendentes...
             </p>
           </CardContent>
         </Card>
@@ -491,9 +484,7 @@ export const TripForm = () => {
       )}
 
       {/* Debug Panel - mostra status do SQLite */}
-      {Capacitor.isNativePlatform() && (
-        <SQLiteDebugPanel />
-      )}
+      {Capacitor.isNativePlatform() && <SQLiteDebugPanel />}
 
       {/* Driver Field */}
       <Card>
@@ -780,6 +771,7 @@ export const TripForm = () => {
           </CardContent>
         </Card>
       )}
+
       <div className="pt-2 pb-6">
         <Button
           variant={isActive ? "trip-end" : "trip-start"}
@@ -837,6 +829,6 @@ export const TripForm = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </PullToRefresh>
   );
 };
