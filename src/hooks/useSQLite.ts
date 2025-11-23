@@ -68,8 +68,10 @@ export const useSQLite = () => {
         return;
       }
 
+      console.log("[SQLite] Iniciando criação do banco...");
       const sqlite = new SQLiteConnection(CapacitorSQLite);
 
+      console.log("[SQLite] Criando conexão com o banco:", DB_NAME);
       const dbConnection = await sqlite.createConnection(
         DB_NAME,
         false,
@@ -78,8 +80,10 @@ export const useSQLite = () => {
         false
       );
 
+      console.log("[SQLite] Abrindo conexão...");
       await dbConnection.open();
 
+      console.log("[SQLite] Criando tabelas...");
       await dbConnection.execute(`
         CREATE TABLE IF NOT EXISTS offline_trips (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -126,10 +130,12 @@ export const useSQLite = () => {
         );
       `);
 
+      console.log("[SQLite] Tabelas criadas com sucesso");
+      
       setDb(dbConnection);
       setHasDb(true);
       setIsReady(true);
-      console.log("[SQLite] Banco inicializado com sucesso");
+      console.log("[SQLite] Banco inicializado com sucesso - db:", !!dbConnection);
     } catch (error: any) {
       console.error("[SQLite] Erro inicializando banco:", error);
       toast.error("Erro inicializando SQLite", {
@@ -278,10 +284,16 @@ export const useSQLite = () => {
   };
 
   const getEmployees = async (): Promise<OfflineEmployee[]> => {
-    if (!db) return [];
+    if (!db) {
+      console.error("[SQLite] getEmployees: db é NULL!");
+      return [];
+    }
 
     try {
+      console.log("[SQLite] getEmployees: executando query...");
       const result = await db.query("SELECT * FROM offline_employees;");
+      const count = result.values?.length || 0;
+      console.log("[SQLite] getEmployees: query concluída, registros:", count);
       return result.values || [];
     } catch (error: any) {
       console.error("[SQLite] Erro lendo employees:", error);
@@ -329,10 +341,16 @@ export const useSQLite = () => {
   };
 
   const getVehicles = async (): Promise<OfflineVehicle[]> => {
-    if (!db) return [];
+    if (!db) {
+      console.error("[SQLite] getVehicles: db é NULL!");
+      return [];
+    }
 
     try {
+      console.log("[SQLite] getVehicles: executando query...");
       const result = await db.query("SELECT * FROM offline_vehicles;");
+      const count = result.values?.length || 0;
+      console.log("[SQLite] getVehicles: query concluída, registros:", count);
       return result.values || [];
     } catch (error: any) {
       console.error("[SQLite] Erro lendo vehicles:", error);
