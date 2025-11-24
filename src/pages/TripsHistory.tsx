@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { format } from "date-fns";
 
 import { Header } from "@/components/Header";
-import { Combobox } from "@/components/ui/combobox";
+import { SearchableCombobox } from "@/components/ui/searchable-combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -22,14 +22,10 @@ const TripsHistory = () => {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
 
-  // opções de combos (usando OfflineContext – mesma lógica de motoristas/veículos do formulário)
+  // opções de combos
   const { getMotoristas, getVeiculos } = useOfflineData();
-  const [employeeOptions, setEmployeeOptions] = useState<
-    { value: string; label: string }[]
-  >([]);
-  const [vehicleOptions, setVehicleOptions] = useState<
-    { value: string; label: string }[]
-  >([]);
+  const [employeeOptions, setEmployeeOptions] = useState<any[]>([]);
+  const [vehicleOptions, setVehicleOptions] = useState<any[]>([]);
 
   useEffect(() => {
     const loadOptions = async () => {
@@ -40,6 +36,7 @@ const TripsHistory = () => {
         employees.map((emp) => ({
           value: String(emp.id),
           label: `${emp.nome_completo} (${emp.matricula})`,
+          searchText: `${emp.nome_completo} ${emp.matricula} ${emp.cargo ?? ""}`,
         }))
       );
 
@@ -47,6 +44,7 @@ const TripsHistory = () => {
         vehicles.map((veh) => ({
           value: String(veh.id),
           label: `${veh.placa} - ${veh.marca} ${veh.modelo}`,
+          searchText: `${veh.placa} ${veh.marca} ${veh.modelo}`,
         }))
       );
     };
@@ -93,35 +91,42 @@ const TripsHistory = () => {
   return (
     <div className="min-h-screen bg-muted">
       <Header />
+
       <main className="max-w-3xl mx-auto px-4 py-4 space-y-4">
         {/* FILTROS */}
         <Card>
           <CardHeader>
             <h2 className="text-lg font-semibold">Filtros</h2>
           </CardHeader>
+
           <CardContent className="space-y-4">
+            {/* Motorista */}
             <div className="space-y-2">
               <Label>Motorista</Label>
-              <Combobox
+              <SearchableCombobox
                 options={employeeOptions}
                 value={selectedEmployeeId}
                 onChange={setSelectedEmployeeId}
                 placeholder="Digite nome ou matrícula..."
-                searchPlaceholder="Buscar motorista..."
+                emptyText="Nenhum motorista encontrado."
+                minCharsToSearch={2}
               />
             </div>
 
+            {/* Veículo */}
             <div className="space-y-2">
               <Label>Veículo</Label>
-              <Combobox
+              <SearchableCombobox
                 options={vehicleOptions}
                 value={selectedVehicleId}
                 onChange={setSelectedVehicleId}
                 placeholder="Digite placa ou modelo..."
-                searchPlaceholder="Buscar veículo..."
+                emptyText="Nenhum veículo encontrado."
+                minCharsToSearch={2}
               />
             </div>
 
+            {/* Datas */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Data Inicial</Label>
@@ -131,6 +136,7 @@ const TripsHistory = () => {
                   onChange={(e) => setStartDate(e.target.value)}
                 />
               </div>
+
               <div className="space-y-2">
                 <Label>Data Final</Label>
                 <Input
@@ -141,21 +147,19 @@ const TripsHistory = () => {
               </div>
             </div>
           </CardContent>
+
           <CardFooter className="flex justify-between gap-2">
-            <Button
-              variant="outline"
-              type="button"
-              onClick={handleClearFilters}
-            >
+            <Button variant="outline" type="button" onClick={handleClearFilters}>
               Limpar Filtros
             </Button>
+
             <Button type="button" onClick={() => refetch()}>
               Aplicar
             </Button>
           </CardFooter>
         </Card>
 
-        {/* LISTA EM CARDS */}
+        {/* LISTA DE VIAGENS */}
         <section className="space-y-3">
           {isLoading && (
             <div className="flex justify-center items-center py-8 text-muted-foreground">
@@ -199,18 +203,21 @@ const TripsHistory = () => {
                       <div className="text-xs uppercase text-muted-foreground">
                         Viagem #{trip.id}
                       </div>
+
                       <div className="text-sm font-semibold">
                         {driverLabel || "Motorista não informado"}
                       </div>
+
                       <div className="text-xs text-muted-foreground">
                         {vehicleLabel || "Veículo não informado"}
                       </div>
                     </div>
+
                     {trip.status && (
                       <Badge
                         variant={
-                          trip.status === "FINALIZADA" ||
-                          trip.status === "COMPLETED"
+                          trip.status.toLowerCase() === "finalizada" ||
+                          trip.status.toLowerCase() === "completed"
                             ? "default"
                             : "outline"
                         }
@@ -221,12 +228,15 @@ const TripsHistory = () => {
                   </CardHeader>
 
                   <CardContent className="grid grid-cols-2 gap-3 text-xs sm:text-sm">
+                    {/* Início */}
                     <div className="space-y-1">
                       <div className="font-medium text-muted-foreground">
                         Início
                       </div>
                       <div>{formatDateTime(trip.start_time)}</div>
                     </div>
+
+                    {/* Fim */}
                     <div className="space-y-1">
                       <div className="font-medium text-muted-foreground">
                         Fim
@@ -234,6 +244,7 @@ const TripsHistory = () => {
                       <div>{formatDateTime(trip.end_time)}</div>
                     </div>
 
+                    {/* Km */}
                     <div className="space-y-1">
                       <div className="font-medium text-muted-foreground">
                         Km
@@ -244,6 +255,7 @@ const TripsHistory = () => {
                       </div>
                     </div>
 
+                    {/* Duração */}
                     <div className="space-y-1">
                       <div className="font-medium text-muted-foreground">
                         Duração
@@ -251,6 +263,7 @@ const TripsHistory = () => {
                       <div>{formatDuration(trip.duration_seconds)}</div>
                     </div>
 
+                    {/* Origem */}
                     {trip.origem && (
                       <div className="space-y-1 col-span-2">
                         <div className="font-medium text-muted-foreground">
@@ -260,6 +273,7 @@ const TripsHistory = () => {
                       </div>
                     )}
 
+                    {/* Destino */}
                     {trip.destino && (
                       <div className="space-y-1 col-span-2">
                         <div className="font-medium text-muted-foreground">
@@ -269,6 +283,7 @@ const TripsHistory = () => {
                       </div>
                     )}
 
+                    {/* Motivo */}
                     {trip.motivo && (
                       <div className="space-y-1 col-span-2">
                         <div className="font-medium text-muted-foreground">
@@ -278,6 +293,7 @@ const TripsHistory = () => {
                       </div>
                     )}
 
+                    {/* Observação */}
                     {trip.observacao && (
                       <div className="space-y-1 col-span-2">
                         <div className="font-medium text-muted-foreground">

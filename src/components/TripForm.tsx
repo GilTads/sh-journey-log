@@ -5,7 +5,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { SearchableCombobox } from "@/components/ui/searchable-combobox";
-import { SQLiteDebugPanel } from "@/components/SQLiteDebugPanel";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -482,9 +481,6 @@ export const TripForm = () => {
           </CardContent>
         </Card>
       )}
-
-      {/* Debug Panel - mostra status do SQLite */}
-      {Capacitor.isNativePlatform() && <SQLiteDebugPanel />}
 
       {/* Driver Field */}
       <Card>

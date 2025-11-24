@@ -33,12 +33,16 @@ export function SearchableCombobox({
 }: SearchableComboboxProps) {
   const [searchTerm, setSearchTerm] = React.useState("");
   const [isOpen, setIsOpen] = React.useState(false);
-  const [filteredOptions, setFilteredOptions] = React.useState<SearchableComboboxOption[]>([]);
+  const [filteredOptions, setFilteredOptions] =
+    React.useState<SearchableComboboxOption[]>([]);
   const containerRef = React.useRef<HTMLDivElement>(null);
 
   const selectedOption = options.find((opt) => opt.value === value);
 
-  // Filter options based on search term
+  // controla se a mudança de `value` veio de digitação (input) ou de fora
+  const valueChangeSourceRef = React.useRef<"none" | "input">("none");
+
+  // Filtra opções conforme o termo digitado
   React.useEffect(() => {
     if (searchTerm.length < minCharsToSearch) {
       setFilteredOptions([]);
@@ -52,16 +56,19 @@ export function SearchableCombobox({
         const searchableText = opt.searchText || opt.label;
         return searchableText.toLowerCase().includes(lowerSearch);
       })
-      .slice(0, 20); // Limit to 20 results for performance
+      .slice(0, 20); // limita a 20 resultados
 
     setFilteredOptions(filtered);
     setIsOpen(filtered.length > 0);
   }, [searchTerm, options, minCharsToSearch]);
 
-  // Close dropdown when clicking outside
+  // Fecha dropdown ao clicar fora
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
       }
     };
@@ -69,6 +76,22 @@ export function SearchableCombobox({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Sincroniza o texto exibido com o `value` quando ele muda de fora
+  React.useEffect(() => {
+    if (valueChangeSourceRef.current === "input") {
+      // mudança veio da digitação do usuário (limpando seleção) → não sobrescreve o que ele digitou
+      valueChangeSourceRef.current = "none";
+      return;
+    }
+
+    const selected = options.find((opt) => opt.value === value);
+    if (selected) {
+      setSearchTerm(selected.label);
+    } else if (!value) {
+      setSearchTerm("");
+    }
+  }, [value, options]);
 
   const handleSelect = (optionValue: string) => {
     onChange(optionValue);
@@ -80,29 +103,30 @@ export function SearchableCombobox({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = e.target.value;
     setSearchTerm(newValue);
-    
-    // Clear selection if user starts typing
+
+    // se havia um valor selecionado e o usuário começou a digitar algo diferente,
+    // limpamos a seleção, mas deixamos o texto do input
     if (value && newValue !== selectedOption?.label) {
+      valueChangeSourceRef.current = "input";
       onChange("");
     }
   };
 
   const handleInputFocus = () => {
-    // Don't auto-open, wait for user to type
     if (selectedOption) {
       setSearchTerm(selectedOption.label);
     }
   };
 
   const handleInputBlur = () => {
-    // Restore selected value label if nothing was selected
+    // pequeno delay para permitir o clique na opção antes de fechar
     setTimeout(() => {
-      if (selectedOption && !isOpen) {
+      setIsOpen(false);
+      if (selectedOption) {
+        // garante que o label da opção selecionada permaneça visível
         setSearchTerm(selectedOption.label);
-      } else if (!value) {
-        setSearchTerm("");
       }
-    }, 200);
+    }, 150);
   };
 
   return (
@@ -118,7 +142,7 @@ export function SearchableCombobox({
         className="w-full"
         autoComplete="off"
       />
-      
+
       {isOpen && filteredOptions.length > 0 && (
         <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-lg">
           <ScrollArea className="max-h-[300px]">
@@ -145,12 +169,16 @@ export function SearchableCombobox({
           </ScrollArea>
         </div>
       )}
-      
-      {isOpen && filteredOptions.length === 0 && searchTerm.length >= minCharsToSearch && (
-        <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover p-4 shadow-lg">
-          <p className="text-sm text-muted-foreground text-center">{emptyText}</p>
-        </div>
-      )}
+
+      {isOpen &&
+        filteredOptions.length === 0 &&
+        searchTerm.length >= minCharsToSearch && (
+          <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover p-4 shadow-lg">
+            <p className="text-sm text-muted-foreground text-center">
+              {emptyText}
+            </p>
+          </div>
+        )}
     </div>
   );
 }

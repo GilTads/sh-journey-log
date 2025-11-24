@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Capacitor } from "@capacitor/core";
 import { supabase } from "@/integrations/supabase/client";
 import { useOfflineData } from "@/contexts/OfflineContext";
-import { OfflineTrip } from "@/hooks/useSQLite";
+import { OfflineTrip, OfflineEmployee, OfflineVehicle } from "@/hooks/useSQLite";
 
 export interface TripHistory {
   id: string;
@@ -20,6 +20,7 @@ export interface TripHistory {
   status: string | null;
   employee_photo_url: string | null;
   trip_photos_urls: string[] | null;
+
   employee?: {
     nome_completo: string;
     matricula: string;
@@ -39,8 +40,8 @@ interface UseTripsHistoryParams {
   enabled?: boolean;
 }
 
-// converte a trip do SQLite pro formato da tela
-const mapOfflineTripToHistory = (trip: OfflineTrip): TripHistory => ({
+// converte trip do SQLite para formato da UI (SEM join ainda)
+const mapOfflineTripBase = (trip: OfflineTrip): TripHistory => ({
   id: String(trip.id),
   employee_id: trip.employee_id,
   vehicle_id: trip.vehicle_id,
@@ -56,26 +57,29 @@ const mapOfflineTripToHistory = (trip: OfflineTrip): TripHistory => ({
   status: trip.status ?? null,
   employee_photo_url: null,
   trip_photos_urls: null,
-  employee: undefined,
-  vehicle: undefined,
 });
 
 export const useTripsHistory = (params: UseTripsHistoryParams = {}) => {
   const { enabled = true, ...filters } = params;
 
-  const { isOnline, isReady, hasDb, getViagens } = useOfflineData();
+  const { isOnline, isReady, hasDb, getViagens, getMotoristas, getVeiculos } =
+    useOfflineData();
+
   const isNative = Capacitor.isNativePlatform();
 
   return useQuery({
     queryKey: ["trips-history", filters, { isNative, isOnline }],
     enabled,
     queryFn: async () => {
-      // caminho OFFLINE: app nativo, com SQLite pronto e sem internet
+      // ===============================
+      //  OFFLINE (nativo + sqlite)
+      // ===============================
       if (isNative && !isOnline && isReady && hasDb) {
-        console.log("[useTripsHistory] OFFLINE -> usando SQLite");
+        console.log("[useTripsHistory] OFFLINE -> SQLite + JOIN manual");
 
         let trips = await getViagens();
 
+        // filtros
         if (filters.employeeId) {
           trips = trips.filter((t) => t.employee_id === filters.employeeId);
         }
@@ -85,14 +89,16 @@ export const useTripsHistory = (params: UseTripsHistoryParams = {}) => {
         }
 
         if (filters.startDate) {
-          const start = new Date(filters.startDate).getTime();
+          // início do dia selecionado (00:00)
+          const start = new Date(`${filters.startDate}T00:00:00`).getTime();
           trips = trips.filter(
             (t) => new Date(t.start_time).getTime() >= start
           );
         }
 
         if (filters.endDate) {
-          const end = new Date(filters.endDate).getTime();
+          // fim do dia selecionado (23:59:59.999)
+          const end = new Date(`${filters.endDate}T23:59:59.999`).getTime();
           trips = trips.filter(
             (t) => new Date(t.start_time).getTime() <= end
           );
@@ -104,11 +110,43 @@ export const useTripsHistory = (params: UseTripsHistoryParams = {}) => {
             new Date(a.start_time).getTime()
         );
 
-        return trips.map(mapOfflineTripToHistory);
+        // ===============================
+        //   🔥 JOIN manual offline aqui
+        // ===============================
+        const employees: OfflineEmployee[] = await getMotoristas();
+        const vehicles: OfflineVehicle[] = await getVeiculos();
+
+        const enriched = trips.map((trip) => {
+          const base = mapOfflineTripBase(trip);
+
+          const emp = employees.find((e) => e.id === trip.employee_id);
+          const veh = vehicles.find((v) => v.id === trip.vehicle_id);
+
+          return {
+            ...base,
+            employee: emp
+              ? {
+                  nome_completo: emp.nome_completo,
+                  matricula: emp.matricula,
+                }
+              : undefined,
+            vehicle: veh
+              ? {
+                  placa: veh.placa,
+                  marca: veh.marca,
+                  modelo: veh.modelo,
+                }
+              : undefined,
+          };
+        });
+
+        return enriched;
       }
 
-      // caminho ONLINE (web ou app com internet): Supabase
-      console.log("[useTripsHistory] ONLINE -> usando Supabase");
+      // ===============================
+      //  ONLINE (Supabase)
+      // ===============================
+      console.log("[useTripsHistory] ONLINE -> Supabase");
 
       let query = supabase
         .from("trips")
@@ -128,12 +166,15 @@ export const useTripsHistory = (params: UseTripsHistoryParams = {}) => {
       }
 
       if (filters.startDate) {
-        query = query.gte("start_time", filters.startDate);
+        // 00:00 do dia inicial
+        query = query.gte("start_time", `${filters.startDate} 00:00:00`);
       }
 
       if (filters.endDate) {
-        query = query.lte("start_time", filters.endDate);
+        // 23:59:59 do dia final (inclusivo)
+        query = query.lte("start_time", `${filters.endDate} 23:59:59`);
       }
+
 
       const { data, error } = await query;
       if (error) throw error;
