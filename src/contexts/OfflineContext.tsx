@@ -189,7 +189,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
 
           const record = {
             employee_id: trip.employee_id,
-            vehicle_id: trip.vehicle_id,
+            vehicle_id: trip.vehicle_id ?? null,
             km_inicial: trip.km_inicial,
             km_final: trip.km_final,
             start_time: trip.start_time,
@@ -207,6 +207,10 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
             employee_photo_url: employeePhotoUrl || undefined,
             trip_photos_urls:
               tripPhotosUrls.length > 0 ? tripPhotosUrls : undefined,
+            is_rented_vehicle: trip.is_rented_vehicle === 1,
+            rented_plate: trip.rented_plate ?? null,
+            rented_model: trip.rented_model ?? null,
+            rented_company: trip.rented_company ?? null,
           };
 
           const { error } = await createTrip(record);

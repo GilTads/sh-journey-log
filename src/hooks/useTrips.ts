@@ -2,7 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface TripRecord {
   employee_id: string;
-  vehicle_id: string;
+  vehicle_id?: string | null;
   km_inicial: number;
   km_final: number;
   start_time: string;
@@ -19,6 +19,10 @@ export interface TripRecord {
   status: string;
   employee_photo_url?: string;
   trip_photos_urls?: string[];
+  is_rented_vehicle?: boolean;
+  rented_plate?: string | null;
+  rented_model?: string | null;
+  rented_company?: string | null;
 }
 
 export const useTrips = () => {
@@ -48,7 +52,7 @@ export const useTrips = () => {
     try {
       const { data, error } = await supabase
         .from("trips")
-        .insert([tripData])
+        .insert([tripData as any])
         .select()
         .single();
 

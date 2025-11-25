@@ -55,6 +55,10 @@ interface TripData {
   startTime?: Date;
   endTime?: Date;
   images: File[];
+  isRentedVehicle: boolean;
+  rentedPlate: string;
+  rentedModel: string;
+  rentedCompany: string;
 }
 
 export const TripForm = () => {
@@ -91,6 +95,10 @@ export const TripForm = () => {
     reason: "",
     observation: "",
     images: [],
+    isRentedVehicle: false,
+    rentedPlate: "",
+    rentedModel: "",
+    rentedCompany: "",
   });
 
   const [isActive, setIsActive] = useState(false);
@@ -172,15 +180,27 @@ export const TripForm = () => {
   };
 
   const handleStartTrip = async () => {
-    if (
-      !tripData.employeeId ||
-      !tripData.employeePhoto ||
-      !tripData.vehicleId ||
-      !tripData.initialKm
-    ) {
+    if (!tripData.employeeId || !tripData.employeePhoto) {
       toast.error(
-        "Preencha os campos obrigatórios: Motorista, Foto do Motorista, Veículo e Km Inicial"
+        "Preencha os campos obrigatórios: Motorista e Foto do Motorista"
       );
+      return;
+    }
+
+    if (!tripData.isRentedVehicle) {
+      if (!tripData.vehicleId) {
+        toast.error("Selecione um veículo cadastrado");
+        return;
+      }
+    } else {
+      if (!tripData.rentedPlate && !tripData.rentedModel) {
+        toast.error("Preencha pelo menos a placa ou o modelo do veículo alugado");
+        return;
+      }
+    }
+
+    if (!tripData.initialKm) {
+      toast.error("Preencha o Km Inicial");
       return;
     }
 
@@ -254,7 +274,7 @@ export const TripForm = () => {
 
         const offlineTrip = {
           employee_id: tripData.employeeId,
-          vehicle_id: tripData.vehicleId,
+          vehicle_id: tripData.isRentedVehicle ? null : tripData.vehicleId,
           km_inicial: parseFloat(tripData.initialKm),
           km_final: parseFloat(tempFinalKm),
           start_time: tripData.startTime!.toISOString(),
@@ -274,6 +294,10 @@ export const TripForm = () => {
             tripPhotosBase64.length > 0
               ? JSON.stringify(tripPhotosBase64)
               : undefined,
+          is_rented_vehicle: tripData.isRentedVehicle ? 1 : 0,
+          rented_plate: tripData.isRentedVehicle ? tripData.rentedPlate || null : null,
+          rented_model: tripData.isRentedVehicle ? tripData.rentedModel || null : null,
+          rented_company: tripData.isRentedVehicle ? tripData.rentedCompany || null : null,
           synced: 0,
           deleted: 0,
         };
@@ -305,7 +329,7 @@ export const TripForm = () => {
 
         const tripRecord = {
           employee_id: tripData.employeeId,
-          vehicle_id: tripData.vehicleId,
+          vehicle_id: tripData.isRentedVehicle ? null : tripData.vehicleId,
           km_inicial: parseFloat(tripData.initialKm),
           km_final: parseFloat(tempFinalKm),
           start_time: tripData.startTime!.toISOString(),
@@ -323,6 +347,10 @@ export const TripForm = () => {
           employee_photo_url: employeePhotoUrl || undefined,
           trip_photos_urls:
             tripPhotosUrls.length > 0 ? tripPhotosUrls : undefined,
+          is_rented_vehicle: tripData.isRentedVehicle,
+          rented_plate: tripData.isRentedVehicle ? tripData.rentedPlate || null : null,
+          rented_model: tripData.isRentedVehicle ? tripData.rentedModel || null : null,
+          rented_company: tripData.isRentedVehicle ? tripData.rentedCompany || null : null,
         };
 
         const { error } = await createTrip(tripRecord);
@@ -349,6 +377,10 @@ export const TripForm = () => {
         reason: "",
         observation: "",
         images: [],
+        isRentedVehicle: false,
+        rentedPlate: "",
+        rentedModel: "",
+        rentedCompany: "",
       });
       setTempFinalKm("");
       setElapsedTime(0);
@@ -571,25 +603,103 @@ export const TripForm = () => {
       {/* Vehicle Field */}
       <Card>
         <CardContent className="pt-6 space-y-3">
-          <Label className="text-base font-semibold flex items-center gap-2">
-            <Car className="h-4 w-4 text-primary" />
-            Veículo *
-          </Label>
-          <SearchableCombobox
-            options={vehicles.map((veh) => ({
-              value: veh.id,
-              label: `${veh.placa} - ${veh.marca} ${veh.modelo}`,
-              searchText: `${veh.placa} ${veh.marca} ${veh.modelo}`,
-            }))}
-            value={tripData.vehicleId}
-            onChange={(value) =>
-              setTripData((prev) => ({ ...prev, vehicleId: value }))
-            }
-            placeholder="Digite placa ou modelo..."
-            emptyText="Nenhum veículo encontrado."
-            disabled={isActive}
-            minCharsToSearch={2}
-          />
+          <div className="flex items-center justify-between mb-4">
+            <Label className="text-base font-semibold flex items-center gap-2">
+              <Car className="h-4 w-4 text-primary" />
+              Veículo *
+            </Label>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="isRented" className="text-sm text-muted-foreground cursor-pointer">
+                Veículo alugado/não cadastrado
+              </Label>
+              <input
+                id="isRented"
+                type="checkbox"
+                checked={tripData.isRentedVehicle}
+                onChange={(e) => {
+                  setTripData((prev) => ({
+                    ...prev,
+                    isRentedVehicle: e.target.checked,
+                    vehicleId: "",
+                    rentedPlate: "",
+                    rentedModel: "",
+                    rentedCompany: "",
+                  }));
+                }}
+                disabled={isActive}
+                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              />
+            </div>
+          </div>
+
+          {!tripData.isRentedVehicle ? (
+            <SearchableCombobox
+              options={vehicles.map((veh) => ({
+                value: veh.id,
+                label: `${veh.placa} - ${veh.marca} ${veh.modelo}`,
+                searchText: `${veh.placa} ${veh.marca} ${veh.modelo}`,
+              }))}
+              value={tripData.vehicleId}
+              onChange={(value) =>
+                setTripData((prev) => ({ ...prev, vehicleId: value }))
+              }
+              placeholder="Digite placa ou modelo..."
+              emptyText="Nenhum veículo encontrado."
+              disabled={isActive}
+              minCharsToSearch={2}
+            />
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="rentedPlate" className="text-sm font-medium mb-2 block">
+                  Placa *
+                </Label>
+                <Input
+                  id="rentedPlate"
+                  type="text"
+                  placeholder="Ex: ABC-1234"
+                  value={tripData.rentedPlate}
+                  onChange={(e) =>
+                    setTripData((prev) => ({ ...prev, rentedPlate: e.target.value }))
+                  }
+                  disabled={isActive}
+                  className="h-12"
+                />
+              </div>
+              <div>
+                <Label htmlFor="rentedModel" className="text-sm font-medium mb-2 block">
+                  Modelo/Descrição *
+                </Label>
+                <Input
+                  id="rentedModel"
+                  type="text"
+                  placeholder="Ex: Fiat Uno 2020"
+                  value={tripData.rentedModel}
+                  onChange={(e) =>
+                    setTripData((prev) => ({ ...prev, rentedModel: e.target.value }))
+                  }
+                  disabled={isActive}
+                  className="h-12"
+                />
+              </div>
+              <div>
+                <Label htmlFor="rentedCompany" className="text-sm font-medium mb-2 block">
+                  Locadora/Proprietário (opcional)
+                </Label>
+                <Input
+                  id="rentedCompany"
+                  type="text"
+                  placeholder="Ex: Localiza"
+                  value={tripData.rentedCompany}
+                  onChange={(e) =>
+                    setTripData((prev) => ({ ...prev, rentedCompany: e.target.value }))
+                  }
+                  disabled={isActive}
+                  className="h-12"
+                />
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
