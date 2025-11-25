@@ -55,7 +55,7 @@ const createConnectionIfNeeded = async () => {
       CREATE TABLE IF NOT EXISTS offline_trips (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         employee_id TEXT NOT NULL,
-        vehicle_id TEXT NOT NULL,
+        vehicle_id TEXT,
         km_inicial REAL NOT NULL,
         km_final REAL NOT NULL,
         start_time TEXT NOT NULL,
@@ -72,6 +72,10 @@ const createConnectionIfNeeded = async () => {
         status TEXT NOT NULL,
         employee_photo_base64 TEXT,
         trip_photos_base64 TEXT,
+        is_rented_vehicle INTEGER DEFAULT 0,
+        rented_plate TEXT,
+        rented_model TEXT,
+        rented_company TEXT,
         synced INTEGER DEFAULT 0,
         deleted INTEGER DEFAULT 0,
         created_at TEXT DEFAULT (datetime('now')),
@@ -117,7 +121,7 @@ const ensureInit = async () => {
 export interface OfflineTrip {
   id?: number;
   employee_id: string;
-  vehicle_id: string;
+  vehicle_id?: string | null;
   km_inicial: number;
   km_final: number;
   start_time: string;
@@ -134,6 +138,10 @@ export interface OfflineTrip {
   status: string;
   employee_photo_base64?: string;
   trip_photos_base64?: string;
+  is_rented_vehicle?: number; // 0 = false, 1 = true
+  rented_plate?: string | null;
+  rented_model?: string | null;
+  rented_company?: string | null;
   synced?: number; // 0 = not synced, 1 = synced
   deleted?: number; // 0 = not deleted, 1 = deleted (soft delete)
   created_at?: string;
@@ -210,13 +218,14 @@ export const useSQLite = () => {
           duration_seconds,
           origem, destino, motivo, observacao, status,
           employee_photo_base64, trip_photos_base64,
+          is_rented_vehicle, rented_plate, rented_model, rented_company,
           synced, deleted
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
       `;
 
       const values = [
         trip.employee_id,
-        trip.vehicle_id,
+        trip.vehicle_id ?? null,
         trip.km_inicial,
         trip.km_final,
         trip.start_time,
@@ -233,6 +242,10 @@ export const useSQLite = () => {
         trip.status,
         trip.employee_photo_base64 ?? null,
         trip.trip_photos_base64 ?? null,
+        trip.is_rented_vehicle ?? 0,
+        trip.rented_plate ?? null,
+        trip.rented_model ?? null,
+        trip.rented_company ?? null,
         trip.synced ?? 0,
         trip.deleted ?? 0,
       ];
@@ -341,12 +354,13 @@ export const useSQLite = () => {
             duration_seconds,
             origem, destino, motivo, observacao, status,
             employee_photo_base64, trip_photos_base64,
+            is_rented_vehicle, rented_plate, rented_model, rented_company,
             synced, deleted
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         `,
           [
             t.employee_id,
-            t.vehicle_id,
+            t.vehicle_id ?? null,
             t.km_inicial,
             t.km_final,
             t.start_time,
@@ -363,6 +377,10 @@ export const useSQLite = () => {
             t.status ?? "CONCLUIDA",
             null, // employee_photo_base64 (não precisamos pro histórico)
             null, // trip_photos_base64
+            t.is_rented_vehicle ? 1 : 0,
+            t.rented_plate ?? null,
+            t.rented_model ?? null,
+            t.rented_company ?? null,
             1, // synced -> veio do servidor
             0, // deleted
           ]

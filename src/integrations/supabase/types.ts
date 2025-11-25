@@ -49,11 +49,15 @@ export type Database = {
           end_longitude: number | null
           end_time: string | null
           id: string
+          is_rented_vehicle: boolean
           km_final: number | null
           km_inicial: number
           motivo: string | null
           observacao: string | null
           origem: string | null
+          rented_company: string | null
+          rented_model: string | null
+          rented_plate: string | null
           start_latitude: number | null
           start_longitude: number | null
           start_time: string
@@ -72,11 +76,15 @@ export type Database = {
           end_longitude?: number | null
           end_time?: string | null
           id?: string
+          is_rented_vehicle?: boolean
           km_final?: number | null
           km_inicial: number
           motivo?: string | null
           observacao?: string | null
           origem?: string | null
+          rented_company?: string | null
+          rented_model?: string | null
+          rented_plate?: string | null
           start_latitude?: number | null
           start_longitude?: number | null
           start_time: string
@@ -95,11 +103,15 @@ export type Database = {
           end_longitude?: number | null
           end_time?: string | null
           id?: string
+          is_rented_vehicle?: boolean
           km_final?: number | null
           km_inicial?: number
           motivo?: string | null
           observacao?: string | null
           origem?: string | null
+          rented_company?: string | null
+          rented_model?: string | null
+          rented_plate?: string | null
           start_latitude?: number | null
           start_longitude?: number | null
           start_time?: string
