@@ -15,6 +15,7 @@ import {
   OfflineEmployee,
   OfflineVehicle,
   OfflineTrip,
+  OfflineTripPosition,
 } from "@/hooks/useSQLite";
 import { supabase } from "@/integrations/supabase/client";
 import { useTrips } from "@/hooks/useTrips";
@@ -30,6 +31,10 @@ interface OfflineContextType {
   getViagens: () => Promise<OfflineTrip[]>;
 
   syncNow: () => Promise<void>;
+
+  // Trip positions
+  saveTripPosition: (position: OfflineTripPosition) => Promise<boolean>;
+  syncTripPositionsToServer: (serverTripId: string, positions: OfflineTripPosition[]) => Promise<void>;
 
   isReady: boolean;
   hasDb: boolean;
@@ -54,6 +59,11 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
     getAllTrips,
     markTripAsSynced,
     replaceSyncedTripsFromServer,
+    saveTripPosition: saveTripPositionSQLite,
+    getUnsyncedTripPositions,
+    markTripPositionAsSynced,
+    updateTripPositionsServerTripId,
+    getTripPositionsByLocalTripId,
   } = useSQLite();
 
   const { uploadPhoto, createTrip } = useTrips();
@@ -238,6 +248,115 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [isOnline, isReady, getUnsyncedTrips, uploadPhoto, createTrip, markTripAsSynced]);
 
+  // ========= sincronização trip positions pendentes (SQLite -> Supabase) =========
+  const syncTripPositionsToServerInternal = useCallback(async () => {
+    if (!isOnline || !isReady) {
+      console.log(
+        "[OfflineContext] syncTripPositions abortado -> isOnline:",
+        isOnline,
+        "isReady:",
+        isReady
+      );
+      return;
+    }
+
+    try {
+      const unsynced = await getUnsyncedTripPositions();
+      if (!unsynced.length) {
+        console.log("[OfflineContext] Nenhuma trip position pendente para sync");
+        return;
+      }
+
+      console.log(
+        `[OfflineContext] Enviando ${unsynced.length} trip positions pendentes para o servidor...`
+      );
+
+      for (const pos of unsynced) {
+        // Só sincroniza se tiver server_trip_id (viagem já foi sincronizada)
+        if (!pos.server_trip_id) {
+          console.log(`[OfflineContext] Position ${pos.id} aguardando server_trip_id`);
+          continue;
+        }
+
+        try {
+          const { error } = await supabase.from("trip_positions").insert({
+            trip_id: pos.server_trip_id,
+            captured_at: pos.captured_at,
+            latitude: pos.latitude,
+            longitude: pos.longitude,
+          });
+
+          if (!error) {
+            await markTripPositionAsSynced(pos.id!);
+            console.log(`[OfflineContext] TripPosition ${pos.id} sincronizada`);
+          } else {
+            console.error("[OfflineContext] Erro ao sincronizar trip position:", error);
+          }
+        } catch (err) {
+          console.error("[OfflineContext] Erro ao sincronizar trip position individual:", err);
+        }
+      }
+    } catch (err) {
+      console.error("[OfflineContext] Erro em syncTripPositions:", err);
+    }
+  }, [isOnline, isReady, getUnsyncedTripPositions, markTripPositionAsSynced]);
+
+  // ========= salvar trip position (usado pelo TripForm) =========
+  const saveTripPosition = useCallback(async (position: OfflineTripPosition): Promise<boolean> => {
+    // Se online e tem server_trip_id, salva direto no Supabase
+    if (isOnline && position.server_trip_id) {
+      try {
+        const { error } = await supabase.from("trip_positions").insert({
+          trip_id: position.server_trip_id,
+          captured_at: position.captured_at,
+          latitude: position.latitude,
+          longitude: position.longitude,
+        });
+
+        if (error) {
+          console.error("[OfflineContext] Erro ao salvar position no Supabase:", error);
+          // Fallback: salva no SQLite
+          return await saveTripPositionSQLite({ ...position, synced: 0 });
+        }
+
+        console.log("[OfflineContext] TripPosition salva diretamente no Supabase");
+        return true;
+      } catch (err) {
+        console.error("[OfflineContext] Erro ao salvar position:", err);
+        return await saveTripPositionSQLite({ ...position, synced: 0 });
+      }
+    }
+
+    // Offline ou sem server_trip_id: salva no SQLite
+    return await saveTripPositionSQLite(position);
+  }, [isOnline, saveTripPositionSQLite]);
+
+  // ========= sincronizar positions de uma viagem específica =========
+  const syncTripPositionsToServer = useCallback(async (
+    serverTripId: string,
+    positions: OfflineTripPosition[]
+  ): Promise<void> => {
+    if (!isOnline) return;
+
+    try {
+      for (const pos of positions) {
+        const { error } = await supabase.from("trip_positions").insert({
+          trip_id: serverTripId,
+          captured_at: pos.captured_at,
+          latitude: pos.latitude,
+          longitude: pos.longitude,
+        });
+
+        if (error) {
+          console.error("[OfflineContext] Erro ao sincronizar position:", error);
+        }
+      }
+      console.log(`[OfflineContext] ${positions.length} positions sincronizadas para trip ${serverTripId}`);
+    } catch (err) {
+      console.error("[OfflineContext] Erro em syncTripPositionsToServer:", err);
+    }
+  }, [isOnline]);
+
   // ========= função principal de sync =========
   const syncNow = useCallback(async () => {
     console.log(
@@ -268,6 +387,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
       toast.info("Sincronizando dados...");
       await syncMasterData();
       await syncTripsToServer();
+      await syncTripPositionsToServerInternal();
       setLastSyncAt(new Date());
       toast.success("Sincronização concluída!");
     } catch (err) {
@@ -276,7 +396,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsSyncing(false);
     }
-  }, [isOnline, isReady, hasDb, isSyncing, syncMasterData, syncTripsToServer]);
+  }, [isOnline, isReady, hasDb, isSyncing, syncMasterData, syncTripsToServer, syncTripPositionsToServerInternal]);
 
   // ========= monitor de rede =========
   useEffect(() => {
@@ -485,6 +605,8 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
     getVeiculos,
     getViagens,
     syncNow,
+    saveTripPosition,
+    syncTripPositionsToServer,
     isReady,
     hasDb,
   };

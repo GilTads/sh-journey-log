@@ -38,6 +38,41 @@ export type Database = {
         }
         Relationships: []
       }
+      trip_positions: {
+        Row: {
+          captured_at: string
+          created_at: string
+          id: string
+          latitude: number
+          longitude: number
+          trip_id: string
+        }
+        Insert: {
+          captured_at?: string
+          created_at?: string
+          id?: string
+          latitude: number
+          longitude: number
+          trip_id: string
+        }
+        Update: {
+          captured_at?: string
+          created_at?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          trip_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_positions_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trips: {
         Row: {
           created_at: string | null

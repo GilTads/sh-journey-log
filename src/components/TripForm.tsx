@@ -70,6 +70,7 @@ export const TripForm = () => {
     isReady,
     lastSyncAt,
     syncNow,
+    saveTripPosition,
   } = useOfflineData();
 
   const { uploadPhoto, createTrip } = useTrips();
@@ -107,8 +108,13 @@ export const TripForm = () => {
   const [showEndTripDialog, setShowEndTripDialog] = useState(false);
   const [tempFinalKm, setTempFinalKm] = useState("");
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const locationTrackingRef = useRef<NodeJS.Timeout | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const employeePhotoInputRef = useRef<HTMLInputElement>(null);
+
+  // IDs para rastreamento de posições
+  const [currentLocalTripId, setCurrentLocalTripId] = useState<number | null>(null);
+  const [currentServerTripId, setCurrentServerTripId] = useState<string | null>(null);
 
   // 🔍 STATUS DO TESTE DO SQLITE (DEBUG)
   const [sqliteStatus, setSqliteStatus] = useState<string>(
@@ -144,6 +150,70 @@ export const TripForm = () => {
       }
     };
   }, [isActive]);
+
+  // ========= RASTREAMENTO DE LOCALIZAÇÃO A CADA 30 SEGUNDOS =========
+  useEffect(() => {
+    if (!isActive) {
+      // Se a viagem não está ativa, limpa o intervalo
+      if (locationTrackingRef.current) {
+        clearInterval(locationTrackingRef.current);
+        locationTrackingRef.current = null;
+        console.log("[TripForm] Rastreamento de localização parado");
+      }
+      return;
+    }
+
+    // Função para capturar e salvar a posição
+    const captureAndSavePosition = async () => {
+      try {
+        const permission = await Geolocation.checkPermissions();
+        if (permission.location !== "granted") {
+          console.warn("[TripForm] Sem permissão de localização para rastreamento");
+          return;
+        }
+
+        const position = await Geolocation.getCurrentPosition({
+          enableHighAccuracy: true,
+          timeout: 15000,
+        });
+
+        const positionData = {
+          local_trip_id: currentLocalTripId ?? undefined,
+          server_trip_id: currentServerTripId ?? undefined,
+          captured_at: new Date().toISOString(),
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          synced: 0,
+          deleted: 0,
+        };
+
+        const saved = await saveTripPosition(positionData);
+        if (saved) {
+          console.log(
+            `[TripForm] Posição capturada: ${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`
+          );
+        } else {
+          console.error("[TripForm] Erro ao salvar posição");
+        }
+      } catch (error) {
+        console.error("[TripForm] Erro ao capturar posição:", error);
+      }
+    };
+
+    // Captura imediatamente ao iniciar
+    captureAndSavePosition();
+
+    // Inicia intervalo de 30 segundos
+    locationTrackingRef.current = setInterval(captureAndSavePosition, 30000);
+    console.log("[TripForm] Rastreamento de localização iniciado (30s)");
+
+    return () => {
+      if (locationTrackingRef.current) {
+        clearInterval(locationTrackingRef.current);
+        locationTrackingRef.current = null;
+      }
+    };
+  }, [isActive, currentLocalTripId, currentServerTripId, saveTripPosition]);
 
   const formatTime = (seconds: number) => {
     const hrs = Math.floor(seconds / 3600);
@@ -384,6 +454,9 @@ export const TripForm = () => {
       });
       setTempFinalKm("");
       setElapsedTime(0);
+      // Limpa IDs de rastreamento de posição
+      setCurrentLocalTripId(null);
+      setCurrentServerTripId(null);
     } catch (error) {
       console.error("Error ending trip:", error);
       toast.error("Erro ao finalizar viagem", {
