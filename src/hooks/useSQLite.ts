@@ -101,6 +101,21 @@ const createConnectionIfNeeded = async () => {
       );
     `);
 
+    // Tabela para pontos de localização durante a viagem
+    await dbConnection.execute(`
+      CREATE TABLE IF NOT EXISTS offline_trip_positions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        local_trip_id INTEGER,
+        server_trip_id TEXT,
+        captured_at TEXT NOT NULL,
+        latitude REAL NOT NULL,
+        longitude REAL NOT NULL,
+        synced INTEGER DEFAULT 0,
+        deleted INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT (datetime('now'))
+      );
+    `);
+
     globalIsReady = true;
     globalHasDb = true;
   } catch (error) {
@@ -160,6 +175,18 @@ export interface OfflineVehicle {
   placa: string;
   marca: string;
   modelo: string;
+}
+
+export interface OfflineTripPosition {
+  id?: number;
+  local_trip_id?: number;      // ID local da viagem (se salvou offline)
+  server_trip_id?: string;     // UUID da viagem no Supabase (se salvou online)
+  captured_at: string;
+  latitude: number;
+  longitude: number;
+  synced?: number;             // 0 = não sincronizado, 1 = sincronizado
+  deleted?: number;
+  created_at?: string;
 }
 
 // ======= HOOK =======
@@ -509,6 +536,116 @@ export const useSQLite = () => {
     }
   };
 
+  // ===== TRIP POSITIONS =====
+  const saveTripPosition = async (position: OfflineTripPosition): Promise<boolean> => {
+    const db = requireDb("saveTripPosition");
+    if (!db) return false;
+
+    try {
+      const query = `
+        INSERT INTO offline_trip_positions (
+          local_trip_id, server_trip_id, captured_at, latitude, longitude, synced, deleted
+        ) VALUES (?, ?, ?, ?, ?, ?, ?);
+      `;
+
+      const values = [
+        position.local_trip_id ?? null,
+        position.server_trip_id ?? null,
+        position.captured_at,
+        position.latitude,
+        position.longitude,
+        position.synced ?? 0,
+        position.deleted ?? 0,
+      ];
+
+      await db.run(query, values);
+      console.log("[useSQLite] TripPosition salva no SQLite");
+      return true;
+    } catch (error) {
+      console.error("[useSQLite] Erro ao salvar trip position:", error);
+      return false;
+    }
+  };
+
+  const getUnsyncedTripPositions = async (): Promise<OfflineTripPosition[]> => {
+    const db = requireDb("getUnsyncedTripPositions");
+    if (!db) return [];
+
+    try {
+      const result = await db.query(
+        "SELECT * FROM offline_trip_positions WHERE synced = 0 AND deleted = 0;"
+      );
+      return (result.values || []) as OfflineTripPosition[];
+    } catch (error) {
+      console.error("[useSQLite] Erro ao buscar trip positions não sincronizadas:", error);
+      return [];
+    }
+  };
+
+  const getTripPositionsByLocalTripId = async (localTripId: number): Promise<OfflineTripPosition[]> => {
+    const db = requireDb("getTripPositionsByLocalTripId");
+    if (!db) return [];
+
+    try {
+      const result = await db.query(
+        "SELECT * FROM offline_trip_positions WHERE local_trip_id = ? AND deleted = 0 ORDER BY captured_at;",
+        [localTripId]
+      );
+      return (result.values || []) as OfflineTripPosition[];
+    } catch (error) {
+      console.error("[useSQLite] Erro ao buscar trip positions por local_trip_id:", error);
+      return [];
+    }
+  };
+
+  const markTripPositionAsSynced = async (id: number): Promise<boolean> => {
+    const db = requireDb("markTripPositionAsSynced");
+    if (!db) return false;
+
+    try {
+      await db.run("UPDATE offline_trip_positions SET synced = 1 WHERE id = ?;", [id]);
+      console.log("[useSQLite] TripPosition marcada como sincronizada:", id);
+      return true;
+    } catch (error) {
+      console.error("[useSQLite] Erro ao marcar trip position como sincronizada:", error);
+      return false;
+    }
+  };
+
+  const updateTripPositionsServerTripId = async (
+    localTripId: number,
+    serverTripId: string
+  ): Promise<boolean> => {
+    const db = requireDb("updateTripPositionsServerTripId");
+    if (!db) return false;
+
+    try {
+      await db.run(
+        "UPDATE offline_trip_positions SET server_trip_id = ? WHERE local_trip_id = ?;",
+        [serverTripId, localTripId]
+      );
+      console.log(`[useSQLite] Trip positions atualizadas com server_trip_id: ${serverTripId}`);
+      return true;
+    } catch (error) {
+      console.error("[useSQLite] Erro ao atualizar server_trip_id:", error);
+      return false;
+    }
+  };
+
+  const deleteTripPositionsByLocalTripId = async (localTripId: number): Promise<boolean> => {
+    const db = requireDb("deleteTripPositionsByLocalTripId");
+    if (!db) return false;
+
+    try {
+      await db.run("DELETE FROM offline_trip_positions WHERE local_trip_id = ?;", [localTripId]);
+      console.log("[useSQLite] Trip positions deletadas para local_trip_id:", localTripId);
+      return true;
+    } catch (error) {
+      console.error("[useSQLite] Erro ao deletar trip positions:", error);
+      return false;
+    }
+  };
+
   return {
     // estado
     isReady,
@@ -519,11 +656,18 @@ export const useSQLite = () => {
     getAllTrips,
     markTripAsSynced,
     deleteTrip,
-    replaceSyncedTripsFromServer, // 🔹 usado no OfflineContext
+    replaceSyncedTripsFromServer,
     // master data
     saveEmployees,
     getEmployees,
     saveVehicles,
     getVehicles,
+    // trip positions
+    saveTripPosition,
+    getUnsyncedTripPositions,
+    getTripPositionsByLocalTripId,
+    markTripPositionAsSynced,
+    updateTripPositionsServerTripId,
+    deleteTripPositionsByLocalTripId,
   };
 };
