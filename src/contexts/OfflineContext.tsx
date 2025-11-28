@@ -223,13 +223,24 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
             rented_company: trip.rented_company ?? null,
           };
 
-          const { error } = await createTrip(record);
-          if (!error) {
+          const { data, error } = await createTrip(record);
+          
+          if (!error && data?.id) {
+            // Marca a trip como sincronizada
             await markTripAsSynced(trip.id!);
             console.log(
-              `[OfflineContext] Trip ${trip.id} sincronizada com sucesso`
+              `[OfflineContext] Trip ${trip.id} sincronizada com sucesso, server ID: ${data.id}`
             );
-          } else {
+
+            // Atualiza as posições dessa viagem com o server_trip_id
+            const localTripId = trip.id!;
+            const serverTripId = data.id;
+            
+            await updateTripPositionsServerTripId(localTripId, serverTripId);
+            console.log(
+              `[OfflineContext] Posições da trip ${localTripId} atualizadas com server_trip_id: ${serverTripId}`
+            );
+          } else if (error) {
             console.error(
               "[OfflineContext] Erro ao sincronizar trip no Supabase:",
               error
@@ -246,7 +257,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
       console.error("[OfflineContext] Erro em syncTripsToServer:", err);
       throw err;
     }
-  }, [isOnline, isReady, getUnsyncedTrips, uploadPhoto, createTrip, markTripAsSynced]);
+  }, [isOnline, isReady, getUnsyncedTrips, uploadPhoto, createTrip, markTripAsSynced, updateTripPositionsServerTripId]);
 
   // ========= sincronização trip positions pendentes (SQLite -> Supabase) =========
   const syncTripPositionsToServerInternal = useCallback(async () => {

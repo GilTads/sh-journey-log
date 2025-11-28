@@ -231,9 +231,13 @@ export const useSQLite = () => {
   };
 
   // ===== TRIPS =====
-  const saveTrip = async (trip: OfflineTrip): Promise<boolean> => {
+  /**
+   * Salva uma viagem no SQLite e retorna o ID inserido (last_insert_rowid)
+   * Retorna null em caso de erro
+   */
+  const saveTrip = async (trip: OfflineTrip): Promise<number | null> => {
     const db = requireDb("saveTrip");
-    if (!db) return false;
+    if (!db) return null;
 
     try {
       const query = `
@@ -277,11 +281,66 @@ export const useSQLite = () => {
         trip.deleted ?? 0,
       ];
 
-      await db.run(query, values);
-      console.log("[useSQLite] Trip salva no SQLite");
-      return true;
+      const result = await db.run(query, values);
+      const insertedId = result.changes?.lastId;
+      console.log("[useSQLite] Trip salva no SQLite com ID:", insertedId);
+      return insertedId ?? null;
     } catch (error) {
       console.error("[useSQLite] Erro ao salvar trip:", error);
+      return null;
+    }
+  };
+
+  /**
+   * Atualiza uma viagem existente com os dados finais (quando a viagem termina)
+   */
+  const updateTripOnEnd = async (
+    localTripId: number,
+    updates: Partial<OfflineTrip>
+  ): Promise<boolean> => {
+    const db = requireDb("updateTripOnEnd");
+    if (!db) return false;
+
+    try {
+      const query = `
+        UPDATE offline_trips SET
+          km_final = ?,
+          end_time = ?,
+          end_latitude = ?,
+          end_longitude = ?,
+          duration_seconds = ?,
+          origem = ?,
+          destino = ?,
+          motivo = ?,
+          observacao = ?,
+          status = ?,
+          employee_photo_base64 = ?,
+          trip_photos_base64 = ?,
+          updated_at = datetime('now')
+        WHERE id = ?;
+      `;
+
+      const values = [
+        updates.km_final ?? null,
+        updates.end_time ?? null,
+        updates.end_latitude ?? null,
+        updates.end_longitude ?? null,
+        updates.duration_seconds ?? 0,
+        updates.origem ?? null,
+        updates.destino ?? null,
+        updates.motivo ?? null,
+        updates.observacao ?? null,
+        updates.status ?? "finalizada",
+        updates.employee_photo_base64 ?? null,
+        updates.trip_photos_base64 ?? null,
+        localTripId,
+      ];
+
+      await db.run(query, values);
+      console.log("[useSQLite] Trip atualizada no SQLite:", localTripId);
+      return true;
+    } catch (error) {
+      console.error("[useSQLite] Erro ao atualizar trip:", error);
       return false;
     }
   };
@@ -652,6 +711,7 @@ export const useSQLite = () => {
     hasDb,
     // trips
     saveTrip,
+    updateTripOnEnd,
     getUnsyncedTrips,
     getAllTrips,
     markTripAsSynced,

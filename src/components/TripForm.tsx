@@ -78,6 +78,7 @@ export const TripForm = () => {
     isReady: isSQLiteReady,
     hasDb: hasSQLiteDb,
     saveTrip: saveTripOffline,
+    updateTripOnEnd,
     getEmployees: getEmployeesRaw,
     getVehicles: getVehiclesRaw,
   } = useSQLite();
@@ -249,6 +250,14 @@ export const TripForm = () => {
     }
   };
 
+  const fileToBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
+
   const handleStartTrip = async () => {
     if (!tripData.employeeId || !tripData.employeePhoto) {
       toast.error(
@@ -279,6 +288,51 @@ export const TripForm = () => {
       const location = await getCurrentLocation();
       const startTime = new Date();
 
+      // Converte foto do motorista para base64 se offline
+      let employeePhotoBase64: string | undefined;
+      const shouldSaveOffline = Capacitor.isNativePlatform() && !isOnline && isSQLiteReady;
+      
+      if (shouldSaveOffline && tripData.employeePhoto) {
+        employeePhotoBase64 = await fileToBase64(tripData.employeePhoto);
+      }
+
+      // Se offline, cria viagem "em_andamento" no SQLite para vincular posições
+      if (shouldSaveOffline) {
+        const draftTrip = {
+          employee_id: tripData.employeeId,
+          vehicle_id: tripData.isRentedVehicle ? null : tripData.vehicleId,
+          km_inicial: parseFloat(tripData.initialKm),
+          km_final: 0, // será preenchido ao finalizar
+          start_time: startTime.toISOString(),
+          end_time: startTime.toISOString(), // placeholder, será atualizado
+          start_latitude: location.lat,
+          start_longitude: location.lng,
+          end_latitude: null,
+          end_longitude: null,
+          duration_seconds: 0,
+          origem: tripData.origin || null,
+          destino: null,
+          motivo: tripData.reason || null,
+          observacao: tripData.observation || null,
+          status: "em_andamento",
+          employee_photo_base64: employeePhotoBase64,
+          is_rented_vehicle: tripData.isRentedVehicle ? 1 : 0,
+          rented_plate: tripData.isRentedVehicle ? tripData.rentedPlate || null : null,
+          rented_model: tripData.isRentedVehicle ? tripData.rentedModel || null : null,
+          rented_company: tripData.isRentedVehicle ? tripData.rentedCompany || null : null,
+          synced: 0,
+          deleted: 0,
+        };
+
+        const localTripId = await saveTripOffline(draftTrip);
+        if (localTripId) {
+          setCurrentLocalTripId(localTripId);
+          console.log("[TripForm] Viagem draft criada com ID local:", localTripId);
+        } else {
+          console.error("[TripForm] Erro ao criar viagem draft no SQLite");
+        }
+      }
+
       setTripData((prev) => ({
         ...prev,
         startLocation: location,
@@ -306,14 +360,6 @@ export const TripForm = () => {
     setShowEndTripDialog(true);
   };
 
-  const fileToBase64 = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = (error) => reject(error);
-    });
-
   const confirmEndTrip = async () => {
     if (!tempFinalKm || tempFinalKm.trim() === "") {
       toast.error("Preencha o Km Final para finalizar a viagem");
@@ -336,51 +382,78 @@ export const TripForm = () => {
         Capacitor.isNativePlatform() && !isOnline && isSQLiteReady;
 
       if (shouldSaveOffline) {
-        let employeePhotoBase64: string | undefined;
-        if (tripData.employeePhoto) {
-          employeePhotoBase64 = await fileToBase64(tripData.employeePhoto);
-        }
-
+        // Prepara fotos para base64
         const tripPhotosBase64: string[] = [];
         for (const img of tripData.images) {
           const base64 = await fileToBase64(img);
           tripPhotosBase64.push(base64);
         }
 
-        const offlineTrip = {
-          employee_id: tripData.employeeId,
-          vehicle_id: tripData.isRentedVehicle ? null : tripData.vehicleId,
-          km_inicial: parseFloat(tripData.initialKm),
-          km_final: parseFloat(tempFinalKm),
-          start_time: tripData.startTime!.toISOString(),
-          end_time: endTime.toISOString(),
-          start_latitude: tripData.startLocation?.lat,
-          start_longitude: tripData.startLocation?.lng,
-          end_latitude: location.lat,
-          end_longitude: location.lng,
-          duration_seconds: elapsedTime,
-          origem: tripData.origin || null,
-          destino: tripData.destination || null,
-          motivo: tripData.reason || null,
-          observacao: tripData.observation || null,
-          status: "finalizada",
-          employee_photo_base64: employeePhotoBase64,
-          trip_photos_base64:
-            tripPhotosBase64.length > 0
+        // Se já temos um local trip ID (criado no handleStartTrip), atualizamos
+        if (currentLocalTripId) {
+          const updates = {
+            km_final: parseFloat(tempFinalKm),
+            end_time: endTime.toISOString(),
+            end_latitude: location.lat,
+            end_longitude: location.lng,
+            duration_seconds: elapsedTime,
+            origem: tripData.origin || null,
+            destino: tripData.destination || null,
+            motivo: tripData.reason || null,
+            observacao: tripData.observation || null,
+            status: "finalizada",
+            trip_photos_base64: tripPhotosBase64.length > 0
               ? JSON.stringify(tripPhotosBase64)
               : undefined,
-          is_rented_vehicle: tripData.isRentedVehicle ? 1 : 0,
-          rented_plate: tripData.isRentedVehicle ? tripData.rentedPlate || null : null,
-          rented_model: tripData.isRentedVehicle ? tripData.rentedModel || null : null,
-          rented_company: tripData.isRentedVehicle ? tripData.rentedCompany || null : null,
-          synced: 0,
-          deleted: 0,
-        };
+          };
 
-        const saved = await saveTripOffline(offlineTrip);
+          const updated = await updateTripOnEnd(currentLocalTripId, updates);
+          if (!updated) {
+            throw new Error("Erro ao atualizar viagem offline");
+          }
 
-        if (!saved) {
-          throw new Error("Erro ao salvar viagem offline");
+          console.log("[TripForm] Viagem atualizada com ID local:", currentLocalTripId);
+        } else {
+          // Fallback: cria nova viagem (não deveria acontecer, mas por segurança)
+          let employeePhotoBase64: string | undefined;
+          if (tripData.employeePhoto) {
+            employeePhotoBase64 = await fileToBase64(tripData.employeePhoto);
+          }
+
+          const offlineTrip = {
+            employee_id: tripData.employeeId,
+            vehicle_id: tripData.isRentedVehicle ? null : tripData.vehicleId,
+            km_inicial: parseFloat(tripData.initialKm),
+            km_final: parseFloat(tempFinalKm),
+            start_time: tripData.startTime!.toISOString(),
+            end_time: endTime.toISOString(),
+            start_latitude: tripData.startLocation?.lat,
+            start_longitude: tripData.startLocation?.lng,
+            end_latitude: location.lat,
+            end_longitude: location.lng,
+            duration_seconds: elapsedTime,
+            origem: tripData.origin || null,
+            destino: tripData.destination || null,
+            motivo: tripData.reason || null,
+            observacao: tripData.observation || null,
+            status: "finalizada",
+            employee_photo_base64: employeePhotoBase64,
+            trip_photos_base64: tripPhotosBase64.length > 0
+              ? JSON.stringify(tripPhotosBase64)
+              : undefined,
+            is_rented_vehicle: tripData.isRentedVehicle ? 1 : 0,
+            rented_plate: tripData.isRentedVehicle ? tripData.rentedPlate || null : null,
+            rented_model: tripData.isRentedVehicle ? tripData.rentedModel || null : null,
+            rented_company: tripData.isRentedVehicle ? tripData.rentedCompany || null : null,
+            synced: 0,
+            deleted: 0,
+          };
+
+          const savedId = await saveTripOffline(offlineTrip);
+          if (!savedId) {
+            throw new Error("Erro ao salvar viagem offline");
+          }
+          console.log("[TripForm] Viagem criada (fallback) com ID local:", savedId);
         }
 
         setIsActive(false);
@@ -389,6 +462,7 @@ export const TripForm = () => {
           description: "Será sincronizada quando houver internet",
         });
       } else {
+        // ONLINE: salva no Supabase
         let employeePhotoUrl: string | null = null;
         if (tripData.employeePhoto) {
           const photoPath = `employees/${tripData.employeeId}/${Date.now()}.jpg`;
@@ -428,10 +502,16 @@ export const TripForm = () => {
           rented_company: tripData.isRentedVehicle ? tripData.rentedCompany || null : null,
         };
 
-        const { error } = await createTrip(tripRecord);
+        const { data, error } = await createTrip(tripRecord);
 
         if (error) {
           throw new Error("Erro ao salvar viagem no banco de dados");
+        }
+
+        // Captura o server_trip_id para vincular posições
+        if (data?.id) {
+          setCurrentServerTripId(data.id);
+          console.log("[TripForm] Viagem criada no Supabase com ID:", data.id);
         }
 
         setIsActive(false);
