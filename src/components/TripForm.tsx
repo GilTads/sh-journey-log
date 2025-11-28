@@ -263,8 +263,8 @@ export const TripForm = () => {
         return;
       }
     } else {
-      if (!tripData.rentedPlate && !tripData.rentedModel) {
-        toast.error("Preencha pelo menos a placa ou o modelo do veículo alugado");
+      if (!tripData.rentedPlate || !tripData.rentedModel) {
+        toast.error("Preencha placa e modelo do veículo alugado");
         return;
       }
     }
@@ -326,6 +326,11 @@ export const TripForm = () => {
     try {
       const location = await getCurrentLocation();
       const endTime = new Date();
+
+      setTripData(prev => ({
+        ...prev,
+        endLocation: location,
+      }));
 
       const shouldSaveOffline =
         Capacitor.isNativePlatform() && !isOnline && isSQLiteReady;
