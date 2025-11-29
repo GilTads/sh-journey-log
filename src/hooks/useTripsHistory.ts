@@ -54,7 +54,7 @@ interface UseTripsHistoryParams {
   enabled?: boolean;
 }
 
-// converte trip do SQLite para formato da UI (SEM join ainda)
+// Converte trip do SQLite para formato da UI (SEM join ainda)
 const mapOfflineTripBase = (trip: OfflineTrip): TripHistory => ({
   id: String(trip.id),
   employee_id: trip.employee_id,
@@ -89,9 +89,27 @@ export const useTripsHistory = (params: UseTripsHistoryParams = {}) => {
 
   const isNative = Capacitor.isNativePlatform();
 
-  // Determina se deve usar SQLite (nativo + offline ou nativo com dados locais)
-  const shouldUseSQLite = isNative && isReady && hasDb;
-  const isOfflineMode = isNative && !isOnline;
+  // Determina as condições de forma explícita
+  const sqliteReady = isNative && isReady && hasDb;
+  const isOfflineNative = isNative && !isOnline;
+
+  // Log para debug
+  console.log("[useTripsHistory] Estado:", {
+    isNative,
+    isOnline,
+    isReady,
+    hasDb,
+    sqliteReady,
+    isOfflineNative,
+    enabled,
+  });
+
+  // Query habilitada quando:
+  // - enabled = true E
+  // - (está online OU (está offline nativo E SQLite está pronto))
+  const queryEnabled = enabled && (isOnline || (isOfflineNative && sqliteReady));
+
+  console.log("[useTripsHistory] queryEnabled:", queryEnabled);
 
   return useQuery({
     queryKey: [
@@ -99,162 +117,209 @@ export const useTripsHistory = (params: UseTripsHistoryParams = {}) => {
       filters,
       statusFilter,
       syncStatusFilter,
+      // Incluir todos os estados que afetam a lógica
       { isNative, isOnline, isReady, hasDb },
     ],
-    // Habilita a query quando:
-    // - enabled é true E
-    // - (está online OU (está offline E SQLite está pronto))
-    enabled: enabled && (isOnline || (isOfflineMode && shouldUseSQLite)),
+    enabled: queryEnabled,
+    // Evita refetch automático que pode causar problemas de timing
+    staleTime: 1000 * 60 * 5, // 5 minutos
     queryFn: async () => {
-      // ===============================
-      //  OFFLINE (nativo + sqlite)
-      // ===============================
-      if (isOfflineMode && shouldUseSQLite) {
-        console.log("[useTripsHistory] OFFLINE -> SQLite + JOIN manual");
+      // ========================================
+      // DECISÃO: SQLITE ou SUPABASE?
+      // ========================================
+      
+      // Reavalia as condições dentro do queryFn para garantir valores atuais
+      const useOfflineSource = isNative && !isOnline && isReady && hasDb;
 
-        let trips = await getViagens();
+      console.log("[useTripsHistory] queryFn executando. useOfflineSource:", useOfflineSource);
 
-        // filtros
-        if (filters.employeeId) {
-          trips = trips.filter((t) => t.employee_id === filters.employeeId);
-        }
+      // ========================================
+      // CAMINHO OFFLINE (SQLite)
+      // ========================================
+      if (useOfflineSource) {
+        console.log("[useTripsHistory] ✅ OFFLINE -> Buscando do SQLite");
 
-        if (filters.vehicleId) {
-          trips = trips.filter((t) => t.vehicle_id === filters.vehicleId);
-        }
+        try {
+          // Busca todas as viagens do SQLite
+          let trips = await getViagens();
+          console.log("[useTripsHistory] SQLite retornou", trips.length, "viagens");
 
-        if (filters.startDate) {
-          const start = new Date(`${filters.startDate}T00:00:00`).getTime();
-          trips = trips.filter(
-            (t) => new Date(t.start_time).getTime() >= start
-          );
-        }
-
-        if (filters.endDate) {
-          const end = new Date(`${filters.endDate}T23:59:59.999`).getTime();
-          trips = trips.filter(
-            (t) => new Date(t.start_time).getTime() <= end
-          );
-        }
-
-        // Status filter
-        if (statusFilter && statusFilter !== "all") {
-          trips = trips.filter((t) => t.status === statusFilter);
-        }
-
-        // Sync status filter
-        if (syncStatusFilter && syncStatusFilter !== "all") {
-          if (syncStatusFilter === "synced") {
-            trips = trips.filter((t) => t.synced === 1);
-          } else if (syncStatusFilter === "offline-only") {
-            trips = trips.filter((t) => t.synced === 0);
+          // ======= FILTROS =======
+          
+          // Filtro por motorista
+          if (filters.employeeId) {
+            trips = trips.filter((t) => t.employee_id === filters.employeeId);
           }
+
+          // Filtro por veículo
+          if (filters.vehicleId) {
+            trips = trips.filter((t) => t.vehicle_id === filters.vehicleId);
+          }
+
+          // Filtro por data inicial
+          if (filters.startDate) {
+            const start = new Date(`${filters.startDate}T00:00:00`).getTime();
+            trips = trips.filter(
+              (t) => new Date(t.start_time).getTime() >= start
+            );
+          }
+
+          // Filtro por data final
+          if (filters.endDate) {
+            const end = new Date(`${filters.endDate}T23:59:59.999`).getTime();
+            trips = trips.filter(
+              (t) => new Date(t.start_time).getTime() <= end
+            );
+          }
+
+          // Filtro por status da viagem
+          if (statusFilter && statusFilter !== "all") {
+            trips = trips.filter((t) => t.status === statusFilter);
+          }
+
+          // Filtro por status de sincronização
+          if (syncStatusFilter && syncStatusFilter !== "all") {
+            if (syncStatusFilter === "synced") {
+              trips = trips.filter((t) => t.synced === 1);
+            } else if (syncStatusFilter === "offline-only") {
+              trips = trips.filter((t) => t.synced === 0);
+            }
+          }
+
+          // Ordena por data decrescente
+          trips.sort(
+            (a, b) =>
+              new Date(b.start_time).getTime() -
+              new Date(a.start_time).getTime()
+          );
+
+          console.log("[useTripsHistory] Após filtros:", trips.length, "viagens");
+
+          // ======= JOIN MANUAL COM EMPLOYEES E VEHICLES =======
+          const employees: OfflineEmployee[] = await getMotoristas();
+          const vehicles: OfflineVehicle[] = await getVeiculos();
+
+          console.log("[useTripsHistory] JOIN manual com", employees.length, "employees e", vehicles.length, "vehicles");
+
+          const enriched: TripHistory[] = trips.map((trip) => {
+            const base = mapOfflineTripBase(trip);
+
+            const emp = employees.find((e) => e.id === trip.employee_id);
+            const veh = trip.vehicle_id
+              ? vehicles.find((v) => v.id === trip.vehicle_id)
+              : undefined;
+
+            return {
+              ...base,
+              employee: emp
+                ? {
+                    nome_completo: emp.nome_completo,
+                    matricula: emp.matricula,
+                  }
+                : undefined,
+              vehicle: veh
+                ? {
+                    placa: veh.placa,
+                    marca: veh.marca,
+                    modelo: veh.modelo,
+                  }
+                : undefined,
+            };
+          });
+
+          console.log("[useTripsHistory] ✅ Retornando", enriched.length, "viagens do SQLite");
+          return enriched;
+
+        } catch (err) {
+          console.error("[useTripsHistory] ❌ Erro ao buscar do SQLite:", err);
+          return [];
         }
-
-        trips.sort(
-          (a, b) =>
-            new Date(b.start_time).getTime() -
-            new Date(a.start_time).getTime()
-        );
-
-        // ===============================
-        //   🔥 JOIN manual offline aqui
-        // ===============================
-        const employees: OfflineEmployee[] = await getMotoristas();
-        const vehicles: OfflineVehicle[] = await getVeiculos();
-
-        const enriched: TripHistory[] = trips.map((trip) => {
-          const base = mapOfflineTripBase(trip);
-
-          const emp = employees.find((e) => e.id === trip.employee_id);
-          const veh = trip.vehicle_id ? vehicles.find((v) => v.id === trip.vehicle_id) : undefined;
-
-          return {
-            ...base,
-            employee: emp
-              ? {
-                  nome_completo: emp.nome_completo,
-                  matricula: emp.matricula,
-                }
-              : undefined,
-            vehicle: veh
-              ? {
-                  placa: veh.placa,
-                  marca: veh.marca,
-                  modelo: veh.modelo,
-                }
-              : undefined,
-          };
-        });
-
-        return enriched;
       }
 
-      // ===============================
-      //  ONLINE (Supabase)
-      // ===============================
-      console.log("[useTripsHistory] ONLINE -> Supabase");
+      // ========================================
+      // CAMINHO ONLINE (Supabase)
+      // ========================================
+      if (isOnline) {
+        console.log("[useTripsHistory] ✅ ONLINE -> Buscando do Supabase");
 
-      let query = supabase
-        .from("trips")
-        .select(`
-          *,
-          employee:employees!trips_employee_id_fkey(nome_completo, matricula),
-          vehicle:vehicles!trips_vehicle_id_fkey(placa, marca, modelo)
-        `)
-        .order("start_time", { ascending: false });
+        try {
+          let query = supabase
+            .from("trips")
+            .select(`
+              *,
+              employee:employees!trips_employee_id_fkey(nome_completo, matricula),
+              vehicle:vehicles!trips_vehicle_id_fkey(placa, marca, modelo)
+            `)
+            .order("start_time", { ascending: false });
 
-      if (filters.employeeId) {
-        query = query.eq("employee_id", filters.employeeId);
+          // Filtros
+          if (filters.employeeId) {
+            query = query.eq("employee_id", filters.employeeId);
+          }
+
+          if (filters.vehicleId) {
+            query = query.eq("vehicle_id", filters.vehicleId);
+          }
+
+          if (filters.startDate) {
+            query = query.gte("start_time", `${filters.startDate} 00:00:00`);
+          }
+
+          if (filters.endDate) {
+            query = query.lte("start_time", `${filters.endDate} 23:59:59`);
+          }
+
+          if (statusFilter && statusFilter !== "all") {
+            query = query.eq("status", statusFilter);
+          }
+
+          const { data, error } = await query;
+
+          if (error) {
+            console.error("[useTripsHistory] ❌ Erro Supabase:", error);
+            throw error;
+          }
+
+          // Mapeia para o formato TripHistory
+          const mapped: TripHistory[] = (data || []).map((trip: any) => ({
+            id: trip.id,
+            employee_id: trip.employee_id,
+            vehicle_id: trip.vehicle_id,
+            km_inicial: trip.km_inicial,
+            km_final: trip.km_final,
+            start_time: trip.start_time,
+            end_time: trip.end_time,
+            duration_seconds: trip.duration_seconds,
+            origem: trip.origem,
+            destino: trip.destino,
+            motivo: trip.motivo,
+            observacao: trip.observacao,
+            status: trip.status,
+            employee_photo_url: trip.employee_photo_url,
+            trip_photos_urls: trip.trip_photos_urls,
+            is_rented_vehicle: trip.is_rented_vehicle ?? false,
+            rented_plate: trip.rented_plate,
+            rented_model: trip.rented_model,
+            rented_company: trip.rented_company,
+            sync_status: "synced" as SyncStatus,
+            employee: trip.employee,
+            vehicle: trip.vehicle,
+          }));
+
+          console.log("[useTripsHistory] ✅ Retornando", mapped.length, "viagens do Supabase");
+          return mapped;
+
+        } catch (err) {
+          console.error("[useTripsHistory] ❌ Erro ao buscar do Supabase:", err);
+          throw err;
+        }
       }
 
-      if (filters.vehicleId) {
-        query = query.eq("vehicle_id", filters.vehicleId);
-      }
-
-      if (filters.startDate) {
-        query = query.gte("start_time", `${filters.startDate} 00:00:00`);
-      }
-
-      if (filters.endDate) {
-        query = query.lte("start_time", `${filters.endDate} 23:59:59`);
-      }
-
-      // Status filter
-      if (statusFilter && statusFilter !== "all") {
-        query = query.eq("status", statusFilter);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      // Map Supabase data to TripHistory format
-      const mapped: TripHistory[] = (data || []).map((trip: any) => ({
-        id: trip.id,
-        employee_id: trip.employee_id,
-        vehicle_id: trip.vehicle_id,
-        km_inicial: trip.km_inicial,
-        km_final: trip.km_final,
-        start_time: trip.start_time,
-        end_time: trip.end_time,
-        duration_seconds: trip.duration_seconds,
-        origem: trip.origem,
-        destino: trip.destino,
-        motivo: trip.motivo,
-        observacao: trip.observacao,
-        status: trip.status,
-        employee_photo_url: trip.employee_photo_url,
-        trip_photos_urls: trip.trip_photos_urls,
-        is_rented_vehicle: trip.is_rented_vehicle ?? false,
-        rented_plate: trip.rented_plate,
-        rented_model: trip.rented_model,
-        rented_company: trip.rented_company,
-        sync_status: "synced" as SyncStatus, // Online trips are always synced
-        employee: trip.employee,
-        vehicle: trip.vehicle,
-      }));
-
-      return mapped;
+      // ========================================
+      // FALLBACK: Não conseguiu nenhuma fonte
+      // ========================================
+      console.warn("[useTripsHistory] ⚠️ Nenhuma fonte de dados disponível. isOnline:", isOnline, "sqliteReady:", isNative && isReady && hasDb);
+      return [];
     },
   });
 };
