@@ -367,12 +367,32 @@ export const useSQLite = () => {
 
     try {
       const result = await db.query(
-        "SELECT * FROM offline_trips WHERE deleted = 0;"
+        "SELECT * FROM offline_trips WHERE deleted = 0 ORDER BY start_time DESC;"
       );
       return (result.values || []) as OfflineTrip[];
     } catch (error) {
       console.error("[useSQLite] Erro ao buscar trips:", error);
       return [];
+    }
+  };
+
+  /**
+   * Busca viagem em andamento (status = 'em_andamento' e não deletada)
+   * Retorna a viagem mais recente caso exista mais de uma
+   */
+  const getOngoingTrip = async (): Promise<OfflineTrip | null> => {
+    const db = requireDb("getOngoingTrip");
+    if (!db) return null;
+
+    try {
+      const result = await db.query(
+        "SELECT * FROM offline_trips WHERE status = 'em_andamento' AND deleted = 0 ORDER BY start_time DESC LIMIT 1;"
+      );
+      const trips = (result.values || []) as OfflineTrip[];
+      return trips.length > 0 ? trips[0] : null;
+    } catch (error) {
+      console.error("[useSQLite] Erro ao buscar viagem em andamento:", error);
+      return null;
     }
   };
 
@@ -714,6 +734,7 @@ export const useSQLite = () => {
     updateTripOnEnd,
     getUnsyncedTrips,
     getAllTrips,
+    getOngoingTrip,
     markTripAsSynced,
     deleteTrip,
     replaceSyncedTripsFromServer,

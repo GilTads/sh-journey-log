@@ -89,14 +89,27 @@ export const useTripsHistory = (params: UseTripsHistoryParams = {}) => {
 
   const isNative = Capacitor.isNativePlatform();
 
+  // Determina se deve usar SQLite (nativo + offline ou nativo com dados locais)
+  const shouldUseSQLite = isNative && isReady && hasDb;
+  const isOfflineMode = isNative && !isOnline;
+
   return useQuery({
-    queryKey: ["trips-history", filters, statusFilter, syncStatusFilter, { isNative, isOnline }],
-    enabled,
+    queryKey: [
+      "trips-history",
+      filters,
+      statusFilter,
+      syncStatusFilter,
+      { isNative, isOnline, isReady, hasDb },
+    ],
+    // Habilita a query quando:
+    // - enabled é true E
+    // - (está online OU (está offline E SQLite está pronto))
+    enabled: enabled && (isOnline || (isOfflineMode && shouldUseSQLite)),
     queryFn: async () => {
       // ===============================
       //  OFFLINE (nativo + sqlite)
       // ===============================
-      if (isNative && !isOnline && isReady && hasDb) {
+      if (isOfflineMode && shouldUseSQLite) {
         console.log("[useTripsHistory] OFFLINE -> SQLite + JOIN manual");
 
         let trips = await getViagens();

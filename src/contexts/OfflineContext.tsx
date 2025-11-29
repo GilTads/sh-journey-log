@@ -29,6 +29,7 @@ interface OfflineContextType {
   getMotoristas: (filtro?: string) => Promise<OfflineEmployee[]>;
   getVeiculos: (filtro?: string) => Promise<OfflineVehicle[]>;
   getViagens: () => Promise<OfflineTrip[]>;
+  getOngoingTrip: () => Promise<OfflineTrip | null>;
 
   syncNow: () => Promise<void>;
 
@@ -57,6 +58,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
     getVehicles,
     getUnsyncedTrips,
     getAllTrips,
+    getOngoingTrip: getOngoingTripSQLite,
     markTripAsSynced,
     replaceSyncedTripsFromServer,
     saveTripPosition: saveTripPositionSQLite,
@@ -608,6 +610,19 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [isReady, hasDb, getAllTrips]);
 
+  // ========= Viagem em andamento (para restaurar estado do TripForm) =========
+  const getOngoingTrip = useCallback(async (): Promise<OfflineTrip | null> => {
+    if (!isReady || !hasDb) return null;
+    try {
+      const trip = await getOngoingTripSQLite();
+      console.log("[getOngoingTrip] Trip em andamento:", trip ? trip.id : "nenhuma");
+      return trip;
+    } catch (err) {
+      console.error("[getOngoingTrip] erro ao buscar viagem em andamento:", err);
+      return null;
+    }
+  }, [isReady, hasDb, getOngoingTripSQLite]);
+
   const value: OfflineContextType = {
     isOnline,
     isSyncing,
@@ -615,6 +630,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
     getMotoristas,
     getVeiculos,
     getViagens,
+    getOngoingTrip,
     syncNow,
     saveTripPosition,
     syncTripPositionsToServer,

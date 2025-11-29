@@ -81,9 +81,36 @@ export const useTrips = () => {
     }
   };
 
+  /**
+   * Busca viagem em andamento no Supabase (status = 'em_andamento')
+   * Retorna a mais recente caso exista mais de uma
+   */
+  const getOngoingTripFromServer = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("trips")
+        .select("*")
+        .eq("status", "em_andamento")
+        .order("start_time", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.error("[useTrips] Erro ao buscar viagem em andamento:", error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error("[useTrips] Erro ao buscar viagem em andamento:", error);
+      return null;
+    }
+  };
+
   return {
     uploadPhoto,
     createTrip,
     updateTrip,
+    getOngoingTripFromServer,
   };
 };

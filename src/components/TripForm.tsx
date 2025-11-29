@@ -69,13 +69,15 @@ export const TripForm = () => {
     isSyncing,
     getMotoristas,
     getVeiculos,
+    getOngoingTrip,
     isReady,
     lastSyncAt,
     syncNow,
     saveTripPosition,
+    hasDb,
   } = useOfflineData();
 
-  const { uploadPhoto, createTrip, updateTrip } = useTrips();
+  const { uploadPhoto, createTrip, updateTrip, getOngoingTripFromServer } = useTrips();
   const {
     isReady: isSQLiteReady,
     hasDb: hasSQLiteDb,
@@ -87,6 +89,7 @@ export const TripForm = () => {
 
   const [employees, setEmployees] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
+  const [isLoadingOngoingTrip, setIsLoadingOngoingTrip] = useState(true);
 
   const [tripData, setTripData] = useState<TripData>({
     employeeId: "",
@@ -124,6 +127,146 @@ export const TripForm = () => {
     "Aguardando teste..."
   );
 
+  // ========= CARREGA VIAGEM EM ANDAMENTO NO MOUNT =========
+  useEffect(() => {
+    const isNative = Capacitor.isNativePlatform();
+    
+    const loadOngoingTripOnMount = async () => {
+      console.log("[TripForm] Verificando viagem em andamento...", {
+        isNative,
+        isOnline,
+        isReady,
+        hasDb,
+      });
+
+      try {
+        // OFFLINE (nativo + sqlite disponível)
+        if (isNative && !isOnline && isReady && hasDb) {
+          console.log("[TripForm] Buscando viagem em andamento no SQLite...");
+          const ongoingTrip = await getOngoingTrip();
+
+          if (ongoingTrip) {
+            console.log("[TripForm] Viagem em andamento encontrada (offline):", ongoingTrip.id);
+            restoreTripState(ongoingTrip, ongoingTrip.id!, null);
+            return;
+          }
+        }
+
+        // ONLINE: busca no Supabase
+        if (isOnline) {
+          console.log("[TripForm] Buscando viagem em andamento no Supabase...");
+          const serverTrip = await getOngoingTripFromServer();
+
+          if (serverTrip) {
+            console.log("[TripForm] Viagem em andamento encontrada (online):", serverTrip.id);
+            restoreTripStateFromServer(serverTrip);
+            return;
+          }
+        }
+
+        // NATIVO ONLINE: também verificar SQLite (pode ter viagem local não sincronizada)
+        if (isNative && isOnline && isReady && hasDb) {
+          console.log("[TripForm] Verificando SQLite por viagem local em andamento...");
+          const localOngoingTrip = await getOngoingTrip();
+
+          if (localOngoingTrip) {
+            console.log("[TripForm] Viagem local em andamento encontrada:", localOngoingTrip.id);
+            restoreTripState(localOngoingTrip, localOngoingTrip.id!, null);
+            return;
+          }
+        }
+
+        console.log("[TripForm] Nenhuma viagem em andamento encontrada");
+      } catch (error) {
+        console.error("[TripForm] Erro ao carregar viagem em andamento:", error);
+      } finally {
+        setIsLoadingOngoingTrip(false);
+      }
+    };
+
+    // Aguarda SQLite estar pronto se nativo, ou executa direto se web/online
+    if (isNative) {
+      if (isReady) {
+        loadOngoingTripOnMount();
+      }
+    } else {
+      // Web: só depende de estar online para buscar do Supabase
+      loadOngoingTripOnMount();
+    }
+  }, [isReady, hasDb, isOnline, getOngoingTrip, getOngoingTripFromServer]);
+
+  // Função auxiliar para restaurar estado do form a partir de viagem offline
+  const restoreTripState = (
+    trip: any,
+    localTripId: number | null,
+    serverTripId: string | null
+  ) => {
+    const startTime = new Date(trip.start_time);
+    const now = new Date();
+    const elapsed = Math.floor((now.getTime() - startTime.getTime()) / 1000);
+
+    setTripData((prev) => ({
+      ...prev,
+      employeeId: trip.employee_id || "",
+      vehicleId: trip.vehicle_id || "",
+      initialKm: String(trip.km_inicial || ""),
+      origin: trip.origem || "",
+      reason: trip.motivo || "",
+      observation: trip.observacao || "",
+      isRentedVehicle: trip.is_rented_vehicle === 1 || trip.is_rented_vehicle === true,
+      rentedPlate: trip.rented_plate || "",
+      rentedModel: trip.rented_model || "",
+      rentedCompany: trip.rented_company || "",
+      startLocation: trip.start_latitude && trip.start_longitude
+        ? { lat: trip.start_latitude, lng: trip.start_longitude }
+        : undefined,
+      startTime,
+    }));
+
+    setCurrentLocalTripId(localTripId);
+    setCurrentServerTripId(serverTripId);
+    setElapsedTime(elapsed > 0 ? elapsed : 0);
+    setIsActive(true);
+
+    toast.info("Viagem em andamento restaurada", {
+      description: `Iniciada às ${startTime.toLocaleTimeString("pt-BR")}`,
+    });
+  };
+
+  // Função auxiliar para restaurar estado do form a partir de viagem do servidor
+  const restoreTripStateFromServer = (trip: any) => {
+    const startTime = new Date(trip.start_time);
+    const now = new Date();
+    const elapsed = Math.floor((now.getTime() - startTime.getTime()) / 1000);
+
+    setTripData((prev) => ({
+      ...prev,
+      employeeId: trip.employee_id || "",
+      vehicleId: trip.vehicle_id || "",
+      initialKm: String(trip.km_inicial || ""),
+      origin: trip.origem || "",
+      reason: trip.motivo || "",
+      observation: trip.observacao || "",
+      isRentedVehicle: trip.is_rented_vehicle === true,
+      rentedPlate: trip.rented_plate || "",
+      rentedModel: trip.rented_model || "",
+      rentedCompany: trip.rented_company || "",
+      startLocation: trip.start_latitude && trip.start_longitude
+        ? { lat: trip.start_latitude, lng: trip.start_longitude }
+        : undefined,
+      startTime,
+    }));
+
+    setCurrentLocalTripId(null);
+    setCurrentServerTripId(trip.id);
+    setElapsedTime(elapsed > 0 ? elapsed : 0);
+    setIsActive(true);
+
+    toast.info("Viagem em andamento restaurada", {
+      description: `Iniciada às ${startTime.toLocaleTimeString("pt-BR")}`,
+    });
+  };
+
   // Carrega employees/vehicles assim que o SQLite estiver pronto
   useEffect(() => {
     if (!isReady) return;
@@ -137,6 +280,7 @@ export const TripForm = () => {
 
     loadData();
   }, [isReady, getMotoristas, getVeiculos, lastSyncAt]);
+
 
   useEffect(() => {
     if (isActive) {
@@ -717,6 +861,20 @@ export const TripForm = () => {
               📡 Modo Offline - Viagens serão sincronizadas quando houver
               internet
             </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Loading ongoing trip indicator */}
+      {isLoadingOngoingTrip && (
+        <Card className="bg-muted/50">
+          <CardContent className="py-4">
+            <div className="flex items-center justify-center gap-3">
+              <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              <span className="text-sm text-muted-foreground">
+                Verificando viagem em andamento...
+              </span>
+            </div>
           </CardContent>
         </Card>
       )}

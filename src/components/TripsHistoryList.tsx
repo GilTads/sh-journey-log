@@ -1,11 +1,13 @@
 // src/components/TripsHistoryList.tsx
 import { useState, useMemo } from "react";
-import { History, AlertCircle } from "lucide-react";
+import { History, AlertCircle, WifiOff, Database } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
 import { Card, CardContent } from "@/components/ui/card";
 import { TripCard } from "@/components/TripCard";
 import { TripCardSkeleton } from "@/components/TripCardSkeleton";
 import { TripsHistoryFilters } from "@/components/TripsHistoryFilters";
 import { useTripsHistory, TripHistory, TripStatus, SyncStatus } from "@/hooks/useTripsHistory";
+import { useOfflineData } from "@/contexts/OfflineContext";
 import { getDayKey, getDayLabel } from "@/lib/formatters";
 
 interface GroupedTrips {
@@ -35,6 +37,9 @@ const groupTripsByDay = (trips: TripHistory[]): GroupedTrips[] => {
 };
 
 export const TripsHistoryList = () => {
+  const { isOnline, isReady, hasDb } = useOfflineData();
+  const isNative = Capacitor.isNativePlatform();
+
   // Filter states
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>("");
@@ -42,6 +47,9 @@ export const TripsHistoryList = () => {
   const [endDate, setEndDate] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<TripStatus>("all");
   const [syncStatusFilter, setSyncStatusFilter] = useState<SyncStatus | "all">("all");
+
+  // Determina se está aguardando SQLite quando offline
+  const isWaitingForSQLite = isNative && !isOnline && (!isReady || !hasDb);
 
   // Fetch trips with filters
   const {
@@ -76,6 +84,14 @@ export const TripsHistoryList = () => {
 
   return (
     <div className="space-y-4">
+      {/* Offline indicator */}
+      {isNative && !isOnline && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-yellow-100 text-yellow-800 rounded-lg text-sm">
+          <WifiOff className="h-4 w-4" />
+          <span>Modo offline - exibindo dados locais</span>
+        </div>
+      )}
+
       {/* Filters */}
       <TripsHistoryFilters
         selectedEmployeeId={selectedEmployeeId}
@@ -92,7 +108,7 @@ export const TripsHistoryList = () => {
         setSyncStatusFilter={setSyncStatusFilter}
         onClear={handleClearFilters}
         onRefresh={handleRefresh}
-        isLoading={isLoading}
+        isLoading={isLoading || isWaitingForSQLite}
       />
 
       {/* Results Header */}
@@ -100,15 +116,30 @@ export const TripsHistoryList = () => {
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <History className="h-4 w-4" />
           <span>
-            {isLoading
+            {isLoading || isWaitingForSQLite
               ? "Carregando..."
               : `${trips.length} viagem${trips.length !== 1 ? "s" : ""} encontrada${trips.length !== 1 ? "s" : ""}`}
           </span>
         </div>
       </div>
 
+      {/* Waiting for SQLite State */}
+      {isWaitingForSQLite && (
+        <Card>
+          <CardContent className="py-8 text-center">
+            <Database className="h-10 w-10 text-muted-foreground mx-auto mb-3 animate-pulse" />
+            <p className="text-sm font-medium text-muted-foreground">
+              Inicializando banco de dados local...
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Aguarde enquanto o SQLite é preparado.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Loading State */}
-      {isLoading && (
+      {isLoading && !isWaitingForSQLite && (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
             <TripCardSkeleton key={i} />
@@ -117,7 +148,7 @@ export const TripsHistoryList = () => {
       )}
 
       {/* Error State */}
-      {isError && (
+      {isError && !isWaitingForSQLite && (
         <Card>
           <CardContent className="py-8 text-center">
             <AlertCircle className="h-10 w-10 text-destructive mx-auto mb-3" />
@@ -132,7 +163,7 @@ export const TripsHistoryList = () => {
       )}
 
       {/* Empty State */}
-      {!isLoading && !isError && trips.length === 0 && (
+      {!isLoading && !isError && !isWaitingForSQLite && trips.length === 0 && (
         <Card>
           <CardContent className="py-8 text-center">
             <History className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
@@ -140,7 +171,9 @@ export const TripsHistoryList = () => {
               Nenhuma viagem encontrada
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Tente ajustar os filtros ou iniciar uma nova viagem.
+              {isNative && !isOnline
+                ? "Sincronize os dados quando estiver online."
+                : "Tente ajustar os filtros ou iniciar uma nova viagem."}
             </p>
           </CardContent>
         </Card>
@@ -149,6 +182,7 @@ export const TripsHistoryList = () => {
       {/* Trips List Grouped by Day */}
       {!isLoading &&
         !isError &&
+        !isWaitingForSQLite &&
         trips.length > 0 &&
         groupedTrips.map((group) => (
           <div key={group.key} className="space-y-3">
