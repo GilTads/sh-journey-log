@@ -45,6 +45,7 @@ import { CapacitorSQLite } from "@capacitor-community/sqlite";
 interface TripData {
   employeeId: string;
   employeePhoto: File | null;
+  employeePhotoUrl?: string; // URL ou base64 da foto recuperada
   vehicleId: string;
   initialKm: string;
   finalKm: string;
@@ -94,6 +95,7 @@ export const TripForm = () => {
   const [tripData, setTripData] = useState<TripData>({
     employeeId: "",
     employeePhoto: null,
+    employeePhotoUrl: undefined,
     vehicleId: "",
     initialKm: "",
     finalKm: "",
@@ -215,12 +217,17 @@ export const TripForm = () => {
     const now = new Date();
     const elapsed = Math.floor((now.getTime() - startTime.getTime()) / 1000);
 
+    // Recupera foto do motorista (base64 do SQLite)
+    const employeePhotoUrl = trip.employee_photo_base64 || trip.employee_photo_url || undefined;
+
     setTripData((prev) => ({
       ...prev,
       employeeId: trip.employee_id || "",
+      employeePhotoUrl, // URL ou base64 da foto recuperada
       vehicleId: trip.vehicle_id || "",
       initialKm: String(trip.km_inicial || ""),
       origin: trip.origem || "",
+      destination: trip.destino || "", // Recupera destino
       reason: trip.motivo || "",
       observation: trip.observacao || "",
       isRentedVehicle: trip.is_rented_vehicle === 1 || trip.is_rented_vehicle === true,
@@ -252,9 +259,11 @@ export const TripForm = () => {
     setTripData((prev) => ({
       ...prev,
       employeeId: trip.employee_id || "",
+      employeePhotoUrl: trip.employee_photo_url || undefined, // URL da foto do servidor
       vehicleId: trip.vehicle_id || "",
       initialKm: String(trip.km_inicial || ""),
       origin: trip.origem || "",
+      destination: trip.destino || "", // Recupera destino
       reason: trip.motivo || "",
       observation: trip.observacao || "",
       isRentedVehicle: trip.is_rented_vehicle === true,
@@ -743,6 +752,7 @@ export const TripForm = () => {
       setTripData({
         employeeId: "",
         employeePhoto: null,
+        employeePhotoUrl: undefined,
         vehicleId: "",
         initialKm: "",
         finalKm: "",
@@ -946,16 +956,18 @@ export const TripForm = () => {
             Foto do Motorista *
           </Label>
           <div className="space-y-3">
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full h-12 flex items-center justify-center gap-2 border-2 border-dashed hover:border-primary"
-              onClick={() => employeePhotoInputRef.current?.click()}
-              disabled={isActive}
-            >
-              <Camera className="h-5 w-5" />
-              <span>Tirar Foto do Motorista</span>
-            </Button>
+            {/* Botão só aparece se não estiver em viagem ativa */}
+            {!isActive && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full h-12 flex items-center justify-center gap-2 border-2 border-dashed hover:border-primary"
+                onClick={() => employeePhotoInputRef.current?.click()}
+              >
+                <Camera className="h-5 w-5" />
+                <span>Tirar Foto do Motorista</span>
+              </Button>
+            )}
             <Input
               id="employeePhoto"
               ref={employeePhotoInputRef}
@@ -966,7 +978,8 @@ export const TripForm = () => {
               disabled={isActive}
               className="hidden"
             />
-            {tripData.employeePhoto && (
+            {/* Mostra foto capturada (File) */}
+            {tripData.employeePhoto && !isActive && (
               <div className="relative w-full max-w-xs mx-auto">
                 <img
                   src={URL.createObjectURL(tripData.employeePhoto)}
@@ -981,10 +994,41 @@ export const TripForm = () => {
                   onClick={() =>
                     setTripData((prev) => ({ ...prev, employeePhoto: null }))
                   }
-                  disabled={isActive}
                 >
                   Remover
                 </Button>
+              </div>
+            )}
+            {/* Mostra foto recuperada (URL/base64) quando viagem em andamento */}
+            {isActive && tripData.employeePhotoUrl && (
+              <div className="relative w-full max-w-xs mx-auto">
+                <img
+                  src={tripData.employeePhotoUrl}
+                  alt="Foto do motorista"
+                  className="w-full h-48 object-cover rounded-lg border-2 border-primary opacity-90"
+                />
+                <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                  Foto registrada
+                </div>
+              </div>
+            )}
+            {/* Mostra foto capturada (File) quando viagem em andamento - sem botão de remover */}
+            {isActive && tripData.employeePhoto && !tripData.employeePhotoUrl && (
+              <div className="relative w-full max-w-xs mx-auto">
+                <img
+                  src={URL.createObjectURL(tripData.employeePhoto)}
+                  alt="Foto do motorista"
+                  className="w-full h-48 object-cover rounded-lg border-2 border-primary opacity-90"
+                />
+                <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                  Foto registrada
+                </div>
+              </div>
+            )}
+            {/* Mensagem quando viagem ativa mas sem foto */}
+            {isActive && !tripData.employeePhotoUrl && !tripData.employeePhoto && (
+              <div className="w-full h-48 flex items-center justify-center bg-muted rounded-lg border-2 border-dashed">
+                <span className="text-muted-foreground text-sm">Foto não disponível</span>
               </div>
             )}
           </div>
@@ -1168,7 +1212,7 @@ export const TripForm = () => {
                 setTripData((prev) => ({ ...prev, origin: e.target.value }))
               }
               disabled={isActive}
-              className="h-12"
+              className={`h-12 ${isActive ? "bg-muted cursor-not-allowed" : ""}`}
             />
           </div>
           <div className="space-y-3">
@@ -1189,7 +1233,8 @@ export const TripForm = () => {
                   destination: e.target.value,
                 }))
               }
-              className="h-12"
+              disabled={isActive}
+              className={`h-12 ${isActive ? "bg-muted cursor-not-allowed" : ""}`}
             />
           </div>
         </CardContent>
@@ -1212,7 +1257,8 @@ export const TripForm = () => {
             onChange={(e) =>
               setTripData((prev) => ({ ...prev, reason: e.target.value }))
             }
-            className="min-h-24 resize-none"
+            disabled={isActive}
+            className={`min-h-24 resize-none ${isActive ? "bg-muted cursor-not-allowed" : ""}`}
           />
         </CardContent>
       </Card>
@@ -1233,7 +1279,8 @@ export const TripForm = () => {
                 observation: e.target.value,
               }))
             }
-            className="min-h-24 resize-none"
+            disabled={isActive}
+            className={`min-h-24 resize-none ${isActive ? "bg-muted cursor-not-allowed" : ""}`}
           />
         </CardContent>
       </Card>
