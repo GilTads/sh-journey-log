@@ -64,8 +64,26 @@ export const useTrips = () => {
     }
   };
 
+  const updateTrip = async (tripId: string, updates: Partial<TripRecord>) => {
+    try {
+      const { data, error } = await supabase
+        .from("trips")
+        .update(updates as any)
+        .eq("id", tripId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { data, error: null };
+    } catch (error) {
+      console.error("Error updating trip:", error);
+      return { data: null, error };
+    }
+  };
+
   return {
     uploadPhoto,
     createTrip,
+    updateTrip,
   };
 };
