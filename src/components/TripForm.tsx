@@ -73,7 +73,7 @@ export const TripForm = () => {
     saveTripPosition,
   } = useOfflineData();
 
-  const { uploadPhoto, createTrip } = useTrips();
+  const { uploadPhoto, createTrip, updateTrip } = useTrips();
   const {
     isReady: isSQLiteReady,
     hasDb: hasSQLiteDb,
@@ -331,6 +331,46 @@ export const TripForm = () => {
         } else {
           console.error("[TripForm] Erro ao criar viagem draft no SQLite");
         }
+      } else if (isOnline) {
+        // ONLINE: cria viagem "em_andamento" no Supabase para vincular posições
+        let employeePhotoUrl: string | null = null;
+        if (tripData.employeePhoto) {
+          const photoPath = `employees/${tripData.employeeId}/${Date.now()}.jpg`;
+          employeePhotoUrl = await uploadPhoto(tripData.employeePhoto, photoPath);
+        }
+
+        const draftTripRecord = {
+          employee_id: tripData.employeeId,
+          vehicle_id: tripData.isRentedVehicle ? null : tripData.vehicleId,
+          km_inicial: parseFloat(tripData.initialKm),
+          km_final: 0, // será preenchido ao finalizar
+          start_time: startTime.toISOString(),
+          end_time: startTime.toISOString(), // placeholder
+          start_latitude: location.lat,
+          start_longitude: location.lng,
+          duration_seconds: 0,
+          status: "em_andamento",
+          origem: tripData.origin || null,
+          motivo: tripData.reason || null,
+          employee_photo_url: employeePhotoUrl || undefined,
+          is_rented_vehicle: tripData.isRentedVehicle,
+          rented_plate: tripData.isRentedVehicle ? tripData.rentedPlate || null : null,
+          rented_model: tripData.isRentedVehicle ? tripData.rentedModel || null : null,
+          rented_company: tripData.isRentedVehicle ? tripData.rentedCompany || null : null,
+        };
+
+        const { data, error } = await createTrip(draftTripRecord);
+        if (error) {
+          console.error("[TripForm] Erro ao criar viagem draft no Supabase:", error);
+          toast.error("Erro ao iniciar viagem no servidor");
+          setIsCapturingLocation(false);
+          return;
+        }
+
+        if (data?.id) {
+          setCurrentServerTripId(data.id);
+          console.log("[TripForm] Viagem draft criada no Supabase com ID:", data.id);
+        }
       }
 
       setTripData((prev) => ({
@@ -462,13 +502,7 @@ export const TripForm = () => {
           description: "Será sincronizada quando houver internet",
         });
       } else {
-        // ONLINE: salva no Supabase
-        let employeePhotoUrl: string | null = null;
-        if (tripData.employeePhoto) {
-          const photoPath = `employees/${tripData.employeeId}/${Date.now()}.jpg`;
-          employeePhotoUrl = await uploadPhoto(tripData.employeePhoto, photoPath);
-        }
-
+        // ONLINE: atualiza ou cria viagem no Supabase
         const tripPhotosUrls: string[] = [];
         for (let i = 0; i < tripData.images.length; i++) {
           const photoPath = `trips/${Date.now()}_${i}.jpg`;
@@ -476,42 +510,71 @@ export const TripForm = () => {
           if (url) tripPhotosUrls.push(url);
         }
 
-        const tripRecord = {
-          employee_id: tripData.employeeId,
-          vehicle_id: tripData.isRentedVehicle ? null : tripData.vehicleId,
-          km_inicial: parseFloat(tripData.initialKm),
-          km_final: parseFloat(tempFinalKm),
-          start_time: tripData.startTime!.toISOString(),
-          end_time: endTime.toISOString(),
-          start_latitude: tripData.startLocation?.lat,
-          start_longitude: tripData.startLocation?.lng,
-          end_latitude: location.lat,
-          end_longitude: location.lng,
-          duration_seconds: elapsedTime,
-          origem: tripData.origin || null,
-          destino: tripData.destination || null,
-          motivo: tripData.reason || null,
-          observacao: tripData.observation || null,
-          status: "finalizada",
-          employee_photo_url: employeePhotoUrl || undefined,
-          trip_photos_urls:
-            tripPhotosUrls.length > 0 ? tripPhotosUrls : undefined,
-          is_rented_vehicle: tripData.isRentedVehicle,
-          rented_plate: tripData.isRentedVehicle ? tripData.rentedPlate || null : null,
-          rented_model: tripData.isRentedVehicle ? tripData.rentedModel || null : null,
-          rented_company: tripData.isRentedVehicle ? tripData.rentedCompany || null : null,
-        };
+        // Se já existe uma viagem no servidor (criada no handleStartTrip), apenas atualiza
+        if (currentServerTripId) {
+          const tripUpdates = {
+            km_final: parseFloat(tempFinalKm),
+            end_time: endTime.toISOString(),
+            end_latitude: location.lat,
+            end_longitude: location.lng,
+            duration_seconds: elapsedTime,
+            destino: tripData.destination || null,
+            observacao: tripData.observation || null,
+            status: "finalizada",
+            trip_photos_urls:
+              tripPhotosUrls.length > 0 ? tripPhotosUrls : undefined,
+          };
 
-        const { data, error } = await createTrip(tripRecord);
+          const { error } = await updateTrip(currentServerTripId, tripUpdates);
 
-        if (error) {
-          throw new Error("Erro ao salvar viagem no banco de dados");
-        }
+          if (error) {
+            throw new Error("Erro ao atualizar viagem no banco de dados");
+          }
 
-        // Captura o server_trip_id para vincular posições
-        if (data?.id) {
-          setCurrentServerTripId(data.id);
-          console.log("[TripForm] Viagem criada no Supabase com ID:", data.id);
+          console.log("[TripForm] Viagem atualizada no Supabase com ID:", currentServerTripId);
+        } else {
+          // Fallback: cria nova viagem (não deveria acontecer se handleStartTrip funcionou)
+          let employeePhotoUrl: string | null = null;
+          if (tripData.employeePhoto) {
+            const photoPath = `employees/${tripData.employeeId}/${Date.now()}.jpg`;
+            employeePhotoUrl = await uploadPhoto(tripData.employeePhoto, photoPath);
+          }
+
+          const tripRecord = {
+            employee_id: tripData.employeeId,
+            vehicle_id: tripData.isRentedVehicle ? null : tripData.vehicleId,
+            km_inicial: parseFloat(tripData.initialKm),
+            km_final: parseFloat(tempFinalKm),
+            start_time: tripData.startTime!.toISOString(),
+            end_time: endTime.toISOString(),
+            start_latitude: tripData.startLocation?.lat,
+            start_longitude: tripData.startLocation?.lng,
+            end_latitude: location.lat,
+            end_longitude: location.lng,
+            duration_seconds: elapsedTime,
+            origem: tripData.origin || null,
+            destino: tripData.destination || null,
+            motivo: tripData.reason || null,
+            observacao: tripData.observation || null,
+            status: "finalizada",
+            employee_photo_url: employeePhotoUrl || undefined,
+            trip_photos_urls:
+              tripPhotosUrls.length > 0 ? tripPhotosUrls : undefined,
+            is_rented_vehicle: tripData.isRentedVehicle,
+            rented_plate: tripData.isRentedVehicle ? tripData.rentedPlate || null : null,
+            rented_model: tripData.isRentedVehicle ? tripData.rentedModel || null : null,
+            rented_company: tripData.isRentedVehicle ? tripData.rentedCompany || null : null,
+          };
+
+          const { data, error } = await createTrip(tripRecord);
+
+          if (error) {
+            throw new Error("Erro ao salvar viagem no banco de dados");
+          }
+
+          if (data?.id) {
+            console.log("[TripForm] Viagem criada (fallback) no Supabase com ID:", data.id);
+          }
         }
 
         setIsActive(false);
