@@ -4,10 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOfflineData } from "@/contexts/OfflineContext";
 import { OfflineTrip, OfflineEmployee, OfflineVehicle } from "@/hooks/useSQLite";
 
+export type SyncStatus = "synced" | "offline-only";
+export type TripStatus = "em_andamento" | "finalizada" | "all";
+
 export interface TripHistory {
   id: string;
   employee_id: string;
-  vehicle_id: string;
+  vehicle_id: string | null;
   km_inicial: number;
   km_final: number | null;
   start_time: string;
@@ -20,6 +23,15 @@ export interface TripHistory {
   status: string | null;
   employee_photo_url: string | null;
   trip_photos_urls: string[] | null;
+
+  // Rented vehicle fields
+  is_rented_vehicle: boolean;
+  rented_plate: string | null;
+  rented_model: string | null;
+  rented_company: string | null;
+
+  // Sync status (only for offline trips)
+  sync_status: SyncStatus;
 
   employee?: {
     nome_completo: string;
@@ -37,6 +49,8 @@ interface UseTripsHistoryParams {
   vehicleId?: string;
   startDate?: string;
   endDate?: string;
+  statusFilter?: TripStatus;
+  syncStatusFilter?: SyncStatus | "all";
   enabled?: boolean;
 }
 
@@ -44,7 +58,7 @@ interface UseTripsHistoryParams {
 const mapOfflineTripBase = (trip: OfflineTrip): TripHistory => ({
   id: String(trip.id),
   employee_id: trip.employee_id,
-  vehicle_id: trip.vehicle_id,
+  vehicle_id: trip.vehicle_id ?? null,
   km_inicial: trip.km_inicial,
   km_final: trip.km_final ?? null,
   start_time: trip.start_time,
@@ -55,12 +69,20 @@ const mapOfflineTripBase = (trip: OfflineTrip): TripHistory => ({
   motivo: trip.motivo ?? null,
   observacao: trip.observacao ?? null,
   status: trip.status ?? null,
+  // Offline trips store base64, not URL - set to null for UI display
   employee_photo_url: null,
   trip_photos_urls: null,
+  // Rented vehicle
+  is_rented_vehicle: trip.is_rented_vehicle === 1,
+  rented_plate: trip.rented_plate ?? null,
+  rented_model: trip.rented_model ?? null,
+  rented_company: trip.rented_company ?? null,
+  // Sync status based on synced flag
+  sync_status: trip.synced === 1 ? "synced" : "offline-only",
 });
 
 export const useTripsHistory = (params: UseTripsHistoryParams = {}) => {
-  const { enabled = true, ...filters } = params;
+  const { enabled = true, statusFilter, syncStatusFilter, ...filters } = params;
 
   const { isOnline, isReady, hasDb, getViagens, getMotoristas, getVeiculos } =
     useOfflineData();
@@ -68,7 +90,7 @@ export const useTripsHistory = (params: UseTripsHistoryParams = {}) => {
   const isNative = Capacitor.isNativePlatform();
 
   return useQuery({
-    queryKey: ["trips-history", filters, { isNative, isOnline }],
+    queryKey: ["trips-history", filters, statusFilter, syncStatusFilter, { isNative, isOnline }],
     enabled,
     queryFn: async () => {
       // ===============================
@@ -89,7 +111,6 @@ export const useTripsHistory = (params: UseTripsHistoryParams = {}) => {
         }
 
         if (filters.startDate) {
-          // início do dia selecionado (00:00)
           const start = new Date(`${filters.startDate}T00:00:00`).getTime();
           trips = trips.filter(
             (t) => new Date(t.start_time).getTime() >= start
@@ -97,11 +118,24 @@ export const useTripsHistory = (params: UseTripsHistoryParams = {}) => {
         }
 
         if (filters.endDate) {
-          // fim do dia selecionado (23:59:59.999)
           const end = new Date(`${filters.endDate}T23:59:59.999`).getTime();
           trips = trips.filter(
             (t) => new Date(t.start_time).getTime() <= end
           );
+        }
+
+        // Status filter
+        if (statusFilter && statusFilter !== "all") {
+          trips = trips.filter((t) => t.status === statusFilter);
+        }
+
+        // Sync status filter
+        if (syncStatusFilter && syncStatusFilter !== "all") {
+          if (syncStatusFilter === "synced") {
+            trips = trips.filter((t) => t.synced === 1);
+          } else if (syncStatusFilter === "offline-only") {
+            trips = trips.filter((t) => t.synced === 0);
+          }
         }
 
         trips.sort(
@@ -116,11 +150,11 @@ export const useTripsHistory = (params: UseTripsHistoryParams = {}) => {
         const employees: OfflineEmployee[] = await getMotoristas();
         const vehicles: OfflineVehicle[] = await getVeiculos();
 
-        const enriched = trips.map((trip) => {
+        const enriched: TripHistory[] = trips.map((trip) => {
           const base = mapOfflineTripBase(trip);
 
           const emp = employees.find((e) => e.id === trip.employee_id);
-          const veh = vehicles.find((v) => v.id === trip.vehicle_id);
+          const veh = trip.vehicle_id ? vehicles.find((v) => v.id === trip.vehicle_id) : undefined;
 
           return {
             ...base,
@@ -166,20 +200,48 @@ export const useTripsHistory = (params: UseTripsHistoryParams = {}) => {
       }
 
       if (filters.startDate) {
-        // 00:00 do dia inicial
         query = query.gte("start_time", `${filters.startDate} 00:00:00`);
       }
 
       if (filters.endDate) {
-        // 23:59:59 do dia final (inclusivo)
         query = query.lte("start_time", `${filters.endDate} 23:59:59`);
       }
 
+      // Status filter
+      if (statusFilter && statusFilter !== "all") {
+        query = query.eq("status", statusFilter);
+      }
 
       const { data, error } = await query;
       if (error) throw error;
 
-      return data as TripHistory[];
+      // Map Supabase data to TripHistory format
+      const mapped: TripHistory[] = (data || []).map((trip: any) => ({
+        id: trip.id,
+        employee_id: trip.employee_id,
+        vehicle_id: trip.vehicle_id,
+        km_inicial: trip.km_inicial,
+        km_final: trip.km_final,
+        start_time: trip.start_time,
+        end_time: trip.end_time,
+        duration_seconds: trip.duration_seconds,
+        origem: trip.origem,
+        destino: trip.destino,
+        motivo: trip.motivo,
+        observacao: trip.observacao,
+        status: trip.status,
+        employee_photo_url: trip.employee_photo_url,
+        trip_photos_urls: trip.trip_photos_urls,
+        is_rented_vehicle: trip.is_rented_vehicle ?? false,
+        rented_plate: trip.rented_plate,
+        rented_model: trip.rented_model,
+        rented_company: trip.rented_company,
+        sync_status: "synced" as SyncStatus, // Online trips are always synced
+        employee: trip.employee,
+        vehicle: trip.vehicle,
+      }));
+
+      return mapped;
     },
   });
 };
