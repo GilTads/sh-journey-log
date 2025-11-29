@@ -476,7 +476,7 @@ export const TripForm = () => {
           end_longitude: null,
           duration_seconds: 0,
           origem: tripData.origin || null,
-          destino: null,
+          destino: tripData.destination || null, // Salva destino se preenchido
           motivo: tripData.reason || null,
           observacao: tripData.observation || null,
           status: "em_andamento",
@@ -516,7 +516,9 @@ export const TripForm = () => {
           duration_seconds: 0,
           status: "em_andamento",
           origem: tripData.origin || null,
+          destino: tripData.destination || null, // Salva destino se preenchido
           motivo: tripData.reason || null,
+          observacao: tripData.observation || null, // Salva observação se preenchida
           employee_photo_url: employeePhotoUrl || undefined,
           is_rented_vehicle: tripData.isRentedVehicle,
           rented_plate: tripData.isRentedVehicle ? tripData.rentedPlate || null : null,
