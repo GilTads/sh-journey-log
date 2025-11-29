@@ -122,6 +122,9 @@ export const TripForm = () => {
   const [currentLocalTripId, setCurrentLocalTripId] = useState<number | null>(null);
   const [currentServerTripId, setCurrentServerTripId] = useState<string | null>(null);
 
+  // Ref para evitar execução múltipla do carregamento de viagem em andamento
+  const hasLoadedOngoingTripRef = useRef(false);
+
   // 🔍 STATUS DO TESTE DO SQLITE (DEBUG)
   const [sqliteStatus, setSqliteStatus] = useState<string>(
     "Aguardando teste..."
@@ -129,7 +132,21 @@ export const TripForm = () => {
 
   // ========= CARREGA VIAGEM EM ANDAMENTO NO MOUNT =========
   useEffect(() => {
+    // Evita execução múltipla
+    if (hasLoadedOngoingTripRef.current) {
+      return;
+    }
+
     const isNative = Capacitor.isNativePlatform();
+
+    // Verifica se podemos executar (web pode executar direto, nativo precisa SQLite pronto)
+    const canExecute = !isNative || isReady;
+    if (!canExecute) {
+      return;
+    }
+
+    // Marca como já executado ANTES de rodar para evitar race conditions
+    hasLoadedOngoingTripRef.current = true;
     
     const loadOngoingTripOnMount = async () => {
       console.log("[TripForm] Verificando viagem em andamento...", {
@@ -184,16 +201,9 @@ export const TripForm = () => {
       }
     };
 
-    // Aguarda SQLite estar pronto se nativo, ou executa direto se web/online
-    if (isNative) {
-      if (isReady) {
-        loadOngoingTripOnMount();
-      }
-    } else {
-      // Web: só depende de estar online para buscar do Supabase
-      loadOngoingTripOnMount();
-    }
-  }, [isReady, hasDb, isOnline, getOngoingTrip, getOngoingTripFromServer]);
+    loadOngoingTripOnMount();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isReady, hasDb, isOnline]);
 
   // Função auxiliar para restaurar estado do form a partir de viagem offline
   const restoreTripState = (
