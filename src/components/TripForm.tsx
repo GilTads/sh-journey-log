@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { SearchableCombobox } from "@/components/ui/searchable-combobox";
 import {
   AlertDialog,
@@ -29,6 +30,7 @@ import { Geolocation } from "@capacitor/geolocation";
 import {
   User,
   Car,
+  CarFront,
   MapPin,
   FileText,
   Camera,
@@ -38,7 +40,7 @@ import {
   Play,
   Square,
 } from "lucide-react";
-import { CapacitorSQLite } from "@capacitor-community/sqlite"; // ⬅️ NOVO IMPORT
+import { CapacitorSQLite } from "@capacitor-community/sqlite";
 
 interface TripData {
   employeeId: string;
@@ -821,59 +823,87 @@ export const TripForm = () => {
         </CardContent>
       </Card>
 
-      {/* Vehicle Field */}
+      {/* Vehicle Section - Reorganized UI */}
       <Card>
-        <CardContent className="pt-6 space-y-3">
-          <div className="flex items-center justify-between mb-4">
+        <CardContent className="pt-6 pb-6">
+          {/* Section Header */}
+          <div className="mb-5">
             <Label className="text-base font-semibold flex items-center gap-2">
-              <Car className="h-4 w-4 text-primary" />
-              Veículo *
+              <Car className="h-5 w-5 text-primary" />
+              Veículo
             </Label>
-            <div className="flex items-center gap-2">
-              <Label htmlFor="isRented" className="text-sm text-muted-foreground cursor-pointer">
-                Veículo alugado/não cadastrado
-              </Label>
-              <input
-                id="isRented"
-                type="checkbox"
-                checked={tripData.isRentedVehicle}
-                onChange={(e) => {
-                  setTripData((prev) => ({
-                    ...prev,
-                    isRentedVehicle: e.target.checked,
-                    vehicleId: "",
-                    rentedPlate: "",
-                    rentedModel: "",
-                    rentedCompany: "",
-                  }));
-                }}
-                disabled={isActive}
-                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-              />
-            </div>
+            <p className="text-sm text-muted-foreground mt-1">
+              Selecione um veículo da frota ou marque a opção de veículo alugado
+            </p>
           </div>
 
-          {!tripData.isRentedVehicle ? (
-            <SearchableCombobox
-              options={vehicles.map((veh) => ({
-                value: veh.id,
-                label: `${veh.placa} - ${veh.marca} ${veh.modelo}`,
-                searchText: `${veh.placa} ${veh.marca} ${veh.modelo}`,
-              }))}
-              value={tripData.vehicleId}
-              onChange={(value) =>
-                setTripData((prev) => ({ ...prev, vehicleId: value }))
-              }
-              placeholder="Digite placa ou modelo..."
-              emptyText="Nenhum veículo encontrado."
+          {/* Toggle for Rented Vehicle */}
+          <div className="flex items-center space-x-3 p-3 rounded-lg bg-muted/50 mb-5">
+            <Checkbox
+              id="isRented"
+              checked={tripData.isRentedVehicle}
+              onCheckedChange={(checked) => {
+                setTripData((prev) => ({
+                  ...prev,
+                  isRentedVehicle: checked === true,
+                  vehicleId: "",
+                  rentedPlate: "",
+                  rentedModel: "",
+                  rentedCompany: "",
+                }));
+              }}
               disabled={isActive}
-              minCharsToSearch={2}
+              className="h-5 w-5"
             />
-          ) : (
-            <div className="space-y-3">
-              <div>
-                <Label htmlFor="rentedPlate" className="text-sm font-medium mb-2 block">
-                  Placa *
+            <Label 
+              htmlFor="isRented" 
+              className="text-sm font-medium cursor-pointer flex items-center gap-2"
+            >
+              <CarFront className="h-4 w-4 text-muted-foreground" />
+              Veículo alugado / não cadastrado
+            </Label>
+          </div>
+
+          {/* Mode 1: Fleet Vehicle */}
+          {!tripData.isRentedVehicle && (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Car className="h-4 w-4 text-muted-foreground" />
+                Veículo da Frota *
+              </Label>
+              <SearchableCombobox
+                options={vehicles.map((veh) => ({
+                  value: veh.id,
+                  label: `${veh.placa} - ${veh.marca} ${veh.modelo}`,
+                  searchText: `${veh.placa} ${veh.marca} ${veh.modelo}`,
+                }))}
+                value={tripData.vehicleId}
+                onChange={(value) =>
+                  setTripData((prev) => ({ ...prev, vehicleId: value }))
+                }
+                placeholder="Digite placa ou modelo..."
+                emptyText="Nenhum veículo encontrado."
+                disabled={isActive}
+                minCharsToSearch={2}
+              />
+              <p className="text-xs text-muted-foreground">
+                Escolha um veículo cadastrado na frota
+              </p>
+            </div>
+          )}
+
+          {/* Mode 2: Rented Vehicle */}
+          {tripData.isRentedVehicle && (
+            <div className="space-y-4 p-4 rounded-lg border border-dashed border-primary/30 bg-primary/5">
+              <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                <CarFront className="h-4 w-4" />
+                Dados do Veículo Alugado
+              </div>
+
+              {/* Rented Plate Field */}
+              <div className="space-y-2">
+                <Label htmlFor="rentedPlate" className="text-sm font-medium">
+                  Placa do veículo *
                 </Label>
                 <Input
                   id="rentedPlate"
@@ -887,9 +917,11 @@ export const TripForm = () => {
                   className="h-12"
                 />
               </div>
-              <div>
-                <Label htmlFor="rentedModel" className="text-sm font-medium mb-2 block">
-                  Modelo/Descrição *
+
+              {/* Rented Model Field */}
+              <div className="space-y-2">
+                <Label htmlFor="rentedModel" className="text-sm font-medium">
+                  Modelo / descrição *
                 </Label>
                 <Input
                   id="rentedModel"
@@ -903,14 +935,16 @@ export const TripForm = () => {
                   className="h-12"
                 />
               </div>
-              <div>
-                <Label htmlFor="rentedCompany" className="text-sm font-medium mb-2 block">
-                  Locadora/Proprietário (opcional)
+
+              {/* Rented Company Field */}
+              <div className="space-y-2">
+                <Label htmlFor="rentedCompany" className="text-sm font-medium text-muted-foreground">
+                  Locadora / proprietário (opcional)
                 </Label>
                 <Input
                   id="rentedCompany"
                   type="text"
-                  placeholder="Ex: Localiza"
+                  placeholder="Ex: Localiza, Movida..."
                   value={tripData.rentedCompany}
                   onChange={(e) =>
                     setTripData((prev) => ({ ...prev, rentedCompany: e.target.value }))
