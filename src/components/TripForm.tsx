@@ -91,6 +91,7 @@ export const TripForm = () => {
   const [employees, setEmployees] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [isLoadingOngoingTrip, setIsLoadingOngoingTrip] = useState(true);
+  const [plateError, setPlateError] = useState<string>("");
 
   const [tripData, setTripData] = useState<TripData>({
     employeeId: "",
@@ -439,6 +440,14 @@ export const TripForm = () => {
     } else {
       if (!tripData.rentedPlate || !tripData.rentedModel) {
         toast.error("Preencha placa e modelo do veículo alugado");
+        return;
+      }
+      
+      // Valida formato da placa
+      if (!validateLicensePlate(tripData.rentedPlate)) {
+        toast.error("Placa inválida", {
+          description: "Use o formato ABC-1234 ou ABC1D23"
+        });
         return;
       }
     }
@@ -846,6 +855,101 @@ export const TripForm = () => {
     }
   };
 
+  /**
+   * Formata a placa do veículo automaticamente
+   * - Converte para UPPERCASE
+   * - Detecta formato antigo (ABC-1234) ou Mercosul (ABC1D23)
+   * - Remove caracteres inválidos
+   * - Adiciona hífen automaticamente no formato antigo
+   */
+  const formatLicensePlate = (value: string): string => {
+    // Remove tudo que não é letra ou número
+    let cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    
+    // Limita a 7 caracteres
+    cleaned = cleaned.slice(0, 7);
+    
+    if (cleaned.length === 0) return '';
+    
+    // Detecta o formato baseado no conteúdo
+    // Formato antigo: 3 letras + 4 números (ABC1234 → ABC-1234)
+    // Formato Mercosul: 3 letras + 1 número + 1 letra + 2 números (ABC1D23)
+    
+    if (cleaned.length <= 3) {
+      // Apenas letras iniciais
+      return cleaned.replace(/[^A-Z]/g, '').slice(0, 3);
+    }
+    
+    const firstThree = cleaned.slice(0, 3).replace(/[^A-Z]/g, '');
+    const rest = cleaned.slice(3);
+    
+    // Se o 4º caractere for número e temos mais de 4 caracteres
+    if (rest.length > 0) {
+      const fourthChar = rest[0];
+      
+      // Tenta detectar formato Mercosul: ABC1X23
+      // Se após o primeiro número há uma letra, é Mercosul
+      if (rest.length >= 2 && /[0-9]/.test(fourthChar) && /[A-Z]/.test(rest[1])) {
+        // Formato Mercosul: ABC1D23
+        const num1 = rest[0].replace(/[^0-9]/g, '');
+        const letter = rest[1].replace(/[^A-Z]/g, '');
+        const num2 = rest.slice(2).replace(/[^0-9]/g, '').slice(0, 2);
+        return `${firstThree}${num1}${letter}${num2}`;
+      }
+      
+      // Formato antigo: ABC-1234 (apenas números após as letras)
+      const numbers = rest.replace(/[^0-9]/g, '').slice(0, 4);
+      if (numbers.length > 0) {
+        return `${firstThree}-${numbers}`;
+      }
+    }
+    
+    return firstThree;
+  };
+
+  /**
+   * Valida se a placa está em um formato válido
+   * - Formato antigo: ABC-1234 (3 letras + hífen + 4 números)
+   * - Formato Mercosul: ABC1D23 (3 letras + 1 número + 1 letra + 2 números)
+   */
+  const validateLicensePlate = (value: string): boolean => {
+    if (!value || value.trim() === '') return false;
+    
+    const plate = value.trim().toUpperCase();
+    
+    // Formato antigo: ABC-1234
+    const oldFormat = /^[A-Z]{3}-[0-9]{4}$/;
+    
+    // Formato Mercosul: ABC1D23
+    const mercosulFormat = /^[A-Z]{3}[0-9][A-Z][0-9]{2}$/;
+    
+    return oldFormat.test(plate) || mercosulFormat.test(plate);
+  };
+
+  /**
+   * Handler para mudança no campo de placa
+   * Formata automaticamente e valida
+   */
+  const handlePlateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatLicensePlate(e.target.value);
+    
+    setTripData((prev) => ({ 
+      ...prev, 
+      rentedPlate: formatted 
+    }));
+    
+    // Valida e atualiza mensagem de erro
+    if (formatted.length > 0 && formatted.length >= 7) {
+      if (!validateLicensePlate(formatted)) {
+        setPlateError("Formato inválido. Use ABC-1234 ou ABC1D23");
+      } else {
+        setPlateError("");
+      }
+    } else {
+      setPlateError("");
+    }
+  };
+
   // 🔥 TESTE VISÍVEL DO SQLITE (OPÇÃO 2)
   const handleTestSQLite = async () => {
     try {
@@ -1122,14 +1226,21 @@ export const TripForm = () => {
                 <Input
                   id="rentedPlate"
                   type="text"
-                  placeholder="Ex: ABC-1234"
+                  placeholder="ABC-1234 ou ABC1D23"
                   value={tripData.rentedPlate}
-                  onChange={(e) =>
-                    setTripData((prev) => ({ ...prev, rentedPlate: e.target.value }))
-                  }
+                  onChange={handlePlateChange}
                   disabled={isActive}
-                  className="h-12"
+                  className={`h-12 ${plateError ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                  maxLength={8}
                 />
+                {plateError && (
+                  <p className="text-xs text-destructive font-medium">
+                    {plateError}
+                  </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Formato antigo (ABC-1234) ou Mercosul (ABC1D23)
+                </p>
               </div>
 
               {/* Rented Model Field */}
