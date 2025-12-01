@@ -425,12 +425,14 @@ export const useSQLite = () => {
   };
 
   /**
-   * Trips vindas do Supabase (histórico completo) usando a mesma filosofia
-   * de saveEmployees/saveVehicles:
-   *
-   * - remove somente as viagens com synced = 1 (cópias do servidor)
-   * - mantém as viagens locais pendentes (synced = 0)
-   * - insere o histórico vindo do Supabase com synced = 1
+   * CORREÇÃO OFFLINE-FIRST:
+   * Substitui as viagens sincronizadas (synced=1) pelas atualizadas do Supabase.
+   * 
+   * Resolve o problema de viagens deletadas no servidor continuarem aparecendo offline:
+   * - Remove viagens com synced=1 que não existem mais no Supabase
+   * - Remove viagens com server_trip_id que foram deletadas no servidor
+   * - Mantém intactas as viagens locais pendentes (synced=0 sem server_trip_id)
+   * - Insere o histórico completo vindo do Supabase com synced=1
    */
   const replaceSyncedTripsFromServer = async (
     tripsFromServer: any[]
@@ -439,21 +441,43 @@ export const useSQLite = () => {
     if (!db) return false;
 
     try {
-      // apaga apenas cópias sincronizadas previamente
-      await db.execute("DELETE FROM offline_trips WHERE synced = 1;");
+      await db.execute("BEGIN TRANSACTION;");
 
       if (!tripsFromServer.length) {
-        console.log("[useSQLite] Nenhuma trip do servidor para salvar");
+        // Se não há viagens no servidor, remove todas as sincronizadas
+        await db.execute("DELETE FROM offline_trips WHERE synced = 1;");
+        await db.execute("COMMIT;");
+        console.log("[useSQLite] Nenhuma trip do servidor - removidas todas synced=1");
         return true;
       }
 
-      await db.execute("BEGIN TRANSACTION;");
+      // Coleta os IDs das viagens vindas do Supabase
+      const serverTripIds = tripsFromServer
+        .map(t => t.id)
+        .filter(id => id)
+        .map(id => `'${id}'`)
+        .join(',');
 
+      // Remove viagens sincronizadas que NÃO estão mais no servidor:
+      // 1. Viagens com synced=1 que não têm ID na lista do servidor
+      // 2. Viagens com server_trip_id preenchido mas que não existem mais no servidor
+      if (serverTripIds) {
+        await db.execute(`
+          DELETE FROM offline_trips 
+          WHERE synced = 1 
+          OR (server_trip_id IS NOT NULL AND server_trip_id NOT IN (${serverTripIds}));
+        `);
+        console.log("[useSQLite] Removidas viagens sincronizadas não presentes no servidor");
+      } else {
+        await db.execute("DELETE FROM offline_trips WHERE synced = 1;");
+      }
+
+      // Insere/atualiza as viagens vindas do Supabase com synced=1
       for (const t of tripsFromServer) {
         await db.run(
           `
           INSERT INTO offline_trips (
-            employee_id, vehicle_id, km_inicial, km_final,
+            server_trip_id, employee_id, vehicle_id, km_inicial, km_final,
             start_time, end_time,
             start_latitude, start_longitude,
             end_latitude, end_longitude,
@@ -465,6 +489,7 @@ export const useSQLite = () => {
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         `,
           [
+            t.id, // server_trip_id
             t.employee_id,
             t.vehicle_id ?? null,
             t.km_inicial,
@@ -480,27 +505,27 @@ export const useSQLite = () => {
             t.destino ?? null,
             t.motivo ?? null,
             t.observacao ?? null,
-            t.status ?? "CONCLUIDA",
-            null, // employee_photo_base64 (não precisamos pro histórico)
+            t.status ?? "finalizada",
+            null, // employee_photo_base64
             null, // trip_photos_base64
             t.is_rented_vehicle ? 1 : 0,
             t.rented_plate ?? null,
             t.rented_model ?? null,
             t.rented_company ?? null,
-            1, // synced -> veio do servidor
-            0, // deleted
+            1, // synced = 1 (veio do servidor)
+            0, // deleted = 0
           ]
         );
       }
 
       await db.execute("COMMIT;");
       console.log(
-        `[useSQLite] ${tripsFromServer.length} trips do servidor salvas no SQLite`
+        `[useSQLite] ✅ ${tripsFromServer.length} trips do servidor salvas/atualizadas no SQLite`
       );
       return true;
     } catch (error) {
       console.error(
-        "[useSQLite] Erro ao salvar trips do servidor no SQLite:",
+        "[useSQLite] ❌ Erro ao salvar trips do servidor no SQLite:",
         error
       );
       try {
