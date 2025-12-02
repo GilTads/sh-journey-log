@@ -66,6 +66,9 @@ export const useTrips = () => {
 
   const updateTrip = async (tripId: string, updates: Partial<TripRecord>) => {
     try {
+      // ✅ GARANTIR que status "finalizada" seja sempre salvo corretamente
+      console.log("[useTrips] Atualizando viagem:", tripId, "Status:", updates.status);
+      
       const { data, error } = await supabase
         .from("trips")
         .update(updates as any)
@@ -74,15 +77,19 @@ export const useTrips = () => {
         .single();
 
       if (error) throw error;
+      
+      console.log("[useTrips] Viagem atualizada com sucesso. Status final:", data?.status);
       return { data, error: null };
     } catch (error) {
-      console.error("Error updating trip:", error);
+      console.error("[useTrips] Erro ao atualizar viagem:", error);
       return { data: null, error };
     }
   };
 
   /**
-   * Busca viagem em andamento no Supabase (status = 'em_andamento')
+   * Busca viagem em andamento no Supabase
+   * ✅ FILTRO RIGOROSO: status = 'em_andamento' AND end_time IS NULL
+   * Isso impede que viagens "fantasmas" sejam consideradas ongoing
    * Retorna a mais recente caso exista mais de uma
    */
   const getOngoingTripFromServer = async () => {
@@ -91,6 +98,7 @@ export const useTrips = () => {
         .from("trips")
         .select("*")
         .eq("status", "em_andamento")
+        .is("end_time", null) // ✅ CRÍTICO: apenas viagens que não foram finalizadas
         .order("start_time", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -100,6 +108,7 @@ export const useTrips = () => {
         return null;
       }
 
+      console.log("[useTrips] Viagem em andamento encontrada:", data?.id || "nenhuma");
       return data;
     } catch (error) {
       console.error("[useTrips] Erro ao buscar viagem em andamento:", error);

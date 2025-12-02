@@ -617,7 +617,7 @@ export const TripForm = () => {
             destino: tripData.destination || null,
             motivo: tripData.reason || null,
             observacao: tripData.observation || null,
-            status: "finalizada",
+            // ✅ NÃO enviar status - updateTripOnEnd sempre força "finalizada"
             trip_photos_base64: tripPhotosBase64.length > 0
               ? JSON.stringify(tripPhotosBase64)
               : undefined,
@@ -628,7 +628,7 @@ export const TripForm = () => {
             throw new Error("Erro ao atualizar viagem offline");
           }
 
-          console.log("[TripForm] Viagem atualizada com ID local:", currentLocalTripId);
+          console.log("[TripForm] ✅ Viagem finalizada (offline) - ID local:", currentLocalTripId);
         } else {
           // Fallback: cria nova viagem (não deveria acontecer, mas por segurança)
           let employeePhotoBase64: string | undefined;
@@ -696,18 +696,20 @@ export const TripForm = () => {
             duration_seconds: elapsedTime,
             destino: tripData.destination || null,
             observacao: tripData.observation || null,
-            status: "finalizada",
+            status: "finalizada", // ✅ CRÍTICO: sempre enviar status explicitamente
             trip_photos_urls:
               tripPhotosUrls.length > 0 ? tripPhotosUrls : undefined,
           };
 
+          console.log("[TripForm] Finalizando viagem no Supabase - ID:", currentServerTripId);
           const { error } = await updateTrip(currentServerTripId, tripUpdates);
 
           if (error) {
+            console.error("[TripForm] ❌ Erro ao finalizar viagem:", error);
             throw new Error("Erro ao atualizar viagem no banco de dados");
           }
 
-          console.log("[TripForm] Viagem atualizada no Supabase com ID:", currentServerTripId);
+          console.log("[TripForm] ✅ Viagem finalizada (online) no Supabase:", currentServerTripId);
         } else {
           // Fallback: cria nova viagem (não deveria acontecer se handleStartTrip funcionou)
           let employeePhotoUrl: string | null = null;
@@ -760,6 +762,7 @@ export const TripForm = () => {
         });
       }
 
+      // ✅ Limpa todos os estados após finalização bem-sucedida
       setTripData({
         employeeId: "",
         employeePhoto: null,
@@ -779,9 +782,11 @@ export const TripForm = () => {
       });
       setTempFinalKm("");
       setElapsedTime(0);
-      // Limpa IDs de rastreamento de posição
+      // ✅ Limpa IDs de rastreamento de posição
       setCurrentLocalTripId(null);
       setCurrentServerTripId(null);
+      
+      console.log("[TripForm] ✅ Estados limpos - pronto para nova viagem");
     } catch (error) {
       console.error("Error ending trip:", error);
       toast.error("Erro ao finalizar viagem", {
