@@ -57,9 +57,9 @@ const createConnectionIfNeeded = async () => {
         employee_id TEXT NOT NULL,
         vehicle_id TEXT,
         km_inicial REAL NOT NULL,
-        km_final REAL NOT NULL,
+        km_final REAL,
         start_time TEXT NOT NULL,
-        end_time TEXT NOT NULL,
+        end_time TEXT,
         start_latitude REAL,
         start_longitude REAL,
         end_latitude REAL,
@@ -78,6 +78,7 @@ const createConnectionIfNeeded = async () => {
         rented_company TEXT,
         synced INTEGER DEFAULT 0,
         deleted INTEGER DEFAULT 0,
+        server_trip_id TEXT,
         created_at TEXT DEFAULT (datetime('now')),
         updated_at TEXT DEFAULT (datetime('now'))
       );
@@ -138,9 +139,9 @@ export interface OfflineTrip {
   employee_id: string;
   vehicle_id?: string | null;
   km_inicial: number;
-  km_final: number;
+  km_final?: number | null;
   start_time: string;
-  end_time: string;
+  end_time?: string | null;
   start_latitude?: number;
   start_longitude?: number;
   end_latitude?: number;
@@ -159,6 +160,7 @@ export interface OfflineTrip {
   rented_company?: string | null;
   synced?: number; // 0 = not synced, 1 = synced
   deleted?: number; // 0 = not deleted, 1 = deleted (soft delete)
+  server_trip_id?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -258,9 +260,9 @@ export const useSQLite = () => {
         trip.employee_id,
         trip.vehicle_id ?? null,
         trip.km_inicial,
-        trip.km_final,
+        trip.km_final ?? null, // ✅ Permite NULL para viagens em andamento
         trip.start_time,
-        trip.end_time,
+        trip.end_time ?? null, // ✅ Permite NULL para viagens em andamento
         trip.start_latitude ?? null,
         trip.start_longitude ?? null,
         trip.end_latitude ?? null,
@@ -387,13 +389,12 @@ export const useSQLite = () => {
     if (!db) return null;
 
     try {
-      // ✅ Busca viagens onde end_time = start_time (indica que ainda não foi finalizada)
-      // ou onde o km_final ainda é 0 (viagem não finalizada)
+      // ✅ FILTRO RIGOROSO: busca viagens com status em_andamento E end_time IS NULL
       const result = await db.query(
         `SELECT * FROM offline_trips 
          WHERE status = 'em_andamento' 
          AND deleted = 0 
-         AND km_final = 0
+         AND end_time IS NULL
          ORDER BY start_time DESC 
          LIMIT 1;`
       );
