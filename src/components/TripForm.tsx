@@ -602,20 +602,21 @@ export const TripForm = () => {
           setCurrentServerTripId(data.id);
           console.log("[TripForm] Viagem draft criada no Supabase com ID:", data.id);
           
-          // ✅ PROBLEMA 3: Criar espelho no SQLite para permitir restauração offline
-          if (Capacitor.isNativePlatform() && isSQLiteReady) {
+          // ✅ CORREÇÃO: Criar espelho no SQLite quando em plataforma nativa
+          // Usa isReady && hasDb do OfflineContext (fonte confiável do estado do SQLite)
+          if (Capacitor.isNativePlatform() && isReady && hasDb) {
             const employeePhotoBase64 = tripData.employeePhoto 
               ? await fileToBase64(tripData.employeePhoto) 
               : undefined;
             
             const localMirror = {
-              server_trip_id: data.id, // ✅ Vincula ao servidor
+              server_trip_id: data.id, // Vincula ao servidor
               employee_id: tripData.employeeId,
               vehicle_id: tripData.isRentedVehicle ? null : tripData.vehicleId,
               km_inicial: parseFloat(tripData.initialKm),
-              km_final: null, // ✅ NULL até finalizar
+              km_final: null,
               start_time: startTime.toISOString(),
-              end_time: null, // ✅ NULL até finalizar
+              end_time: null,
               start_latitude: location.lat,
               start_longitude: location.lng,
               end_latitude: null,
@@ -631,15 +632,19 @@ export const TripForm = () => {
               rented_plate: tripData.isRentedVehicle ? tripData.rentedPlate || null : null,
               rented_model: tripData.isRentedVehicle ? tripData.rentedModel || null : null,
               rented_company: tripData.isRentedVehicle ? tripData.rentedCompany || null : null,
-              synced: 1, // ✅ Marca como sincronizado (espelho fiel do servidor)
+              synced: 1, // Marca como sincronizado (espelho do servidor)
               deleted: 0,
             };
             
             const localTripId = await saveTripOffline(localMirror);
             if (localTripId) {
               setCurrentLocalTripId(localTripId);
-              console.log("[TripForm] Espelho local criado com ID:", localTripId);
+              console.log("[TripForm] Espelho local criado com ID:", localTripId, "para server ID:", data.id);
+            } else {
+              console.error("[TripForm] Falha ao criar espelho local para viagem online");
             }
+          } else if (Capacitor.isNativePlatform()) {
+            console.warn("[TripForm] SQLite não pronto para criar espelho local. isReady:", isReady, "hasDb:", hasDb);
           }
         }
       }
