@@ -199,13 +199,14 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
             }
           }
 
+          // ✅ GARANTIR que status finalizada seja sempre enviado corretamente
           const record = {
             employee_id: trip.employee_id,
             vehicle_id: trip.vehicle_id ?? null,
             km_inicial: trip.km_inicial,
-            km_final: trip.km_final,
+            km_final: trip.km_final ?? null,
             start_time: trip.start_time,
-            end_time: trip.end_time,
+            end_time: trip.end_time ?? null,
             start_latitude: trip.start_latitude,
             start_longitude: trip.start_longitude,
             end_latitude: trip.end_latitude,
@@ -215,7 +216,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
             destino: trip.destino ?? null,
             motivo: trip.motivo ?? null,
             observacao: trip.observacao ?? null,
-            status: trip.status,
+            status: trip.status || "finalizada", // ✅ Garante que sempre tem status
             employee_photo_url: employeePhotoUrl || undefined,
             trip_photos_urls:
               tripPhotosUrls.length > 0 ? tripPhotosUrls : undefined,
@@ -225,13 +226,15 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
             rented_company: trip.rented_company ?? null,
           };
 
+          console.log(`[OfflineContext] Sincronizando trip ${trip.id} com status: ${record.status}`);
+
           const { data, error } = await createTrip(record);
           
           if (!error && data?.id) {
             // Marca a trip como sincronizada
             await markTripAsSynced(trip.id!);
             console.log(
-              `[OfflineContext] Trip ${trip.id} sincronizada com sucesso, server ID: ${data.id}`
+              `[OfflineContext] ✅ Trip ${trip.id} sincronizada com sucesso, server ID: ${data.id}, status: ${data.status}`
             );
 
             // Atualiza as posições dessa viagem com o server_trip_id

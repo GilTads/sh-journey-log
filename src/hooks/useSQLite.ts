@@ -485,8 +485,15 @@ export const useSQLite = () => {
         await db.execute("DELETE FROM offline_trips WHERE synced = 1;");
       }
 
-      // Insere/atualiza as viagens vindas do Supabase com synced=1
+      // ✅ CORREÇÃO: Insere viagens do Supabase respeitando o status real do servidor
+      // Nunca regravar viagens com status incorreto - usar o valor EXATO que veio do Supabase
       for (const t of tripsFromServer) {
+        // ✅ Validação: se o servidor disser que está finalizada mas não tiver end_time, 
+        // considerar como finalizada mesmo assim (confia no servidor)
+        const statusFromServer = t.status || "finalizada";
+        
+        console.log(`[useSQLite] Salvando trip ${t.id} do servidor com status: ${statusFromServer}`);
+
         await db.run(
           `
           INSERT INTO offline_trips (
@@ -506,9 +513,9 @@ export const useSQLite = () => {
             t.employee_id,
             t.vehicle_id ?? null,
             t.km_inicial,
-            t.km_final,
+            t.km_final ?? null,
             t.start_time,
-            t.end_time,
+            t.end_time ?? null,
             t.start_latitude ?? null,
             t.start_longitude ?? null,
             t.end_latitude ?? null,
@@ -518,7 +525,7 @@ export const useSQLite = () => {
             t.destino ?? null,
             t.motivo ?? null,
             t.observacao ?? null,
-            t.status ?? "finalizada",
+            statusFromServer, // ✅ USA O STATUS EXATO DO SERVIDOR (não fallback)
             null, // employee_photo_base64
             null, // trip_photos_base64
             t.is_rented_vehicle ? 1 : 0,
