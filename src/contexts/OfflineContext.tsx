@@ -102,7 +102,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
       const { data: employees, error: empError } = await supabase
         .from("employees")
         .select("*")
-        .order("nome_completo");
+        .order("full_name");
 
       if (empError) {
         console.error("[OfflineContext] Erro ao buscar employees:", empError);
@@ -117,7 +117,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
       const { data: vehicles, error: vehError } = await supabase
         .from("vehicles")
         .select("*")
-        .order("placa");
+        .order("license_plate");
 
       if (vehError) {
         console.error("[OfflineContext] Erro ao buscar vehicles:", vehError);
@@ -493,7 +493,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
           const { data, error } = await supabase
             .from("employees")
             .select("*")
-            .order("nome_completo");
+            .order("full_name");
 
           if (error) {
             console.error("[getMotoristas] erro Supabase:", error);
@@ -515,7 +515,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
         const { data, error } = await supabase
           .from("employees")
           .select("*")
-          .order("nome_completo");
+          .order("full_name");
 
         if (error) {
           console.error("[getMotoristas][web] erro Supabase:", error);
@@ -558,7 +558,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
           const { data, error } = await supabase
             .from("vehicles")
             .select("*")
-            .order("placa");
+            .order("license_plate");
 
           if (error) {
             console.error("[getVeiculos] erro Supabase:", error);
@@ -580,7 +580,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
         const { data, error } = await supabase
           .from("vehicles")
           .select("*")
-          .order("placa");
+          .order("license_plate");
 
         if (error) {
           console.error("[getVeiculos][web] erro Supabase:", error);
