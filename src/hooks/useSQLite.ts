@@ -293,6 +293,7 @@ export const useSQLite = () => {
 
   /**
    * Atualiza uma viagem existente com os dados finais (quando a viagem termina)
+   * ✅ SEMPRE força status = "finalizada" para evitar viagens "fantasmas"
    */
   const updateTripOnEnd = async (
     localTripId: number,
@@ -313,13 +314,14 @@ export const useSQLite = () => {
           destino = ?,
           motivo = ?,
           observacao = ?,
-          status = ?,
+          status = 'finalizada',
           employee_photo_base64 = ?,
           trip_photos_base64 = ?,
           updated_at = datetime('now')
         WHERE id = ?;
       `;
 
+      // ✅ IGNORA updates.status completamente - sempre grava "finalizada"
       const values = [
         updates.km_final ?? null,
         updates.end_time ?? null,
@@ -330,14 +332,13 @@ export const useSQLite = () => {
         updates.destino ?? null,
         updates.motivo ?? null,
         updates.observacao ?? null,
-        updates.status ?? "finalizada",
         updates.employee_photo_base64 ?? null,
         updates.trip_photos_base64 ?? null,
         localTripId,
       ];
 
       await db.run(query, values);
-      console.log("[useSQLite] Trip atualizada no SQLite:", localTripId);
+      console.log("[useSQLite] ✅ Trip finalizada no SQLite (status=finalizada):", localTripId);
       return true;
     } catch (error) {
       console.error("[useSQLite] Erro ao atualizar trip:", error);
@@ -378,6 +379,7 @@ export const useSQLite = () => {
 
   /**
    * Busca viagem em andamento (status = 'em_andamento' e não deletada)
+   * ✅ FILTRO RIGOROSO: garante que end_time ainda não foi preenchido
    * Retorna a viagem mais recente caso exista mais de uma
    */
   const getOngoingTrip = async (): Promise<OfflineTrip | null> => {
@@ -385,11 +387,21 @@ export const useSQLite = () => {
     if (!db) return null;
 
     try {
+      // ✅ Busca viagens onde end_time = start_time (indica que ainda não foi finalizada)
+      // ou onde o km_final ainda é 0 (viagem não finalizada)
       const result = await db.query(
-        "SELECT * FROM offline_trips WHERE status = 'em_andamento' AND deleted = 0 ORDER BY start_time DESC LIMIT 1;"
+        `SELECT * FROM offline_trips 
+         WHERE status = 'em_andamento' 
+         AND deleted = 0 
+         AND km_final = 0
+         ORDER BY start_time DESC 
+         LIMIT 1;`
       );
       const trips = (result.values || []) as OfflineTrip[];
-      return trips.length > 0 ? trips[0] : null;
+      const found = trips.length > 0 ? trips[0] : null;
+      
+      console.log("[useSQLite] Busca por viagem em andamento:", found ? `ID ${found.id}` : "nenhuma");
+      return found;
     } catch (error) {
       console.error("[useSQLite] Erro ao buscar viagem em andamento:", error);
       return null;
