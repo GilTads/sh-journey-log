@@ -252,22 +252,22 @@ export const useSQLite = () => {
           origem, destino, motivo, observacao, status,
           employee_photo_base64, trip_photos_base64,
           is_rented_vehicle, rented_plate, rented_model, rented_company,
-          synced, deleted
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+          synced, deleted, server_trip_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
       `;
 
       const values = [
         trip.employee_id,
         trip.vehicle_id ?? null,
         trip.km_inicial,
-        trip.km_final ?? null, // ✅ Permite NULL para viagens em andamento
+        trip.km_final ?? null,
         trip.start_time,
-        trip.end_time ?? null, // ✅ Permite NULL para viagens em andamento
+        trip.end_time ?? null,
         trip.start_latitude ?? null,
         trip.start_longitude ?? null,
         trip.end_latitude ?? null,
         trip.end_longitude ?? null,
-        trip.duration_seconds ?? null, // ✅ Permite NULL para viagens em andamento
+        trip.duration_seconds ?? null,
         trip.origem ?? null,
         trip.destino ?? null,
         trip.motivo ?? null,
@@ -281,11 +281,19 @@ export const useSQLite = () => {
         trip.rented_company ?? null,
         trip.synced ?? 0,
         trip.deleted ?? 0,
+        trip.server_trip_id ?? null, // ✅ PROBLEMA 1: Inclui server_trip_id no INSERT
       ];
 
       const result = await db.run(query, values);
       const insertedId = result.changes?.lastId;
-      console.log("[useSQLite] Trip salva no SQLite com ID:", insertedId);
+      
+      // Log detalhado para debug
+      if (trip.server_trip_id) {
+        console.log(`[useSQLite] ✅ Trip salva com espelho do servidor - Local ID: ${insertedId}, Server ID: ${trip.server_trip_id}`);
+      } else {
+        console.log("[useSQLite] Trip salva no SQLite com ID local:", insertedId);
+      }
+      
       return insertedId ?? null;
     } catch (error) {
       console.error("[useSQLite] Erro ao salvar trip:", error);
