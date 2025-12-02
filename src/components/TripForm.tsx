@@ -476,16 +476,16 @@ export const TripForm = () => {
           employee_id: tripData.employeeId,
           vehicle_id: tripData.isRentedVehicle ? null : tripData.vehicleId,
           km_inicial: parseFloat(tripData.initialKm),
-          km_final: 0, // será preenchido ao finalizar
+          km_final: null, // ✅ NULL até finalizar (não 0)
           start_time: startTime.toISOString(),
           end_time: null, // ✅ NULL até finalizar a viagem
           start_latitude: location.lat,
           start_longitude: location.lng,
           end_latitude: null,
           end_longitude: null,
-          duration_seconds: 0,
+          duration_seconds: null, // ✅ NULL até finalizar (não 0)
           origem: tripData.origin || null,
-          destino: tripData.destination || null, // Salva destino se preenchido
+          destino: tripData.destination || null,
           motivo: tripData.reason || null,
           observacao: tripData.observation || null,
           status: "em_andamento",
@@ -517,17 +517,17 @@ export const TripForm = () => {
           employee_id: tripData.employeeId,
           vehicle_id: tripData.isRentedVehicle ? null : tripData.vehicleId,
           km_inicial: parseFloat(tripData.initialKm),
-          km_final: 0, // será preenchido ao finalizar
+          km_final: null, // ✅ NULL até finalizar (não 0)
           start_time: startTime.toISOString(),
           end_time: null, // ✅ NULL até finalizar a viagem
           start_latitude: location.lat,
           start_longitude: location.lng,
-          duration_seconds: 0,
+          duration_seconds: null, // ✅ NULL até finalizar
           status: "em_andamento",
           origem: tripData.origin || null,
-          destino: tripData.destination || null, // Salva destino se preenchido
+          destino: tripData.destination || null,
           motivo: tripData.reason || null,
-          observacao: tripData.observation || null, // Salva observação se preenchida
+          observacao: tripData.observation || null,
           employee_photo_url: employeePhotoUrl || undefined,
           is_rented_vehicle: tripData.isRentedVehicle,
           rented_plate: tripData.isRentedVehicle ? tripData.rentedPlate || null : null,
@@ -546,6 +546,46 @@ export const TripForm = () => {
         if (data?.id) {
           setCurrentServerTripId(data.id);
           console.log("[TripForm] Viagem draft criada no Supabase com ID:", data.id);
+          
+          // ✅ PROBLEMA 3: Criar espelho no SQLite para permitir restauração offline
+          if (Capacitor.isNativePlatform() && isSQLiteReady) {
+            const employeePhotoBase64 = tripData.employeePhoto 
+              ? await fileToBase64(tripData.employeePhoto) 
+              : undefined;
+            
+            const localMirror = {
+              server_trip_id: data.id, // ✅ Vincula ao servidor
+              employee_id: tripData.employeeId,
+              vehicle_id: tripData.isRentedVehicle ? null : tripData.vehicleId,
+              km_inicial: parseFloat(tripData.initialKm),
+              km_final: null, // ✅ NULL até finalizar
+              start_time: startTime.toISOString(),
+              end_time: null, // ✅ NULL até finalizar
+              start_latitude: location.lat,
+              start_longitude: location.lng,
+              end_latitude: null,
+              end_longitude: null,
+              duration_seconds: null,
+              origem: tripData.origin || null,
+              destino: tripData.destination || null,
+              motivo: tripData.reason || null,
+              observacao: tripData.observation || null,
+              status: "em_andamento",
+              employee_photo_base64: employeePhotoBase64,
+              is_rented_vehicle: tripData.isRentedVehicle ? 1 : 0,
+              rented_plate: tripData.isRentedVehicle ? tripData.rentedPlate || null : null,
+              rented_model: tripData.isRentedVehicle ? tripData.rentedModel || null : null,
+              rented_company: tripData.isRentedVehicle ? tripData.rentedCompany || null : null,
+              synced: 1, // ✅ Marca como sincronizado (espelho fiel do servidor)
+              deleted: 0,
+            };
+            
+            const localTripId = await saveTripOffline(localMirror);
+            if (localTripId) {
+              setCurrentLocalTripId(localTripId);
+              console.log("[TripForm] Espelho local criado com ID:", localTripId);
+            }
+          }
         }
       }
 
