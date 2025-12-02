@@ -478,7 +478,7 @@ export const TripForm = () => {
           km_inicial: parseFloat(tripData.initialKm),
           km_final: 0, // será preenchido ao finalizar
           start_time: startTime.toISOString(),
-          end_time: startTime.toISOString(), // placeholder, será atualizado
+          end_time: null, // ✅ NULL até finalizar a viagem
           start_latitude: location.lat,
           start_longitude: location.lng,
           end_latitude: null,
@@ -519,7 +519,7 @@ export const TripForm = () => {
           km_inicial: parseFloat(tripData.initialKm),
           km_final: 0, // será preenchido ao finalizar
           start_time: startTime.toISOString(),
-          end_time: startTime.toISOString(), // placeholder
+          end_time: null, // ✅ NULL até finalizar a viagem
           start_latitude: location.lat,
           start_longitude: location.lng,
           duration_seconds: 0,
