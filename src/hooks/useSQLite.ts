@@ -56,15 +56,15 @@ const createConnectionIfNeeded = async () => {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         employee_id TEXT NOT NULL,
         vehicle_id TEXT,
-        km_inicial REAL NOT NULL,
-        km_final REAL,
-        start_time TEXT NOT NULL,
-        end_time TEXT,
-        start_latitude REAL,
-        start_longitude REAL,
-        end_latitude REAL,
-        end_longitude REAL,
-        duration_seconds INTEGER NOT NULL,
+      km_inicial REAL NOT NULL,
+      km_final REAL,
+      start_time TEXT NOT NULL,
+      end_time TEXT,
+      start_latitude REAL,
+      start_longitude REAL,
+      end_latitude REAL,
+      end_longitude REAL,
+      duration_seconds INTEGER,
         origem TEXT,
         destino TEXT,
         motivo TEXT,
@@ -146,7 +146,7 @@ export interface OfflineTrip {
   start_longitude?: number;
   end_latitude?: number;
   end_longitude?: number;
-  duration_seconds: number;
+  duration_seconds?: number | null; // ✅ Permite NULL para viagens em andamento
   origem?: string | null;
   destino?: string | null;
   motivo?: string | null;
@@ -267,7 +267,7 @@ export const useSQLite = () => {
         trip.start_longitude ?? null,
         trip.end_latitude ?? null,
         trip.end_longitude ?? null,
-        trip.duration_seconds,
+        trip.duration_seconds ?? null, // ✅ Permite NULL para viagens em andamento
         trip.origem ?? null,
         trip.destino ?? null,
         trip.motivo ?? null,
@@ -329,7 +329,7 @@ export const useSQLite = () => {
         updates.end_time ?? null,
         updates.end_latitude ?? null,
         updates.end_longitude ?? null,
-        updates.duration_seconds ?? 0,
+        updates.duration_seconds ?? null, // ✅ Permite NULL
         updates.origem ?? null,
         updates.destino ?? null,
         updates.motivo ?? null,
@@ -381,7 +381,7 @@ export const useSQLite = () => {
 
   /**
    * Busca viagem em andamento (status = 'em_andamento' e não deletada)
-   * ✅ FILTRO RIGOROSO: garante que end_time ainda não foi preenchido
+   * ✅ PROBLEMA 2: Filtro rigoroso - end_time IS NULL garante que não foi finalizada
    * Retorna a viagem mais recente caso exista mais de uma
    */
   const getOngoingTrip = async (): Promise<OfflineTrip | null> => {
@@ -389,7 +389,8 @@ export const useSQLite = () => {
     if (!db) return null;
 
     try {
-      // ✅ FILTRO RIGOROSO: busca viagens com status em_andamento E end_time IS NULL
+      // ✅ PROBLEMA 2: Filtro rigoroso para viagem em andamento
+      // status = 'em_andamento' AND end_time IS NULL
       const result = await db.query(
         `SELECT * FROM offline_trips 
          WHERE status = 'em_andamento' 
@@ -438,14 +439,10 @@ export const useSQLite = () => {
   };
 
   /**
-   * CORREÇÃO OFFLINE-FIRST:
-   * Substitui as viagens sincronizadas (synced=1) pelas atualizadas do Supabase.
-   * 
-   * Resolve o problema de viagens deletadas no servidor continuarem aparecendo offline:
-   * - Remove viagens com synced=1 que não existem mais no Supabase
-   * - Remove viagens com server_trip_id que foram deletadas no servidor
-   * - Mantém intactas as viagens locais pendentes (synced=0 sem server_trip_id)
-   * - Insere o histórico completo vindo do Supabase com synced=1
+   * ✅ PROBLEMA 1: Substitui viagens sincronizadas pelas do servidor
+   * - Remove viagens sincronizadas (synced=1) que não existem mais no Supabase
+   * - Insere/atualiza viagens do servidor com synced=1 e status exato do servidor
+   * - Preserva viagens pendentes (synced=0) que ainda não foram enviadas
    */
   const replaceSyncedTripsFromServer = async (
     tripsFromServer: any[]
@@ -471,9 +468,7 @@ export const useSQLite = () => {
         .map(id => `'${id}'`)
         .join(',');
 
-      // Remove viagens sincronizadas que NÃO estão mais no servidor:
-      // 1. Viagens com synced=1 que não têm ID na lista do servidor
-      // 2. Viagens com server_trip_id preenchido mas que não existem mais no servidor
+      // ✅ PROBLEMA 1: Remove viagens sincronizadas que NÃO estão mais no servidor
       if (serverTripIds) {
         await db.execute(`
           DELETE FROM offline_trips 
@@ -485,12 +480,9 @@ export const useSQLite = () => {
         await db.execute("DELETE FROM offline_trips WHERE synced = 1;");
       }
 
-      // ✅ CORREÇÃO: Insere viagens do Supabase respeitando o status real do servidor
-      // Nunca regravar viagens com status incorreto - usar o valor EXATO que veio do Supabase
+      // ✅ PROBLEMA 1: Insere viagens do servidor com status exato (não fazer fallback)
       for (const t of tripsFromServer) {
-        // ✅ Validação: se o servidor disser que está finalizada mas não tiver end_time, 
-        // considerar como finalizada mesmo assim (confia no servidor)
-        const statusFromServer = t.status || "finalizada";
+        const statusFromServer = t.status; // ✅ USA EXATAMENTE O STATUS DO SERVIDOR
         
         console.log(`[useSQLite] Salvando trip ${t.id} do servidor com status: ${statusFromServer}`);
 
@@ -520,7 +512,7 @@ export const useSQLite = () => {
             t.start_longitude ?? null,
             t.end_latitude ?? null,
             t.end_longitude ?? null,
-            t.duration_seconds ?? 0,
+            t.duration_seconds ?? null, // ✅ Permite NULL
             t.origem ?? null,
             t.destino ?? null,
             t.motivo ?? null,
@@ -532,7 +524,7 @@ export const useSQLite = () => {
             t.rented_plate ?? null,
             t.rented_model ?? null,
             t.rented_company ?? null,
-            1, // synced = 1 (veio do servidor)
+            1, // ✅ synced = 1 (veio do servidor, está sincronizado)
             0, // deleted = 0
           ]
         );
@@ -540,7 +532,7 @@ export const useSQLite = () => {
 
       await db.execute("COMMIT;");
       console.log(
-        `[useSQLite] ✅ ${tripsFromServer.length} trips do servidor salvas/atualizadas no SQLite`
+        `[useSQLite] ✅ ${tripsFromServer.length} trips do servidor salvas/atualizadas (synced=1)`
       );
       return true;
     } catch (error) {

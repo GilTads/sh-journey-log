@@ -199,7 +199,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
             }
           }
 
-          // ✅ GARANTIR que status finalizada seja sempre enviado corretamente
+          // ✅ GARANTIR que status seja sempre enviado corretamente
           const record = {
             employee_id: trip.employee_id,
             vehicle_id: trip.vehicle_id ?? null,
@@ -211,12 +211,12 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
             start_longitude: trip.start_longitude,
             end_latitude: trip.end_latitude,
             end_longitude: trip.end_longitude,
-            duration_seconds: trip.duration_seconds,
+            duration_seconds: trip.duration_seconds ?? null,
             origem: trip.origem ?? null,
             destino: trip.destino ?? null,
             motivo: trip.motivo ?? null,
             observacao: trip.observacao ?? null,
-            status: trip.status || "finalizada", // ✅ Garante que sempre tem status
+            status: trip.status, // ✅ Usa exatamente o status da viagem local
             employee_photo_url: employeePhotoUrl || undefined,
             trip_photos_urls:
               tripPhotosUrls.length > 0 ? tripPhotosUrls : undefined,
@@ -231,7 +231,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
           const { data, error } = await createTrip(record);
           
           if (!error && data?.id) {
-            // Marca a trip como sincronizada
+            // ✅ PROBLEMA 1: Marca a trip como sincronizada (synced = 1)
             await markTripAsSynced(trip.id!);
             console.log(
               `[OfflineContext] ✅ Trip ${trip.id} sincronizada com sucesso, server ID: ${data.id}, status: ${data.status}`

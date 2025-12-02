@@ -251,14 +251,14 @@ export const useTripsHistory = (params: UseTripsHistoryParams = {}) => {
           // DECISÃO BASEADA NO FILTRO DE SINCRONIZAÇÃO
           // ========================================
           
-          // CASO 1: Filtro = "Pendentes" → buscar SOMENTE do SQLite (synced=0)
+          // ✅ PROBLEMA 1: Filtro = "Pendentes" → buscar SOMENTE do SQLite (synced=0)
           if (syncStatusFilter === "offline-only") {
             console.log("[useTripsHistory] Filtro Pendentes → buscando SOMENTE SQLite (synced=0)");
             
             if (sqliteReady) {
               let trips = await getViagens();
               
-              // Filtrar pendentes
+              // ✅ Filtrar RIGOROSAMENTE apenas pendentes (synced = 0)
               trips = trips.filter((t) => t.synced === 0);
 
               // Aplicar filtros adicionais
@@ -293,12 +293,13 @@ export const useTripsHistory = (params: UseTripsHistoryParams = {}) => {
 
                 return {
                   ...base,
+                  sync_status: "offline-only" as SyncStatus, // ✅ Garante que é pendente
                   employee: emp ? { nome_completo: emp.nome_completo, matricula: emp.matricula } : undefined,
                   vehicle: veh ? { placa: veh.placa, marca: veh.marca, modelo: veh.modelo } : undefined,
                 };
               });
 
-              console.log("[useTripsHistory] ✅ Pendentes:", sqliteTrips.length);
+              console.log("[useTripsHistory] ✅ Pendentes (synced=0):", sqliteTrips.length);
             }
           }
           
