@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -65,6 +66,10 @@ interface TripData {
 }
 
 export const TripForm = () => {
+  const location = useLocation();
+  const viewTripData = location.state?.viewTrip;
+  const isViewMode = !!viewTripData;
+
   const {
     isOnline,
     isSyncing,
@@ -135,6 +140,14 @@ export const TripForm = () => {
 
   // ========= CARREGA VIAGEM EM ANDAMENTO NO MOUNT =========
   useEffect(() => {
+    // Se está em modo visualização, carrega a viagem passada via state
+    if (isViewMode && viewTripData) {
+      console.log("[TripForm] Carregando viagem em modo visualização:", viewTripData);
+      loadViewModeTrip(viewTripData);
+      setIsLoadingOngoingTrip(false);
+      return;
+    }
+
     // Evita execução múltipla
     if (hasLoadedOngoingTripRef.current) {
       return;
@@ -206,7 +219,49 @@ export const TripForm = () => {
 
     loadOngoingTripOnMount();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isReady, hasDb, isOnline]);
+  }, [isReady, hasDb, isOnline, isViewMode, viewTripData]);
+
+  // Função para carregar viagem em modo visualização
+  const loadViewModeTrip = (trip: any) => {
+    const startTime = trip.start_time ? new Date(trip.start_time) : new Date();
+    const now = new Date();
+    const elapsed = Math.floor((now.getTime() - startTime.getTime()) / 1000);
+
+    setTripData({
+      employeeId: trip.employee_id || "",
+      employeePhoto: null,
+      employeePhotoUrl: trip.employee_photo_url || undefined,
+      vehicleId: trip.vehicle_id || "",
+      initialKm: String(trip.km_inicial || ""),
+      finalKm: trip.km_final ? String(trip.km_final) : "",
+      origin: trip.origem || "",
+      destination: trip.destino || "",
+      reason: trip.motivo || "",
+      observation: trip.observacao || "",
+      startLocation: trip.start_latitude && trip.start_longitude
+        ? { lat: trip.start_latitude, lng: trip.start_longitude }
+        : undefined,
+      endLocation: trip.end_latitude && trip.end_longitude
+        ? { lat: trip.end_latitude, lng: trip.end_longitude }
+        : undefined,
+      startTime,
+      endTime: trip.end_time ? new Date(trip.end_time) : undefined,
+      images: [],
+      isRentedVehicle: trip.is_rented_vehicle === 1 || trip.is_rented_vehicle === true,
+      rentedPlate: trip.rented_plate || "",
+      rentedModel: trip.rented_model || "",
+      rentedCompany: trip.rented_company || "",
+    });
+
+    setCurrentLocalTripId(trip.id || null);
+    setCurrentServerTripId(trip.server_trip_id || trip.id || null);
+    setElapsedTime(elapsed > 0 ? elapsed : 0);
+    setIsActive(true);
+
+    toast.info("Visualizando viagem em andamento", {
+      description: "Todos os campos estão em modo somente leitura",
+    });
+  };
 
   // Função auxiliar para restaurar estado do form a partir de viagem offline
   const restoreTripState = (
@@ -1090,7 +1145,7 @@ export const TripForm = () => {
             }
             placeholder="Digite nome ou matrícula..."
             emptyText="Nenhum motorista encontrado."
-            disabled={isActive}
+            disabled={isActive || isViewMode}
             minCharsToSearch={2}
           />
         </CardContent>
@@ -1107,8 +1162,8 @@ export const TripForm = () => {
             Foto do Motorista *
           </Label>
           <div className="space-y-3">
-            {/* Botão só aparece se não estiver em viagem ativa */}
-            {!isActive && (
+            {/* Botão só aparece se não estiver em viagem ativa ou em modo visualização */}
+            {!isActive && !isViewMode && (
               <Button
                 type="button"
                 variant="outline"
@@ -1126,11 +1181,11 @@ export const TripForm = () => {
               accept="image/*"
               capture="user"
               onChange={handleEmployeePhotoUpload}
-              disabled={isActive}
+              disabled={isActive || isViewMode}
               className="hidden"
             />
             {/* Mostra foto capturada (File) */}
-            {tripData.employeePhoto && !isActive && (
+            {tripData.employeePhoto && !isActive && !isViewMode && (
               <div className="relative w-full max-w-xs mx-auto">
                 <img
                   src={URL.createObjectURL(tripData.employeePhoto)}
@@ -1150,8 +1205,8 @@ export const TripForm = () => {
                 </Button>
               </div>
             )}
-            {/* Mostra foto recuperada (URL/base64) quando viagem em andamento */}
-            {isActive && tripData.employeePhotoUrl && (
+            {/* Mostra foto recuperada (URL/base64) quando viagem em andamento ou em modo visualização */}
+            {(isActive || isViewMode) && tripData.employeePhotoUrl && (
               <div className="relative w-full max-w-xs mx-auto">
                 <img
                   src={tripData.employeePhotoUrl}
@@ -1163,8 +1218,8 @@ export const TripForm = () => {
                 </div>
               </div>
             )}
-            {/* Mostra foto capturada (File) quando viagem em andamento - sem botão de remover */}
-            {isActive && tripData.employeePhoto && !tripData.employeePhotoUrl && (
+            {/* Mostra foto capturada (File) quando viagem em andamento ou modo visualização - sem botão de remover */}
+            {(isActive || isViewMode) && tripData.employeePhoto && !tripData.employeePhotoUrl && (
               <div className="relative w-full max-w-xs mx-auto">
                 <img
                   src={URL.createObjectURL(tripData.employeePhoto)}
@@ -1215,7 +1270,7 @@ export const TripForm = () => {
                   rentedCompany: "",
                 }));
               }}
-              disabled={isActive}
+              disabled={isActive || isViewMode}
               className="h-5 w-5"
             />
             <Label 
@@ -1246,7 +1301,7 @@ export const TripForm = () => {
                 }
                 placeholder="Digite placa ou modelo..."
                 emptyText="Nenhum veículo encontrado."
-                disabled={isActive}
+                disabled={isActive || isViewMode}
                 minCharsToSearch={2}
               />
               <p className="text-xs text-muted-foreground">
@@ -1274,8 +1329,8 @@ export const TripForm = () => {
                   placeholder="ABC-1234 ou ABC1D23"
                   value={tripData.rentedPlate}
                   onChange={handlePlateChange}
-                  disabled={isActive}
-                  className={`h-12 ${plateError ? 'border-destructive focus-visible:ring-destructive' : ''}`}
+                  disabled={isActive || isViewMode}
+                  className={`h-12 ${plateError ? 'border-destructive focus-visible:ring-destructive' : ''} ${isActive || isViewMode ? "bg-muted cursor-not-allowed" : ""}`}
                   maxLength={8}
                 />
                 {plateError && (
@@ -1301,8 +1356,8 @@ export const TripForm = () => {
                   onChange={(e) =>
                     setTripData((prev) => ({ ...prev, rentedModel: e.target.value }))
                   }
-                  disabled={isActive}
-                  className="h-12"
+                  disabled={isActive || isViewMode}
+                  className={`h-12 ${isActive || isViewMode ? "bg-muted cursor-not-allowed" : ""}`}
                 />
               </div>
 
@@ -1319,8 +1374,8 @@ export const TripForm = () => {
                   onChange={(e) =>
                     setTripData((prev) => ({ ...prev, rentedCompany: e.target.value }))
                   }
-                  disabled={isActive}
-                  className="h-12"
+                  disabled={isActive || isViewMode}
+                  className={`h-12 ${isActive || isViewMode ? "bg-muted cursor-not-allowed" : ""}`}
                 />
               </div>
             </div>
@@ -1345,8 +1400,8 @@ export const TripForm = () => {
                 initialKm: e.target.value,
               }))
             }
-            disabled={isActive}
-            className="h-12"
+            disabled={isActive || isViewMode}
+            className={`h-12 ${isActive || isViewMode ? "bg-muted cursor-not-allowed" : ""}`}
           />
         </CardContent>
       </Card>
@@ -1366,11 +1421,11 @@ export const TripForm = () => {
               id="origin"
               placeholder="Local de saída"
               value={tripData.origin}
-              onChange={(e) =>
-                setTripData((prev) => ({ ...prev, origin: e.target.value }))
-              }
-              disabled={isActive}
-              className={`h-12 ${isActive ? "bg-muted cursor-not-allowed" : ""}`}
+            onChange={(e) =>
+              setTripData((prev) => ({ ...prev, origin: e.target.value }))
+            }
+            disabled={isActive || isViewMode}
+            className={`h-12 ${isActive || isViewMode ? "bg-muted cursor-not-allowed" : ""}`}
             />
           </div>
           <div className="space-y-3">
@@ -1391,8 +1446,8 @@ export const TripForm = () => {
                   destination: e.target.value,
                 }))
               }
-              disabled={isActive}
-              className={`h-12 ${isActive ? "bg-muted cursor-not-allowed" : ""}`}
+              disabled={isActive || isViewMode}
+              className={`h-12 ${isActive || isViewMode ? "bg-muted cursor-not-allowed" : ""}`}
             />
           </div>
         </CardContent>
@@ -1415,8 +1470,8 @@ export const TripForm = () => {
             onChange={(e) =>
               setTripData((prev) => ({ ...prev, reason: e.target.value }))
             }
-            disabled={isActive}
-            className={`min-h-24 resize-none ${isActive ? "bg-muted cursor-not-allowed" : ""}`}
+            disabled={isActive || isViewMode}
+            className={`min-h-24 resize-none ${isActive || isViewMode ? "bg-muted cursor-not-allowed" : ""}`}
           />
         </CardContent>
       </Card>
@@ -1437,8 +1492,8 @@ export const TripForm = () => {
                 observation: e.target.value,
               }))
             }
-            disabled={isActive}
-            className={`min-h-24 resize-none ${isActive ? "bg-muted cursor-not-allowed" : ""}`}
+            disabled={isActive || isViewMode}
+            className={`min-h-24 resize-none ${isActive || isViewMode ? "bg-muted cursor-not-allowed" : ""}`}
           />
         </CardContent>
       </Card>
@@ -1463,6 +1518,7 @@ export const TripForm = () => {
             type="button"
             variant="outline"
             onClick={() => fileInputRef.current?.click()}
+            disabled={isViewMode}
             className="w-full h-12"
           >
             <Camera className="h-5 w-5 mr-2" />
@@ -1506,32 +1562,42 @@ export const TripForm = () => {
         </Card>
       )}
 
-      <div className="pt-2 pb-6">
-        <Button
-          variant={isActive ? "trip-end" : "trip-start"}
-          size="xl"
-          onClick={isActive ? handleEndTrip : handleStartTrip}
-          disabled={isCapturingLocation}
-          className="w-full"
-        >
-          {isCapturingLocation ? (
-            <>
-              <Navigation className="h-5 w-5 animate-pulse" />
-              Capturando localização...
-            </>
-          ) : isActive ? (
-            <>
-              <Square className="h-5 w-5" />
-              Finalizar Viagem
-            </>
-          ) : (
-            <>
-              <Play className="h-5 w-5" />
-              Iniciar Viagem
-            </>
-          )}
-        </Button>
-      </div>
+      {!isViewMode && (
+        <div className="pt-2 pb-6">
+          <Button
+            variant={isActive ? "trip-end" : "trip-start"}
+            size="xl"
+            onClick={isActive ? handleEndTrip : handleStartTrip}
+            disabled={isCapturingLocation}
+            className="w-full"
+          >
+            {isCapturingLocation ? (
+              <>
+                <Navigation className="h-5 w-5 animate-pulse" />
+                Capturando localização...
+              </>
+            ) : isActive ? (
+              <>
+                <Square className="h-5 w-5" />
+                Finalizar Viagem
+              </>
+            ) : (
+              <>
+                <Play className="h-5 w-5" />
+                Iniciar Viagem
+              </>
+            )}
+          </Button>
+        </div>
+      )}
+
+      {isViewMode && (
+        <div className="pt-2 pb-6">
+          <div className="text-center text-sm text-muted-foreground p-4 bg-muted/50 rounded-lg">
+            Visualização em modo somente leitura
+          </div>
+        </div>
+      )}
 
       <AlertDialog open={showEndTripDialog} onOpenChange={setShowEndTripDialog}>
         <AlertDialogContent>

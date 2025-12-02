@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { TripHistory, SyncStatus } from "@/hooks/useTripsHistory";
 import { formatTime, formatDuration, formatKm } from "@/lib/formatters";
+import { useNavigate } from "react-router-dom";
 
 interface TripCardProps {
   trip: TripHistory;
@@ -61,9 +62,18 @@ const getSyncStatusConfig = (syncStatus: SyncStatus) => {
 };
 
 export const TripCard = ({ trip }: TripCardProps) => {
+  const navigate = useNavigate();
   const statusConfig = getStatusConfig(trip.status);
   const syncConfig = getSyncStatusConfig(trip.sync_status);
   const StatusIcon = statusConfig.icon;
+
+  const isOngoing = trip.status?.toLowerCase() === "em_andamento" || trip.status?.toLowerCase() === "in_progress";
+
+  const handleCardClick = () => {
+    if (isOngoing) {
+      navigate("/", { state: { viewTripId: trip.id, viewTrip: trip } });
+    }
+  };
 
   // Driver info
   const driverName = trip.employee?.nome_completo || "Motorista não informado";
@@ -88,7 +98,10 @@ export const TripCard = ({ trip }: TripCardProps) => {
   const hasRoute = trip.origem || trip.destino;
 
   return (
-    <Card className="shadow-sm hover:shadow-md transition-shadow">
+    <Card 
+      className={`shadow-sm hover:shadow-md transition-shadow ${isOngoing ? "cursor-pointer" : ""}`}
+      onClick={handleCardClick}
+    >
       <CardContent className="p-4">
         {/* Header: Driver + Status */}
         <div className="flex items-start justify-between gap-3 mb-3">
