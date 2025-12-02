@@ -88,28 +88,22 @@ export const useTripsHistory = (params: UseTripsHistoryParams = {}) => {
     useOfflineData();
 
   const isNative = Capacitor.isNativePlatform();
-
-  // Determina as condições de forma explícita
   const sqliteReady = isNative && isReady && hasDb;
-  const isOfflineNative = isNative && !isOnline;
 
-  // Log para debug
+  // ✅ LÓGICA SIMPLIFICADA E CLARA:
+  // - Nativo + SQLite pronto → sempre pode executar (online ou offline)
+  // - Web + online → pode executar
+  // - Web + offline → não executa (retorna vazio)
+  const queryEnabled = enabled && (sqliteReady || (!isNative && isOnline));
+
   console.log("[useTripsHistory] Estado:", {
     isNative,
     isOnline,
     isReady,
     hasDb,
     sqliteReady,
-    isOfflineNative,
-    enabled,
+    queryEnabled,
   });
-
-  // Query habilitada quando:
-  // - enabled = true E
-  // - (está online OU (está offline nativo E SQLite está pronto))
-  const queryEnabled = enabled && (isOnline || (isOfflineNative && sqliteReady));
-
-  console.log("[useTripsHistory] queryEnabled:", queryEnabled);
 
   return useQuery({
     queryKey: [
@@ -125,18 +119,25 @@ export const useTripsHistory = (params: UseTripsHistoryParams = {}) => {
     staleTime: 1000 * 60 * 5, // 5 minutos
     queryFn: async () => {
       // ========================================
-      // DECISÃO: SQLITE ou SUPABASE?
+      // DECISÃO CLARA: OFFLINE ou ONLINE?
       // ========================================
       
-      // Reavalia as condições dentro do queryFn para garantir valores atuais
-      const useOfflineSource = isNative && !isOnline && isReady && hasDb;
+      // ✅ Nativo + sem internet → usa SOMENTE SQLite
+      const useOfflineOnly = isNative && !isOnline && sqliteReady;
+      
+      // ✅ Online → pode usar Supabase + SQLite pendentes
+      const useOnlineWithPending = isOnline;
 
-      console.log("[useTripsHistory] queryFn executando. useOfflineSource:", useOfflineSource);
+      console.log("[useTripsHistory] queryFn executando:", {
+        useOfflineOnly,
+        useOnlineWithPending,
+        syncStatusFilter,
+      });
 
       // ========================================
-      // CAMINHO OFFLINE (SQLite)
+      // CAMINHO 1: OFFLINE PURO (SQLite apenas)
       // ========================================
-      if (useOfflineSource) {
+      if (useOfflineOnly) {
         console.log("[useTripsHistory] ✅ OFFLINE -> Buscando do SQLite");
 
         try {
@@ -237,88 +238,225 @@ export const useTripsHistory = (params: UseTripsHistoryParams = {}) => {
       }
 
       // ========================================
-      // CAMINHO ONLINE (Supabase)
+      // CAMINHO 2: ONLINE (Supabase + SQLite pendentes)
       // ========================================
-      if (isOnline) {
-        console.log("[useTripsHistory] ✅ ONLINE -> Buscando do Supabase");
+      if (useOnlineWithPending) {
+        console.log("[useTripsHistory] ✅ ONLINE -> Modo híbrido Supabase + SQLite");
 
         try {
-          let query = supabase
-            .from("trips")
-            .select(`
-              *,
-              employee:employees!trips_employee_id_fkey(nome_completo, matricula),
-              vehicle:vehicles!trips_vehicle_id_fkey(placa, marca, modelo)
-            `)
-            .order("start_time", { ascending: false });
+          let supabaseTrips: TripHistory[] = [];
+          let sqliteTrips: TripHistory[] = [];
 
-          // Filtros
-          if (filters.employeeId) {
-            query = query.eq("employee_id", filters.employeeId);
+          // ========================================
+          // DECISÃO BASEADA NO FILTRO DE SINCRONIZAÇÃO
+          // ========================================
+          
+          // CASO 1: Filtro = "Pendentes" → buscar SOMENTE do SQLite (synced=0)
+          if (syncStatusFilter === "offline-only") {
+            console.log("[useTripsHistory] Filtro Pendentes → buscando SOMENTE SQLite (synced=0)");
+            
+            if (sqliteReady) {
+              let trips = await getViagens();
+              
+              // Filtrar pendentes
+              trips = trips.filter((t) => t.synced === 0);
+
+              // Aplicar filtros adicionais
+              if (filters.employeeId) {
+                trips = trips.filter((t) => t.employee_id === filters.employeeId);
+              }
+              if (filters.vehicleId) {
+                trips = trips.filter((t) => t.vehicle_id === filters.vehicleId);
+              }
+              if (filters.startDate) {
+                const start = new Date(`${filters.startDate}T00:00:00`).getTime();
+                trips = trips.filter((t) => new Date(t.start_time).getTime() >= start);
+              }
+              if (filters.endDate) {
+                const end = new Date(`${filters.endDate}T23:59:59.999`).getTime();
+                trips = trips.filter((t) => new Date(t.start_time).getTime() <= end);
+              }
+              if (statusFilter && statusFilter !== "all") {
+                trips = trips.filter((t) => t.status === statusFilter);
+              }
+
+              trips.sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
+
+              // JOIN manual
+              const employees: OfflineEmployee[] = await getMotoristas();
+              const vehicles: OfflineVehicle[] = await getVeiculos();
+
+              sqliteTrips = trips.map((trip) => {
+                const base = mapOfflineTripBase(trip);
+                const emp = employees.find((e) => e.id === trip.employee_id);
+                const veh = trip.vehicle_id ? vehicles.find((v) => v.id === trip.vehicle_id) : undefined;
+
+                return {
+                  ...base,
+                  employee: emp ? { nome_completo: emp.nome_completo, matricula: emp.matricula } : undefined,
+                  vehicle: veh ? { placa: veh.placa, marca: veh.marca, modelo: veh.modelo } : undefined,
+                };
+              });
+
+              console.log("[useTripsHistory] ✅ Pendentes:", sqliteTrips.length);
+            }
+          }
+          
+          // CASO 2: Filtro = "Sincronizados" → buscar SOMENTE do Supabase
+          else if (syncStatusFilter === "synced") {
+            console.log("[useTripsHistory] Filtro Sincronizados → buscando SOMENTE Supabase");
+            
+            let query = supabase
+              .from("trips")
+              .select(`
+                *,
+                employee:employees!trips_employee_id_fkey(nome_completo, matricula),
+                vehicle:vehicles!trips_vehicle_id_fkey(placa, marca, modelo)
+              `)
+              .order("start_time", { ascending: false });
+
+            if (filters.employeeId) query = query.eq("employee_id", filters.employeeId);
+            if (filters.vehicleId) query = query.eq("vehicle_id", filters.vehicleId);
+            if (filters.startDate) query = query.gte("start_time", `${filters.startDate} 00:00:00`);
+            if (filters.endDate) query = query.lte("start_time", `${filters.endDate} 23:59:59`);
+            if (statusFilter && statusFilter !== "all") query = query.eq("status", statusFilter);
+
+            const { data, error } = await query;
+            if (error) throw error;
+
+            supabaseTrips = (data || []).map((trip: any) => ({
+              id: trip.id,
+              employee_id: trip.employee_id,
+              vehicle_id: trip.vehicle_id,
+              km_inicial: trip.km_inicial,
+              km_final: trip.km_final,
+              start_time: trip.start_time,
+              end_time: trip.end_time,
+              duration_seconds: trip.duration_seconds,
+              origem: trip.origem,
+              destino: trip.destino,
+              motivo: trip.motivo,
+              observacao: trip.observacao,
+              status: trip.status,
+              employee_photo_url: trip.employee_photo_url,
+              trip_photos_urls: trip.trip_photos_urls,
+              is_rented_vehicle: trip.is_rented_vehicle ?? false,
+              rented_plate: trip.rented_plate,
+              rented_model: trip.rented_model,
+              rented_company: trip.rented_company,
+              sync_status: "synced" as SyncStatus,
+              employee: trip.employee,
+              vehicle: trip.vehicle,
+            }));
+
+            console.log("[useTripsHistory] ✅ Sincronizados:", supabaseTrips.length);
+          }
+          
+          // CASO 3: Filtro = "Todos" ou nenhum → buscar Supabase + SQLite pendentes
+          else {
+            console.log("[useTripsHistory] Filtro Todos → buscando Supabase + SQLite pendentes");
+
+            // Buscar do Supabase
+            let query = supabase
+              .from("trips")
+              .select(`
+                *,
+                employee:employees!trips_employee_id_fkey(nome_completo, matricula),
+                vehicle:vehicles!trips_vehicle_id_fkey(placa, marca, modelo)
+              `)
+              .order("start_time", { ascending: false });
+
+            if (filters.employeeId) query = query.eq("employee_id", filters.employeeId);
+            if (filters.vehicleId) query = query.eq("vehicle_id", filters.vehicleId);
+            if (filters.startDate) query = query.gte("start_time", `${filters.startDate} 00:00:00`);
+            if (filters.endDate) query = query.lte("start_time", `${filters.endDate} 23:59:59`);
+            if (statusFilter && statusFilter !== "all") query = query.eq("status", statusFilter);
+
+            const { data, error } = await query;
+            if (error) throw error;
+
+            supabaseTrips = (data || []).map((trip: any) => ({
+              id: trip.id,
+              employee_id: trip.employee_id,
+              vehicle_id: trip.vehicle_id,
+              km_inicial: trip.km_inicial,
+              km_final: trip.km_final,
+              start_time: trip.start_time,
+              end_time: trip.end_time,
+              duration_seconds: trip.duration_seconds,
+              origem: trip.origem,
+              destino: trip.destino,
+              motivo: trip.motivo,
+              observacao: trip.observacao,
+              status: trip.status,
+              employee_photo_url: trip.employee_photo_url,
+              trip_photos_urls: trip.trip_photos_urls,
+              is_rented_vehicle: trip.is_rented_vehicle ?? false,
+              rented_plate: trip.rented_plate,
+              rented_model: trip.rented_model,
+              rented_company: trip.rented_company,
+              sync_status: "synced" as SyncStatus,
+              employee: trip.employee,
+              vehicle: trip.vehicle,
+            }));
+
+            // Buscar pendentes do SQLite
+            if (sqliteReady) {
+              let trips = await getViagens();
+              trips = trips.filter((t) => t.synced === 0);
+
+              if (filters.employeeId) trips = trips.filter((t) => t.employee_id === filters.employeeId);
+              if (filters.vehicleId) trips = trips.filter((t) => t.vehicle_id === filters.vehicleId);
+              if (filters.startDate) {
+                const start = new Date(`${filters.startDate}T00:00:00`).getTime();
+                trips = trips.filter((t) => new Date(t.start_time).getTime() >= start);
+              }
+              if (filters.endDate) {
+                const end = new Date(`${filters.endDate}T23:59:59.999`).getTime();
+                trips = trips.filter((t) => new Date(t.start_time).getTime() <= end);
+              }
+              if (statusFilter && statusFilter !== "all") {
+                trips = trips.filter((t) => t.status === statusFilter);
+              }
+
+              const employees: OfflineEmployee[] = await getMotoristas();
+              const vehicles: OfflineVehicle[] = await getVeiculos();
+
+              sqliteTrips = trips.map((trip) => {
+                const base = mapOfflineTripBase(trip);
+                const emp = employees.find((e) => e.id === trip.employee_id);
+                const veh = trip.vehicle_id ? vehicles.find((v) => v.id === trip.vehicle_id) : undefined;
+
+                return {
+                  ...base,
+                  employee: emp ? { nome_completo: emp.nome_completo, matricula: emp.matricula } : undefined,
+                  vehicle: veh ? { placa: veh.placa, marca: veh.marca, modelo: veh.modelo } : undefined,
+                };
+              });
+            }
+
+            console.log("[useTripsHistory] ✅ Supabase:", supabaseTrips.length, "SQLite pendentes:", sqliteTrips.length);
           }
 
-          if (filters.vehicleId) {
-            query = query.eq("vehicle_id", filters.vehicleId);
-          }
+          // ========================================
+          // MERGE E ORDENAÇÃO FINAL
+          // ========================================
+          const allTrips = [...supabaseTrips, ...sqliteTrips];
+          allTrips.sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
 
-          if (filters.startDate) {
-            query = query.gte("start_time", `${filters.startDate} 00:00:00`);
-          }
-
-          if (filters.endDate) {
-            query = query.lte("start_time", `${filters.endDate} 23:59:59`);
-          }
-
-          if (statusFilter && statusFilter !== "all") {
-            query = query.eq("status", statusFilter);
-          }
-
-          const { data, error } = await query;
-
-          if (error) {
-            console.error("[useTripsHistory] ❌ Erro Supabase:", error);
-            throw error;
-          }
-
-          // Mapeia para o formato TripHistory
-          const mapped: TripHistory[] = (data || []).map((trip: any) => ({
-            id: trip.id,
-            employee_id: trip.employee_id,
-            vehicle_id: trip.vehicle_id,
-            km_inicial: trip.km_inicial,
-            km_final: trip.km_final,
-            start_time: trip.start_time,
-            end_time: trip.end_time,
-            duration_seconds: trip.duration_seconds,
-            origem: trip.origem,
-            destino: trip.destino,
-            motivo: trip.motivo,
-            observacao: trip.observacao,
-            status: trip.status,
-            employee_photo_url: trip.employee_photo_url,
-            trip_photos_urls: trip.trip_photos_urls,
-            is_rented_vehicle: trip.is_rented_vehicle ?? false,
-            rented_plate: trip.rented_plate,
-            rented_model: trip.rented_model,
-            rented_company: trip.rented_company,
-            sync_status: "synced" as SyncStatus,
-            employee: trip.employee,
-            vehicle: trip.vehicle,
-          }));
-
-          console.log("[useTripsHistory] ✅ Retornando", mapped.length, "viagens do Supabase");
-          return mapped;
+          console.log("[useTripsHistory] ✅ Total combinado:", allTrips.length);
+          return allTrips;
 
         } catch (err) {
-          console.error("[useTripsHistory] ❌ Erro ao buscar do Supabase:", err);
+          console.error("[useTripsHistory] ❌ Erro ao buscar dados online:", err);
           throw err;
         }
       }
 
       // ========================================
-      // FALLBACK: Não conseguiu nenhuma fonte
+      // FALLBACK: Web offline ou condições não atendidas
       // ========================================
-      console.warn("[useTripsHistory] ⚠️ Nenhuma fonte de dados disponível. isOnline:", isOnline, "sqliteReady:", isNative && isReady && hasDb);
+      console.warn("[useTripsHistory] ⚠️ Nenhuma fonte disponível (web offline ou erro de estado)");
       return [];
     },
   });
