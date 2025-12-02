@@ -232,12 +232,12 @@ export const TripForm = () => {
       employeePhoto: null,
       employeePhotoUrl: trip.employee_photo_url || undefined,
       vehicleId: trip.vehicle_id || "",
-      initialKm: String(trip.km_inicial || ""),
-      finalKm: trip.km_final ? String(trip.km_final) : "",
-      origin: trip.origem || "",
-      destination: trip.destino || "",
-      reason: trip.motivo || "",
-      observation: trip.observacao || "",
+      initialKm: String(trip.initial_km || ""),
+      finalKm: trip.final_km ? String(trip.final_km) : "",
+      origin: trip.origin || "",
+      destination: trip.destination || "",
+      reason: trip.reason || "",
+      observation: trip.notes || "",
       startLocation: trip.start_latitude && trip.start_longitude
         ? { lat: trip.start_latitude, lng: trip.start_longitude }
         : undefined,
@@ -281,11 +281,11 @@ export const TripForm = () => {
       employeeId: trip.employee_id || "",
       employeePhotoUrl, // URL ou base64 da foto recuperada
       vehicleId: trip.vehicle_id || "",
-      initialKm: String(trip.km_inicial || ""),
-      origin: trip.origem || "",
-      destination: trip.destino || "", // Recupera destino
-      reason: trip.motivo || "",
-      observation: trip.observacao || "",
+      initialKm: String(trip.initial_km || ""),
+      origin: trip.origin || "",
+      destination: trip.destination || "",
+      reason: trip.reason || "",
+      observation: trip.notes || "",
       isRentedVehicle: trip.is_rented_vehicle === 1 || trip.is_rented_vehicle === true,
       rentedPlate: trip.rented_plate || "",
       rentedModel: trip.rented_model || "",
@@ -317,11 +317,11 @@ export const TripForm = () => {
       employeeId: trip.employee_id || "",
       employeePhotoUrl: trip.employee_photo_url || undefined, // URL da foto do servidor
       vehicleId: trip.vehicle_id || "",
-      initialKm: String(trip.km_inicial || ""),
-      origin: trip.origem || "",
-      destination: trip.destino || "", // Recupera destino
-      reason: trip.motivo || "",
-      observation: trip.observacao || "",
+      initialKm: String(trip.initial_km || ""),
+      origin: trip.origin || "",
+      destination: trip.destination || "",
+      reason: trip.reason || "",
+      observation: trip.notes || "",
       isRentedVehicle: trip.is_rented_vehicle === true,
       rentedPlate: trip.rented_plate || "",
       rentedModel: trip.rented_model || "",
@@ -530,19 +530,19 @@ export const TripForm = () => {
         const draftTrip = {
           employee_id: tripData.employeeId,
           vehicle_id: tripData.isRentedVehicle ? null : tripData.vehicleId,
-          km_inicial: parseFloat(tripData.initialKm),
-          km_final: null, // ✅ NULL até finalizar (não 0)
+          initial_km: parseFloat(tripData.initialKm),
+          final_km: null,
           start_time: startTime.toISOString(),
-          end_time: null, // ✅ NULL até finalizar a viagem
+          end_time: null,
           start_latitude: location.lat,
           start_longitude: location.lng,
           end_latitude: null,
           end_longitude: null,
-          duration_seconds: null, // ✅ NULL até finalizar (não 0)
-          origem: tripData.origin || null,
-          destino: tripData.destination || null,
-          motivo: tripData.reason || null,
-          observacao: tripData.observation || null,
+          duration_seconds: null,
+          origin: tripData.origin || null,
+          destination: tripData.destination || null,
+          reason: tripData.reason || null,
+          notes: tripData.observation || null,
           status: "em_andamento",
           employee_photo_base64: employeePhotoBase64,
           is_rented_vehicle: tripData.isRentedVehicle ? 1 : 0,
@@ -571,18 +571,18 @@ export const TripForm = () => {
         const draftTripRecord = {
           employee_id: tripData.employeeId,
           vehicle_id: tripData.isRentedVehicle ? null : tripData.vehicleId,
-          km_inicial: parseFloat(tripData.initialKm),
-          km_final: null, // ✅ NULL até finalizar (não 0)
+          initial_km: parseFloat(tripData.initialKm),
+          final_km: null,
           start_time: startTime.toISOString(),
-          end_time: null, // ✅ NULL até finalizar a viagem
+          end_time: null,
           start_latitude: location.lat,
           start_longitude: location.lng,
-          duration_seconds: null, // ✅ NULL até finalizar
+          duration_seconds: null,
           status: "em_andamento",
-          origem: tripData.origin || null,
-          destino: tripData.destination || null,
-          motivo: tripData.reason || null,
-          observacao: tripData.observation || null,
+          origin: tripData.origin || null,
+          destination: tripData.destination || null,
+          reason: tripData.reason || null,
+          notes: tripData.observation || null,
           employee_photo_url: employeePhotoUrl || undefined,
           is_rented_vehicle: tripData.isRentedVehicle,
           rented_plate: tripData.isRentedVehicle ? tripData.rentedPlate || null : null,
@@ -610,11 +610,11 @@ export const TripForm = () => {
               : undefined;
             
             const localMirror = {
-              server_trip_id: data.id, // Vincula ao servidor
+              server_trip_id: data.id,
               employee_id: tripData.employeeId,
               vehicle_id: tripData.isRentedVehicle ? null : tripData.vehicleId,
-              km_inicial: parseFloat(tripData.initialKm),
-              km_final: null,
+              initial_km: parseFloat(tripData.initialKm),
+              final_km: null,
               start_time: startTime.toISOString(),
               end_time: null,
               start_latitude: location.lat,
@@ -622,17 +622,17 @@ export const TripForm = () => {
               end_latitude: null,
               end_longitude: null,
               duration_seconds: null,
-              origem: tripData.origin || null,
-              destino: tripData.destination || null,
-              motivo: tripData.reason || null,
-              observacao: tripData.observation || null,
+              origin: tripData.origin || null,
+              destination: tripData.destination || null,
+              reason: tripData.reason || null,
+              notes: tripData.observation || null,
               status: "em_andamento",
               employee_photo_base64: employeePhotoBase64,
               is_rented_vehicle: tripData.isRentedVehicle ? 1 : 0,
               rented_plate: tripData.isRentedVehicle ? tripData.rentedPlate || null : null,
               rented_model: tripData.isRentedVehicle ? tripData.rentedModel || null : null,
               rented_company: tripData.isRentedVehicle ? tripData.rentedCompany || null : null,
-              synced: 1, // Marca como sincronizado (espelho do servidor)
+              synced: 1,
               deleted: 0,
             };
             
@@ -708,16 +708,15 @@ export const TripForm = () => {
         // Se já temos um local trip ID (criado no handleStartTrip), atualizamos
         if (currentLocalTripId) {
           const updates = {
-            km_final: parseFloat(tempFinalKm),
+            final_km: parseFloat(tempFinalKm),
             end_time: endTime.toISOString(),
             end_latitude: location.lat,
             end_longitude: location.lng,
             duration_seconds: elapsedTime,
-            origem: tripData.origin || null,
-            destino: tripData.destination || null,
-            motivo: tripData.reason || null,
-            observacao: tripData.observation || null,
-            // ✅ NÃO enviar status - updateTripOnEnd sempre força "finalizada"
+            origin: tripData.origin || null,
+            destination: tripData.destination || null,
+            reason: tripData.reason || null,
+            notes: tripData.observation || null,
             trip_photos_base64: tripPhotosBase64.length > 0
               ? JSON.stringify(tripPhotosBase64)
               : undefined,
@@ -739,8 +738,8 @@ export const TripForm = () => {
           const offlineTrip = {
             employee_id: tripData.employeeId,
             vehicle_id: tripData.isRentedVehicle ? null : tripData.vehicleId,
-            km_inicial: parseFloat(tripData.initialKm),
-            km_final: parseFloat(tempFinalKm),
+            initial_km: parseFloat(tripData.initialKm),
+            final_km: parseFloat(tempFinalKm),
             start_time: tripData.startTime!.toISOString(),
             end_time: endTime.toISOString(),
             start_latitude: tripData.startLocation?.lat,
@@ -748,10 +747,10 @@ export const TripForm = () => {
             end_latitude: location.lat,
             end_longitude: location.lng,
             duration_seconds: elapsedTime,
-            origem: tripData.origin || null,
-            destino: tripData.destination || null,
-            motivo: tripData.reason || null,
-            observacao: tripData.observation || null,
+            origin: tripData.origin || null,
+            destination: tripData.destination || null,
+            reason: tripData.reason || null,
+            notes: tripData.observation || null,
             status: "finalizada",
             employee_photo_base64: employeePhotoBase64,
             trip_photos_base64: tripPhotosBase64.length > 0
@@ -789,14 +788,14 @@ export const TripForm = () => {
         // Se já existe uma viagem no servidor (criada no handleStartTrip), apenas atualiza
         if (currentServerTripId) {
           const tripUpdates = {
-            km_final: parseFloat(tempFinalKm),
+            final_km: parseFloat(tempFinalKm),
             end_time: endTime.toISOString(),
             end_latitude: location.lat,
             end_longitude: location.lng,
             duration_seconds: elapsedTime,
-            destino: tripData.destination || null,
-            observacao: tripData.observation || null,
-            status: "finalizada", // ✅ CRÍTICO: sempre enviar status explicitamente
+            destination: tripData.destination || null,
+            notes: tripData.observation || null,
+            status: "finalizada",
             trip_photos_urls:
               tripPhotosUrls.length > 0 ? tripPhotosUrls : undefined,
           };
@@ -821,8 +820,8 @@ export const TripForm = () => {
           const tripRecord = {
             employee_id: tripData.employeeId,
             vehicle_id: tripData.isRentedVehicle ? null : tripData.vehicleId,
-            km_inicial: parseFloat(tripData.initialKm),
-            km_final: parseFloat(tempFinalKm),
+            initial_km: parseFloat(tripData.initialKm),
+            final_km: parseFloat(tempFinalKm),
             start_time: tripData.startTime!.toISOString(),
             end_time: endTime.toISOString(),
             start_latitude: tripData.startLocation?.lat,
@@ -830,10 +829,10 @@ export const TripForm = () => {
             end_latitude: location.lat,
             end_longitude: location.lng,
             duration_seconds: elapsedTime,
-            origem: tripData.origin || null,
-            destino: tripData.destination || null,
-            motivo: tripData.reason || null,
-            observacao: tripData.observation || null,
+            origin: tripData.origin || null,
+            destination: tripData.destination || null,
+            reason: tripData.reason || null,
+            notes: tripData.observation || null,
             status: "finalizada",
             employee_photo_url: employeePhotoUrl || undefined,
             trip_photos_urls:
@@ -939,7 +938,7 @@ export const TripForm = () => {
         return;
       }
 
-      const employee = employees.find((emp) => emp.matricula === scanned);
+      const employee = employees.find((emp) => emp.registration_id === scanned);
 
       if (employee) {
         setTripData((prev) => ({
@@ -1141,8 +1140,8 @@ export const TripForm = () => {
           <SearchableCombobox
             options={employees.map((emp) => ({
               value: emp.id,
-              label: `${emp.nome_completo} (${emp.matricula})`,
-              searchText: `${emp.nome_completo} ${emp.matricula} ${emp.cargo}`,
+              label: `${emp.full_name} (${emp.registration_id})`,
+              searchText: `${emp.full_name} ${emp.registration_id} ${emp.position}`,
             }))}
             value={tripData.employeeId}
             onChange={(value) =>
@@ -1297,8 +1296,8 @@ export const TripForm = () => {
               <SearchableCombobox
                 options={vehicles.map((veh) => ({
                   value: veh.id,
-                  label: `${veh.placa} - ${veh.marca} ${veh.modelo}`,
-                  searchText: `${veh.placa} ${veh.marca} ${veh.modelo}`,
+                  label: `${veh.license_plate} - ${veh.brand} ${veh.model}`,
+                  searchText: `${veh.license_plate} ${veh.brand} ${veh.model}`,
                 }))}
                 value={tripData.vehicleId}
                 onChange={(value) =>
