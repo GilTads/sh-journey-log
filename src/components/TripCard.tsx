@@ -76,14 +76,14 @@ export const TripCard = ({ trip }: TripCardProps) => {
   };
 
   // Driver info
-  const driverName = trip.employee?.nome_completo || "Motorista não informado";
+  const driverName = trip.employee?.full_name || "Motorista não informado";
   const driverInitials = driverName
     .split(" ")
     .map((n) => n[0])
     .slice(0, 2)
     .join("")
     .toUpperCase();
-  const driverMatricula = trip.employee?.matricula;
+  const driverRegistrationId = trip.employee?.registration_id;
 
   // Vehicle info
   const isRented = trip.is_rented_vehicle;
@@ -91,11 +91,11 @@ export const TripCard = ({ trip }: TripCardProps) => {
   const vehicleLabel = isRented
     ? `${trip.rented_plate || ""} ${trip.rented_model || ""}`.trim() || "Veículo alugado"
     : trip.vehicle
-    ? `${trip.vehicle.placa} - ${trip.vehicle.marca} ${trip.vehicle.modelo}`
+    ? `${trip.vehicle.license_plate} - ${trip.vehicle.brand} ${trip.vehicle.model}`
     : "Veículo não informado";
 
   // Route info
-  const hasRoute = trip.origem || trip.destino;
+  const hasRoute = trip.origin || trip.destination;
 
   return (
     <Card 
@@ -119,9 +119,9 @@ export const TripCard = ({ trip }: TripCardProps) => {
                 <User className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                 <span className="font-medium text-sm truncate">{driverName}</span>
               </div>
-              {driverMatricula && (
+              {driverRegistrationId && (
                 <span className="text-xs text-muted-foreground">
-                  Mat: {driverMatricula}
+                  Mat: {driverRegistrationId}
                 </span>
               )}
             </div>
@@ -163,16 +163,16 @@ export const TripCard = ({ trip }: TripCardProps) => {
           <div className="flex items-start gap-2 mb-3 text-sm">
             <Route className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
             <div className="flex-1 min-w-0">
-              {trip.origem && (
+              {trip.origin && (
                 <div className="flex items-center gap-1">
                   <MapPin className="h-3 w-3 text-green-600" />
-                  <span className="truncate">{trip.origem}</span>
+                  <span className="truncate">{trip.origin}</span>
                 </div>
               )}
-              {trip.destino && (
+              {trip.destination && (
                 <div className="flex items-center gap-1">
                   <MapPin className="h-3 w-3 text-red-600" />
-                  <span className="truncate">{trip.destino}</span>
+                  <span className="truncate">{trip.destination}</span>
                 </div>
               )}
             </div>
@@ -205,9 +205,9 @@ export const TripCard = ({ trip }: TripCardProps) => {
             <div>
               <div className="text-muted-foreground">Km</div>
               <div className="font-medium">
-                {formatKm(trip.km_inicial)}
-                {trip.km_final != null && (
-                  <span className="text-muted-foreground"> → {formatKm(trip.km_final)}</span>
+                {formatKm(trip.initial_km)}
+                {trip.final_km != null && (
+                  <span className="text-muted-foreground"> → {formatKm(trip.final_km)}</span>
                 )}
               </div>
             </div>
@@ -223,11 +223,11 @@ export const TripCard = ({ trip }: TripCardProps) => {
           </div>
         </div>
 
-        {/* Motivo */}
-        {trip.motivo && (
+        {/* Reason */}
+        {trip.reason && (
           <div className="mt-3 pt-3 border-t text-xs">
             <span className="text-muted-foreground">Motivo: </span>
-            <span>{trip.motivo}</span>
+            <span>{trip.reason}</span>
           </div>
         )}
       </CardContent>

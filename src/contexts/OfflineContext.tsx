@@ -199,12 +199,11 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
             }
           }
 
-          // ✅ GARANTIR que status seja sempre enviado corretamente
           const record = {
             employee_id: trip.employee_id,
             vehicle_id: trip.vehicle_id ?? null,
-            km_inicial: trip.km_inicial,
-            km_final: trip.km_final ?? null,
+            initial_km: trip.initial_km,
+            final_km: trip.final_km ?? null,
             start_time: trip.start_time,
             end_time: trip.end_time ?? null,
             start_latitude: trip.start_latitude,
@@ -212,11 +211,11 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
             end_latitude: trip.end_latitude,
             end_longitude: trip.end_longitude,
             duration_seconds: trip.duration_seconds ?? null,
-            origem: trip.origem ?? null,
-            destino: trip.destino ?? null,
-            motivo: trip.motivo ?? null,
-            observacao: trip.observacao ?? null,
-            status: trip.status, // ✅ Usa exatamente o status da viagem local
+            origin: trip.origin ?? null,
+            destination: trip.destination ?? null,
+            reason: trip.reason ?? null,
+            notes: trip.notes ?? null,
+            status: trip.status,
             employee_photo_url: employeePhotoUrl || undefined,
             trip_photos_urls:
               tripPhotosUrls.length > 0 ? tripPhotosUrls : undefined,
@@ -530,9 +529,9 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
       const f = filtro.toLowerCase();
       return all.filter(
         (emp) =>
-          emp.nome_completo.toLowerCase().includes(f) ||
-          emp.matricula.toLowerCase().includes(f) ||
-          emp.cargo.toLowerCase().includes(f)
+          emp.full_name.toLowerCase().includes(f) ||
+          emp.registration_id.toLowerCase().includes(f) ||
+          emp.position.toLowerCase().includes(f)
       );
     },
     [isReady, hasDb, isOnline, getEmployees, saveEmployees]
@@ -594,7 +593,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
 
       const f = filtro.toLowerCase();
       return all.filter((v) =>
-        `${v.placa} ${v.marca} ${v.modelo}`.toLowerCase().includes(f)
+        `${v.license_plate} ${v.brand} ${v.model}`.toLowerCase().includes(f)
       );
     },
     [isReady, hasDb, isOnline, getVehicles, saveVehicles]

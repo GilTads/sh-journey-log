@@ -3,9 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface Employee {
   id: string;
-  matricula: string;
-  nome_completo: string;
-  cargo: string;
+  registration_id: string;
+  full_name: string;
+  position: string;
 }
 
 export const useEmployees = () => {
@@ -15,7 +15,7 @@ export const useEmployees = () => {
       const { data, error } = await supabase
         .from("employees")
         .select("*")
-        .order("nome_completo");
+        .order("full_name");
 
       if (error) throw error;
       return data as Employee[];

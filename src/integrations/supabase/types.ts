@@ -16,25 +16,25 @@ export type Database = {
     Tables: {
       employees: {
         Row: {
-          cargo: string
           created_at: string | null
+          full_name: string
           id: string
-          matricula: string
-          nome_completo: string
+          position: string
+          registration_id: string
         }
         Insert: {
-          cargo: string
           created_at?: string | null
+          full_name: string
           id?: string
-          matricula: string
-          nome_completo: string
+          position: string
+          registration_id: string
         }
         Update: {
-          cargo?: string
           created_at?: string | null
+          full_name?: string
           id?: string
-          matricula?: string
-          nome_completo?: string
+          position?: string
+          registration_id?: string
         }
         Relationships: []
       }
@@ -76,20 +76,20 @@ export type Database = {
       trips: {
         Row: {
           created_at: string | null
-          destino: string | null
+          destination: string | null
           duration_seconds: number | null
           employee_id: string
           employee_photo_url: string | null
           end_latitude: number | null
           end_longitude: number | null
           end_time: string | null
+          final_km: number | null
           id: string
+          initial_km: number
           is_rented_vehicle: boolean
-          km_final: number | null
-          km_inicial: number
-          motivo: string | null
-          observacao: string | null
-          origem: string | null
+          notes: string | null
+          origin: string | null
+          reason: string | null
           rented_company: string | null
           rented_model: string | null
           rented_plate: string | null
@@ -103,20 +103,20 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
-          destino?: string | null
+          destination?: string | null
           duration_seconds?: number | null
           employee_id: string
           employee_photo_url?: string | null
           end_latitude?: number | null
           end_longitude?: number | null
           end_time?: string | null
+          final_km?: number | null
           id?: string
+          initial_km: number
           is_rented_vehicle?: boolean
-          km_final?: number | null
-          km_inicial: number
-          motivo?: string | null
-          observacao?: string | null
-          origem?: string | null
+          notes?: string | null
+          origin?: string | null
+          reason?: string | null
           rented_company?: string | null
           rented_model?: string | null
           rented_plate?: string | null
@@ -130,20 +130,20 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
-          destino?: string | null
+          destination?: string | null
           duration_seconds?: number | null
           employee_id?: string
           employee_photo_url?: string | null
           end_latitude?: number | null
           end_longitude?: number | null
           end_time?: string | null
+          final_km?: number | null
           id?: string
+          initial_km?: number
           is_rented_vehicle?: boolean
-          km_final?: number | null
-          km_inicial?: number
-          motivo?: string | null
-          observacao?: string | null
-          origem?: string | null
+          notes?: string | null
+          origin?: string | null
+          reason?: string | null
           rented_company?: string | null
           rented_model?: string | null
           rented_plate?: string | null
@@ -174,25 +174,25 @@ export type Database = {
       }
       vehicles: {
         Row: {
+          brand: string
           created_at: string | null
           id: string
-          marca: string
-          modelo: string
-          placa: string
+          license_plate: string
+          model: string
         }
         Insert: {
+          brand: string
           created_at?: string | null
           id?: string
-          marca: string
-          modelo: string
-          placa: string
+          license_plate: string
+          model: string
         }
         Update: {
+          brand?: string
           created_at?: string | null
           id?: string
-          marca?: string
-          modelo?: string
-          placa?: string
+          license_plate?: string
+          model?: string
         }
         Relationships: []
       }
