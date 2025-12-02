@@ -64,16 +64,16 @@ export const TripsHistoryFilters = ({
       setEmployeeOptions(
         employees.map((emp) => ({
           value: String(emp.id),
-          label: `${emp.nome_completo} (${emp.matricula})`,
-          searchText: `${emp.nome_completo} ${emp.matricula} ${emp.cargo ?? ""}`,
+          label: `${emp.full_name} (${emp.registration_id})`,
+          searchText: `${emp.full_name} ${emp.registration_id} ${emp.position ?? ""}`,
         }))
       );
 
       setVehicleOptions(
         vehicles.map((veh) => ({
           value: String(veh.id),
-          label: `${veh.placa} - ${veh.marca} ${veh.modelo}`,
-          searchText: `${veh.placa} ${veh.marca} ${veh.modelo}`,
+          label: `${veh.license_plate} - ${veh.brand} ${veh.model}`,
+          searchText: `${veh.license_plate} ${veh.brand} ${veh.model}`,
         }))
       );
     };

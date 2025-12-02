@@ -3,8 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 export interface TripRecord {
   employee_id: string;
   vehicle_id?: string | null;
-  km_inicial: number;
-  km_final: number;
+  initial_km: number;
+  final_km: number;
   start_time: string;
   end_time: string;
   start_latitude?: number;
@@ -12,10 +12,10 @@ export interface TripRecord {
   end_latitude?: number;
   end_longitude?: number;
   duration_seconds: number;
-  origem?: string;
-  destino?: string;
-  motivo?: string;
-  observacao?: string;
+  origin?: string;
+  destination?: string;
+  reason?: string;
+  notes?: string;
   status: string;
   employee_photo_url?: string;
   trip_photos_urls?: string[];
@@ -66,8 +66,7 @@ export const useTrips = () => {
 
   const updateTrip = async (tripId: string, updates: Partial<TripRecord>) => {
     try {
-      // ✅ GARANTIR que status "finalizada" seja sempre salvo corretamente
-      console.log("[useTrips] Atualizando viagem:", tripId, "Status:", updates.status);
+      console.log("[useTrips] Updating trip:", tripId, "Status:", updates.status);
       
       const { data, error } = await supabase
         .from("trips")
@@ -78,19 +77,17 @@ export const useTrips = () => {
 
       if (error) throw error;
       
-      console.log("[useTrips] Viagem atualizada com sucesso. Status final:", data?.status);
+      console.log("[useTrips] Trip updated successfully. Final status:", data?.status);
       return { data, error: null };
     } catch (error) {
-      console.error("[useTrips] Erro ao atualizar viagem:", error);
+      console.error("[useTrips] Error updating trip:", error);
       return { data: null, error };
     }
   };
 
   /**
-   * Busca viagem em andamento no Supabase
-   * ✅ FILTRO RIGOROSO: status = 'em_andamento' AND end_time IS NULL
-   * Isso impede que viagens "fantasmas" sejam consideradas ongoing
-   * Retorna a mais recente caso exista mais de uma
+   * Fetch ongoing trip from Supabase
+   * STRICT FILTER: status = 'em_andamento' AND end_time IS NULL
    */
   const getOngoingTripFromServer = async () => {
     try {
@@ -98,20 +95,20 @@ export const useTrips = () => {
         .from("trips")
         .select("*")
         .eq("status", "em_andamento")
-        .is("end_time", null) // ✅ CRÍTICO: apenas viagens que não foram finalizadas
+        .is("end_time", null)
         .order("start_time", { ascending: false })
         .limit(1)
         .maybeSingle();
 
       if (error) {
-        console.error("[useTrips] Erro ao buscar viagem em andamento:", error);
+        console.error("[useTrips] Error fetching ongoing trip:", error);
         return null;
       }
 
-      console.log("[useTrips] Viagem em andamento encontrada:", data?.id || "nenhuma");
+      console.log("[useTrips] Ongoing trip found:", data?.id || "none");
       return data;
     } catch (error) {
-      console.error("[useTrips] Erro ao buscar viagem em andamento:", error);
+      console.error("[useTrips] Error fetching ongoing trip:", error);
       return null;
     }
   };

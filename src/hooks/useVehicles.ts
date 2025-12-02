@@ -3,9 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface Vehicle {
   id: string;
-  placa: string;
-  marca: string;
-  modelo: string;
+  license_plate: string;
+  brand: string;
+  model: string;
 }
 
 export const useVehicles = () => {
@@ -15,7 +15,7 @@ export const useVehicles = () => {
       const { data, error } = await supabase
         .from("vehicles")
         .select("*")
-        .order("placa");
+        .order("license_plate");
 
       if (error) throw error;
       return data as Vehicle[];
