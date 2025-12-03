@@ -66,6 +66,20 @@ export const TripCard = ({ trip }: TripCardProps) => {
   const statusConfig = getStatusConfig(trip.status);
   const syncConfig = getSyncStatusConfig(trip.sync_status);
   const StatusIcon = statusConfig.icon;
+  // Usa duration_seconds se presente; senão calcula a partir de start/end
+  const durationSeconds = (() => {
+    if (trip.duration_seconds && trip.duration_seconds > 0) {
+      return trip.duration_seconds;
+    }
+    if (trip.start_time && trip.end_time) {
+      const start = new Date(trip.start_time).getTime();
+      const end = new Date(trip.end_time).getTime();
+      if (!Number.isNaN(start) && !Number.isNaN(end) && end > start) {
+        return Math.floor((end - start) / 1000);
+      }
+    }
+    return null;
+  })();
 
   const isOngoing = trip.status?.toLowerCase() === "em_andamento" || trip.status?.toLowerCase() === "in_progress";
 
@@ -218,7 +232,7 @@ export const TripCard = ({ trip }: TripCardProps) => {
             <Clock className="h-3.5 w-3.5 text-muted-foreground" />
             <div>
               <div className="text-muted-foreground">Duração</div>
-              <div className="font-medium">{formatDuration(trip.duration_seconds)}</div>
+              <div className="font-medium">{formatDuration(durationSeconds)}</div>
             </div>
           </div>
         </div>

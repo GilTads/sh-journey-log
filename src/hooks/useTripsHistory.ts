@@ -101,6 +101,75 @@ export const useTripsHistory = (params: UseTripsHistoryParams = {}) => {
     queryEnabled,
   });
 
+  const loadOfflineTrips = async (): Promise<TripHistory[]> => {
+    if (!sqliteReady) return [];
+
+    try {
+      let trips = await getViagens();
+
+      if (filters.employeeId) {
+        trips = trips.filter((t) => t.employee_id === filters.employeeId);
+      }
+      if (filters.vehicleId) {
+        trips = trips.filter((t) => t.vehicle_id === filters.vehicleId);
+      }
+      if (filters.startDate) {
+        const start = new Date(`${filters.startDate}T00:00:00`).getTime();
+        trips = trips.filter((t) => new Date(t.start_time).getTime() >= start);
+      }
+      if (filters.endDate) {
+        const end = new Date(`${filters.endDate}T23:59:59.999`).getTime();
+        trips = trips.filter((t) => new Date(t.start_time).getTime() <= end);
+      }
+      if (statusFilter && statusFilter !== "all") {
+        trips = trips.filter((t) => t.status === statusFilter);
+      }
+      if (syncStatusFilter && syncStatusFilter !== "all") {
+        if (syncStatusFilter === "synced") {
+          trips = trips.filter((t) => t.synced === 1);
+        } else if (syncStatusFilter === "offline-only") {
+          trips = trips.filter((t) => t.synced === 0);
+        }
+      }
+
+      trips.sort(
+        (a, b) =>
+          new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
+      );
+
+      const employees: OfflineEmployee[] = await getMotoristas();
+      const vehicles: OfflineVehicle[] = await getVeiculos();
+
+      return trips.map((trip) => {
+        const base = mapOfflineTripBase(trip);
+        const emp = employees.find((e) => e.id === trip.employee_id);
+        const veh = trip.vehicle_id
+          ? vehicles.find((v) => v.id === trip.vehicle_id)
+          : undefined;
+
+        return {
+          ...base,
+          employee: emp
+            ? {
+                full_name: emp.full_name,
+                registration_id: emp.registration_id,
+              }
+            : undefined,
+          vehicle: veh
+            ? {
+                license_plate: veh.license_plate,
+                brand: veh.brand,
+                model: veh.model,
+              }
+            : undefined,
+        };
+      });
+    } catch (err) {
+      console.error("[useTripsHistory] Error loading from SQLite:", err);
+      return [];
+    }
+  };
+
   return useQuery({
     queryKey: [
       "trips-history",
@@ -111,6 +180,8 @@ export const useTripsHistory = (params: UseTripsHistoryParams = {}) => {
     ],
     enabled: queryEnabled,
     staleTime: 1000 * 60 * 5,
+    // Permite rodar mesmo offline (React Query normalmente pausa)
+    networkMode: "always",
     queryFn: async () => {
       const useOfflineOnly = isNative && !isOnline && sqliteReady;
       const useOnlineWithPending = isOnline;
@@ -125,80 +196,7 @@ export const useTripsHistory = (params: UseTripsHistoryParams = {}) => {
       if (useOfflineOnly) {
         console.log("[useTripsHistory] ✅ OFFLINE -> Fetching from SQLite");
 
-        try {
-          let trips = await getViagens();
-          console.log("[useTripsHistory] SQLite returned", trips.length, "trips");
-
-          // Filters
-          if (filters.employeeId) {
-            trips = trips.filter((t) => t.employee_id === filters.employeeId);
-          }
-          if (filters.vehicleId) {
-            trips = trips.filter((t) => t.vehicle_id === filters.vehicleId);
-          }
-          if (filters.startDate) {
-            const start = new Date(`${filters.startDate}T00:00:00`).getTime();
-            trips = trips.filter((t) => new Date(t.start_time).getTime() >= start);
-          }
-          if (filters.endDate) {
-            const end = new Date(`${filters.endDate}T23:59:59.999`).getTime();
-            trips = trips.filter((t) => new Date(t.start_time).getTime() <= end);
-          }
-          if (statusFilter && statusFilter !== "all") {
-            trips = trips.filter((t) => t.status === statusFilter);
-          }
-          if (syncStatusFilter && syncStatusFilter !== "all") {
-            if (syncStatusFilter === "synced") {
-              trips = trips.filter((t) => t.synced === 1);
-            } else if (syncStatusFilter === "offline-only") {
-              trips = trips.filter((t) => t.synced === 0);
-            }
-          }
-
-          trips.sort(
-            (a, b) =>
-              new Date(b.start_time).getTime() - new Date(a.start_time).getTime()
-          );
-
-          console.log("[useTripsHistory] After filters:", trips.length, "trips");
-
-          // Manual JOIN with employees and vehicles
-          const employees: OfflineEmployee[] = await getMotoristas();
-          const vehicles: OfflineVehicle[] = await getVeiculos();
-
-          console.log("[useTripsHistory] Manual JOIN with", employees.length, "employees and", vehicles.length, "vehicles");
-
-          const enriched: TripHistory[] = trips.map((trip) => {
-            const base = mapOfflineTripBase(trip);
-            const emp = employees.find((e) => e.id === trip.employee_id);
-            const veh = trip.vehicle_id
-              ? vehicles.find((v) => v.id === trip.vehicle_id)
-              : undefined;
-
-            return {
-              ...base,
-              employee: emp
-                ? {
-                    full_name: emp.full_name,
-                    registration_id: emp.registration_id,
-                  }
-                : undefined,
-              vehicle: veh
-                ? {
-                    license_plate: veh.license_plate,
-                    brand: veh.brand,
-                    model: veh.model,
-                  }
-                : undefined,
-            };
-          });
-
-          console.log("[useTripsHistory] ✅ Returning", enriched.length, "trips from SQLite");
-          return enriched;
-        } catch (err) {
-          console.error("[useTripsHistory] ❌ Error fetching from SQLite:", err);
-          return [];
-        }
+        return await loadOfflineTrips();
       }
 
       // PATH 2: ONLINE (Supabase + SQLite pending)
@@ -391,14 +389,34 @@ export const useTripsHistory = (params: UseTripsHistoryParams = {}) => {
           }
 
           // Merge and sort
-          const allTrips = [...supabaseTrips, ...sqliteTrips];
+          // Deduplica: se há uma trip local pendente com mesmo server_trip_id, prioriza a local (status mais recente)
+          const mergedByServerId = new Map<string, TripHistory>();
+
+          // Primeiro, coloca trips do Supabase
+          for (const trip of supabaseTrips) {
+            if (trip.id) mergedByServerId.set(trip.id, trip);
+          }
+
+          // Depois, pendentes locais: se tem server_trip_id, sobrescreve a versão do Supabase
+          for (const trip of sqliteTrips) {
+            if (trip.sync_status === "offline-only" && (trip as any).server_trip_id) {
+              mergedByServerId.set((trip as any).server_trip_id, trip);
+            } else {
+              // Trips locais sem server_trip_id: usa id numérico como chave única
+              mergedByServerId.set(`local-${trip.id}`, trip);
+            }
+          }
+
+          const allTrips = Array.from(mergedByServerId.values());
           allTrips.sort((a, b) => new Date(b.start_time).getTime() - new Date(a.start_time).getTime());
 
           console.log("[useTripsHistory] ✅ Total combined:", allTrips.length);
           return allTrips;
         } catch (err) {
           console.error("[useTripsHistory] ❌ Error fetching online data:", err);
-          throw err;
+          // Fallback to SQLite to avoid UI error when offline or Supabase falha
+          const offline = await loadOfflineTrips();
+          return offline;
         }
       }
 

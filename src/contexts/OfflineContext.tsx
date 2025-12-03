@@ -447,7 +447,11 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
             console.log(
               "[OfflineContext] Rede restaurada, disparando syncNow()"
             );
-            // await syncNow();
+            try {
+              await syncNow();
+            } catch (err) {
+              console.error("[OfflineContext] Erro ao sincronizar após reconexão:", err);
+            }
           }
         }
       );
@@ -459,7 +463,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
       canceled = true;
       if (listener) listener.remove();
     };
-  }, /*[syncNow]*/);
+  }, [syncNow]);
 
   // ========= sync inicial (apenas app nativo) =========
   useEffect(() => {
@@ -468,8 +472,10 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
     if (hasInitialSyncRun) return;
 
     setHasInitialSyncRun(true);
-    // syncNow();
-  }, [isOnline, isReady, hasDb, hasInitialSyncRun /*, syncNow*/]);
+    syncNow().catch((err) =>
+      console.error("[OfflineContext] Erro ao sincronizar na inicialização:", err)
+    );
+  }, [hasDb, hasInitialSyncRun, isOnline, isReady, syncNow]);
 
   // ========= Motoristas =========
   const getMotoristas = useCallback(
