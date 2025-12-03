@@ -310,6 +310,7 @@ export const useSQLite = () => {
     if (!db) return false;
 
     try {
+      // Mantém o espelho local alinhado com o servidor: status finalizada, sync flag e server_trip_id.
       const query = `
         UPDATE offline_trips SET
           final_km = ?,
@@ -325,6 +326,8 @@ export const useSQLite = () => {
           employee_photo_base64 = ?,
           trip_photos_base64 = ?,
           device_id = COALESCE(device_id, ?),
+          synced = ?,
+          server_trip_id = COALESCE(?, server_trip_id),
           updated_at = datetime('now')
         WHERE id = ?;
       `;
@@ -342,6 +345,8 @@ export const useSQLite = () => {
         updates.employee_photo_base64 ?? null,
         updates.trip_photos_base64 ?? null,
         updates.device_id ?? null,
+        updates.synced ?? 0,
+        updates.server_trip_id ?? null,
         localTripId,
       ];
 

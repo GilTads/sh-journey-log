@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -23,11 +23,16 @@ import { useOfflineData } from "@/contexts/OfflineContext";
 import { useTrips } from "@/hooks/useTrips";
 import { useSQLite } from "@/hooks/useSQLite";
 import { Capacitor } from "@capacitor/core";
+import { App } from "@capacitor/app";
 import {
   CapacitorBarcodeScanner,
   CapacitorBarcodeScannerTypeHintALLOption,
 } from "@capacitor/barcode-scanner";
 import { Geolocation } from "@capacitor/geolocation";
+import {
+  startBackgroundLocationService,
+  stopBackgroundLocationService,
+} from "@/lib/backgroundLocation";
 import {
   User,
   Car,
@@ -130,6 +135,8 @@ export const TripForm = () => {
   const [tempFinalKm, setTempFinalKm] = useState("");
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const locationTrackingRef = useRef<NodeJS.Timeout | null>(null);
+  const locationWatchIdRef = useRef<string | null>(null);
+  const lastCaptureRef = useRef<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const employeePhotoInputRef = useRef<HTMLInputElement>(null);
 
@@ -431,70 +438,176 @@ export const TripForm = () => {
     };
   }, [isActive]);
 
+  const ensureLocationPermission = useCallback(async (): Promise<boolean> => {
+    try {
+      const permission = await Geolocation.checkPermissions();
+      if (permission.location === "granted") return true;
+
+      const requested = await Geolocation.requestPermissions();
+      const granted = requested.location === "granted";
+
+      if (!granted) {
+        toast.error("Permita a localização em segundo plano para rastrear a viagem.");
+      }
+
+      return granted;
+    } catch (error) {
+      console.error("[TripForm] Erro ao checar permissões de localização:", error);
+      return false;
+    }
+  }, []);
+
+  const persistPosition = async (position: GeolocationPosition, source: string) => {
+    const positionData = {
+      local_trip_id: currentLocalTripId ?? undefined,
+      server_trip_id: currentServerTripId ?? undefined,
+      captured_at: new Date().toISOString(),
+      latitude: position.coords.latitude,
+      longitude: position.coords.longitude,
+      device_id: deviceId ?? undefined,
+      synced: 0,
+      deleted: 0,
+    };
+
+    const saved = await saveTripPosition(positionData);
+    if (saved) {
+      lastCaptureRef.current = Date.now();
+      console.log(
+        `[TripForm] (${source}) Posição capturada: ${position.coords.latitude.toFixed(
+          6
+        )}, ${position.coords.longitude.toFixed(6)}`
+      );
+    } else {
+      console.error("[TripForm] Erro ao salvar posição");
+    }
+  };
+
+  const captureAndSavePosition = useCallback(
+    async (reason: string): Promise<boolean> => {
+      const hasPermission = await ensureLocationPermission();
+      if (!hasPermission) return false;
+
+      try {
+        const position = await Geolocation.getCurrentPosition({
+          enableHighAccuracy: true,
+          timeout: 20000,
+          maximumAge: 20000,
+        });
+
+        await persistPosition(position, reason);
+        return true;
+      } catch (error) {
+        console.error(`[TripForm] Erro ao capturar posição (${reason}):`, error);
+        return false;
+      }
+    },
+    [currentLocalTripId, currentServerTripId, deviceId, ensureLocationPermission, saveTripPosition]
+  );
+
+  const stopLocationTracking = useCallback(() => {
+    if (locationTrackingRef.current) {
+      clearInterval(locationTrackingRef.current);
+      locationTrackingRef.current = null;
+    }
+
+    if (locationWatchIdRef.current) {
+      Geolocation.clearWatch({ id: locationWatchIdRef.current });
+      locationWatchIdRef.current = null;
+    }
+  }, []);
+
+  const startLocationTracking = useCallback(async () => {
+    stopLocationTracking();
+
+    const hasPermission = await ensureLocationPermission();
+    if (!hasPermission) return;
+
+    await captureAndSavePosition("start");
+
+    locationWatchIdRef.current = await Geolocation.watchPosition(
+      {
+        enableHighAccuracy: true,
+        timeout: 20000,
+        maximumAge: 15000,
+      },
+      async (position, error) => {
+        if (error) {
+          console.error("[TripForm] Erro no watchPosition:", error);
+          return;
+        }
+        if (!position) return;
+        await persistPosition(position, "watch");
+      }
+    );
+
+    // Fallback: força captura se nenhuma posição chegar em 30s
+    locationTrackingRef.current = setInterval(async () => {
+      const now = Date.now();
+      const elapsedSinceLast = lastCaptureRef.current
+        ? now - lastCaptureRef.current
+        : Number.MAX_SAFE_INTEGER;
+
+      if (elapsedSinceLast >= 28000) {
+        const ok = await captureAndSavePosition("interval_fallback");
+        if (!ok) {
+          setTimeout(() => {
+            captureAndSavePosition("interval_retry").catch((err) =>
+              console.error("[TripForm] Erro em retry de posição:", err)
+            );
+          }, 7000);
+        }
+      }
+    }, 30000);
+
+    console.log("[TripForm] Rastreamento de localização iniciado (watch + fallback 30s)");
+  }, [captureAndSavePosition, ensureLocationPermission, stopLocationTracking]);
+
   // ========= RASTREAMENTO DE LOCALIZAÇÃO A CADA 30 SEGUNDOS =========
   useEffect(() => {
     if (!isActive) {
-      // Se a viagem não está ativa, limpa o intervalo
-      if (locationTrackingRef.current) {
-        clearInterval(locationTrackingRef.current);
-        locationTrackingRef.current = null;
-        console.log("[TripForm] Rastreamento de localização parado");
-      }
+      stopLocationTracking();
       return;
     }
-
-    // Função para capturar e salvar a posição
-    const captureAndSavePosition = async () => {
-      try {
-        const permission = await Geolocation.checkPermissions();
-        if (permission.location !== "granted") {
-          console.warn("[TripForm] Sem permissão de localização para rastreamento");
-          return;
-        }
-
-        const position = await Geolocation.getCurrentPosition({
-          enableHighAccuracy: true,
-          timeout: 15000,
-        });
-
-        const positionData = {
-          local_trip_id: currentLocalTripId ?? undefined,
-          server_trip_id: currentServerTripId ?? undefined,
-          captured_at: new Date().toISOString(),
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          device_id: deviceId ?? undefined,
-          synced: 0,
-          deleted: 0,
-        };
-
-        const saved = await saveTripPosition(positionData);
-        if (saved) {
-          console.log(
-            `[TripForm] Posição capturada: ${position.coords.latitude.toFixed(6)}, ${position.coords.longitude.toFixed(6)}`
-          );
-        } else {
-          console.error("[TripForm] Erro ao salvar posição");
-        }
-      } catch (error) {
-        console.error("[TripForm] Erro ao capturar posição:", error);
-      }
-    };
-
-    // Captura imediatamente ao iniciar
-    captureAndSavePosition();
-
-    // Inicia intervalo de 30 segundos
-    locationTrackingRef.current = setInterval(captureAndSavePosition, 30000);
-    console.log("[TripForm] Rastreamento de localização iniciado (30s)");
+    startLocationTracking();
 
     return () => {
-      if (locationTrackingRef.current) {
-        clearInterval(locationTrackingRef.current);
-        locationTrackingRef.current = null;
-      }
+      stopLocationTracking();
     };
-  }, [deviceId, isActive, currentLocalTripId, currentServerTripId, saveTripPosition]);
+  }, [isActive, startLocationTracking, stopLocationTracking]);
+
+  // Ativa serviço nativo para manter o app acordado durante a viagem
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    if (isActive) {
+      startBackgroundLocationService({
+        title: "Viagem em andamento",
+        text: "Capturando localização a cada 30s",
+      });
+    } else {
+      stopBackgroundLocationService();
+    }
+
+    return () => {
+      stopBackgroundLocationService();
+    };
+  }, [isActive]);
+
+  useEffect(() => {
+    const subPromise = App.addListener("appStateChange", ({ isActive: appActive }) => {
+      if (appActive && isActive) {
+        console.log("[TripForm] App retomado; reiniciando rastreamento de localização");
+        lastCaptureRef.current = null;
+        startLocationTracking().catch((err) =>
+          console.error("[TripForm] Erro ao recapturar na retomada:", err)
+        );
+      }
+    });
+
+    return () => {
+      subPromise.then((sub) => sub.remove());
+    };
+  }, [isActive, startLocationTracking]);
 
   const formatTime = (seconds: number) => {
     const hrs = Math.floor(seconds / 3600);
@@ -792,6 +905,7 @@ export const TripForm = () => {
 
         // Se já temos um local trip ID (criado no handleStartTrip), atualizamos
         if (currentLocalTripId) {
+          // Finaliza espelho local já existente (mantém server_trip_id/synced para não duplicar)
           const updates = {
             final_km: parseFloat(tempFinalKm),
             end_time: endTime.toISOString(),
@@ -806,6 +920,8 @@ export const TripForm = () => {
               ? JSON.stringify(tripPhotosBase64)
               : undefined,
             device_id: deviceId ?? null,
+            synced: 0,
+            server_trip_id: currentServerTripId ?? null,
           };
 
           const updated = await updateTripOnEnd(currentLocalTripId, updates);
@@ -896,6 +1012,24 @@ export const TripForm = () => {
           }
 
           console.log("[TripForm] ✅ Viagem finalizada (online) no Supabase:", currentServerTripId);
+
+          // Mantém espelho local coerente (marca synced=1 para não reaparecer em andamento offline)
+          if (sqliteAvailable && currentLocalTripId) {
+            await updateTripOnEnd(currentLocalTripId, {
+              final_km: parseFloat(tempFinalKm),
+              end_time: endTime.toISOString(),
+              end_latitude: location.lat,
+              end_longitude: location.lng,
+              duration_seconds: elapsedTime,
+              origin: tripData.origin || null,
+              destination: tripData.destination || null,
+              reason: tripData.reason || null,
+              notes: tripData.observation || null,
+              device_id: deviceId ?? null,
+              synced: 1,
+              server_trip_id: currentServerTripId,
+            });
+          }
         } else {
           // Fallback: cria nova viagem (não deveria acontecer se handleStartTrip funcionou)
           let employeePhotoUrl: string | null = null;
