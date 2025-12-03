@@ -1,4 +1,4 @@
-import { Menu, RefreshCw, Info } from "lucide-react";
+import { Menu, RefreshCw, Info, LayoutDashboard } from "lucide-react";
 import { Link } from "react-router-dom";
 import logo from "@/assets/icon.png";
 import {
@@ -68,6 +68,16 @@ export const Header = () => {
                 >
                   Histórico de Viagens
                 </Link>
+
+                {!Capacitor.isNativePlatform() && (
+                  <Link
+                    to="/portal"
+                    className="px-4 py-2 rounded-md hover:bg-accent text-foreground transition-colors flex items-center gap-2"
+                  >
+                    <LayoutDashboard className="h-4 w-4" />
+                    Portal de Gestão
+                  </Link>
+                )}
               </nav>
 
               {/* RODAPÉ – Status, TI e Sync */}
