@@ -20,11 +20,13 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useTrips } from "@/hooks/useTrips";
 import { toast } from "sonner";
+import { getDeviceId } from "@/lib/deviceId";
 
 interface OfflineContextType {
   isOnline: boolean;
   isSyncing: boolean;
   lastSyncAt: Date | null;
+  deviceId: string | null;
 
   getMotoristas: (filtro?: string) => Promise<OfflineEmployee[]>;
   getVeiculos: (filtro?: string) => Promise<OfflineVehicle[]>;
@@ -48,6 +50,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
   const [hasInitialSyncRun, setHasInitialSyncRun] = useState(false);
+  const [deviceId, setDeviceId] = useState<string | null>(null);
 
   const {
     isReady,
@@ -69,6 +72,19 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
   } = useSQLite();
 
   const { uploadPhoto, createTrip } = useTrips();
+
+  // Load deviceId once
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      const id = await getDeviceId();
+      if (!cancelled) setDeviceId(id);
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // ========= utils =========
   const base64ToFile = (base64: string, filename: string): File => {
@@ -223,6 +239,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
             rented_plate: trip.rented_plate ?? null,
             rented_model: trip.rented_model ?? null,
             rented_company: trip.rented_company ?? null,
+            device_id: trip.device_id ?? deviceId ?? null,
           };
 
           console.log(`[OfflineContext] Sincronizando trip ${trip.id} com status: ${record.status}`);
@@ -261,7 +278,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
       console.error("[OfflineContext] Erro em syncTripsToServer:", err);
       throw err;
     }
-  }, [isOnline, isReady, getUnsyncedTrips, uploadPhoto, createTrip, markTripAsSynced, updateTripPositionsServerTripId]);
+  }, [deviceId, isOnline, isReady, getUnsyncedTrips, uploadPhoto, createTrip, markTripAsSynced, updateTripPositionsServerTripId]);
 
   // ========= sincronização trip positions pendentes (SQLite -> Supabase) =========
   const syncTripPositionsToServerInternal = useCallback(async () => {
@@ -299,6 +316,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
             captured_at: pos.captured_at,
             latitude: pos.latitude,
             longitude: pos.longitude,
+            device_id: deviceId ?? null,
           });
 
           if (!error) {
@@ -314,7 +332,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
     } catch (err) {
       console.error("[OfflineContext] Erro em syncTripPositions:", err);
     }
-  }, [isOnline, isReady, getUnsyncedTripPositions, markTripPositionAsSynced]);
+  }, [deviceId, isOnline, isReady, getUnsyncedTripPositions, markTripPositionAsSynced]);
 
   // ========= salvar trip position (usado pelo TripForm) =========
   const saveTripPosition = useCallback(async (position: OfflineTripPosition): Promise<boolean> => {
@@ -326,25 +344,26 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
           captured_at: position.captured_at,
           latitude: position.latitude,
           longitude: position.longitude,
+          device_id: deviceId ?? null,
         });
 
         if (error) {
           console.error("[OfflineContext] Erro ao salvar position no Supabase:", error);
           // Fallback: salva no SQLite
-          return await saveTripPositionSQLite({ ...position, synced: 0 });
+          return await saveTripPositionSQLite({ ...position, device_id: position.device_id ?? deviceId ?? null, synced: 0 });
         }
 
         console.log("[OfflineContext] TripPosition salva diretamente no Supabase");
         return true;
       } catch (err) {
         console.error("[OfflineContext] Erro ao salvar position:", err);
-        return await saveTripPositionSQLite({ ...position, synced: 0 });
+        return await saveTripPositionSQLite({ ...position, device_id: position.device_id ?? deviceId ?? null, synced: 0 });
       }
     }
 
     // Offline ou sem server_trip_id: salva no SQLite
-    return await saveTripPositionSQLite(position);
-  }, [isOnline, saveTripPositionSQLite]);
+    return await saveTripPositionSQLite({ ...position, device_id: position.device_id ?? deviceId ?? null });
+  }, [deviceId, isOnline, saveTripPositionSQLite]);
 
   // ========= sincronizar positions de uma viagem específica =========
   const syncTripPositionsToServer = useCallback(async (
@@ -360,6 +379,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
           captured_at: pos.captured_at,
           latitude: pos.latitude,
           longitude: pos.longitude,
+          device_id: deviceId ?? null,
         });
 
         if (error) {
@@ -370,7 +390,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
     } catch (err) {
       console.error("[OfflineContext] Erro em syncTripPositionsToServer:", err);
     }
-  }, [isOnline]);
+  }, [deviceId, isOnline]);
 
   // ========= função principal de sync =========
   const syncNow = useCallback(async () => {
@@ -620,21 +640,22 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
 
   // ========= Viagem em andamento (para restaurar estado do TripForm) =========
   const getOngoingTrip = useCallback(async (): Promise<OfflineTrip | null> => {
-    if (!isReady || !hasDb) return null;
+    if (!isReady || !hasDb || !deviceId) return null;
     try {
-      const trip = await getOngoingTripSQLite();
+      const trip = await getOngoingTripSQLite(deviceId);
       console.log("[getOngoingTrip] Trip em andamento:", trip ? trip.id : "nenhuma");
       return trip;
     } catch (err) {
       console.error("[getOngoingTrip] erro ao buscar viagem em andamento:", err);
       return null;
     }
-  }, [isReady, hasDb, getOngoingTripSQLite]);
+  }, [deviceId, isReady, hasDb, getOngoingTripSQLite]);
 
   const value: OfflineContextType = {
     isOnline,
     isSyncing,
     lastSyncAt,
+    deviceId,
     getMotoristas,
     getVeiculos,
     getViagens,

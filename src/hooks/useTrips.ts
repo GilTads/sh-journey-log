@@ -23,6 +23,7 @@ export interface TripRecord {
   rented_plate?: string | null;
   rented_model?: string | null;
   rented_company?: string | null;
+  device_id?: string | null;
 }
 
 export const useTrips = () => {
@@ -89,16 +90,21 @@ export const useTrips = () => {
    * Fetch ongoing trip from Supabase
    * STRICT FILTER: status = 'em_andamento' AND end_time IS NULL
    */
-  const getOngoingTripFromServer = async () => {
+  const getOngoingTripFromServer = async (deviceId?: string | null) => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("trips")
         .select("*")
         .eq("status", "em_andamento")
         .is("end_time", null)
         .order("start_time", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(1);
+
+      if (deviceId) {
+        query = query.eq("device_id", deviceId);
+      }
+
+      const { data, error } = await query.maybeSingle();
 
       if (error) {
         console.error("[useTrips] Error fetching ongoing trip:", error);

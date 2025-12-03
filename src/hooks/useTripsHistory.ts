@@ -23,6 +23,8 @@ export interface TripHistory {
   status: string | null;
   employee_photo_url: string | null;
   trip_photos_urls: string[] | null;
+  server_trip_id?: string | null;
+  device_id?: string | null;
 
   // Rented vehicle fields
   is_rented_vehicle: boolean;
@@ -69,9 +71,11 @@ const mapOfflineTripBase = (trip: OfflineTrip): TripHistory => ({
   reason: trip.reason ?? null,
   notes: trip.notes ?? null,
   status: trip.status ?? null,
+  server_trip_id: trip.server_trip_id ?? null,
   // Offline trips store base64, not URL - set to null for UI display
   employee_photo_url: null,
   trip_photos_urls: null,
+  device_id: trip.device_id ?? null,
   // Rented vehicle
   is_rented_vehicle: trip.is_rented_vehicle === 1,
   rented_plate: trip.rented_plate ?? null,
@@ -278,6 +282,7 @@ export const useTripsHistory = (params: UseTripsHistoryParams = {}) => {
 
             supabaseTrips = (data || []).map((trip: any) => ({
               id: trip.id,
+              server_trip_id: trip.id,
               employee_id: trip.employee_id,
               vehicle_id: trip.vehicle_id,
               initial_km: trip.initial_km,
@@ -296,6 +301,7 @@ export const useTripsHistory = (params: UseTripsHistoryParams = {}) => {
               rented_plate: trip.rented_plate,
               rented_model: trip.rented_model,
               rented_company: trip.rented_company,
+              device_id: trip.device_id ?? null,
               sync_status: "synced" as SyncStatus,
               employee: trip.employee,
               vehicle: trip.vehicle,
@@ -327,6 +333,7 @@ export const useTripsHistory = (params: UseTripsHistoryParams = {}) => {
 
             supabaseTrips = (data || []).map((trip: any) => ({
               id: trip.id,
+              server_trip_id: trip.id,
               employee_id: trip.employee_id,
               vehicle_id: trip.vehicle_id,
               initial_km: trip.initial_km,
@@ -345,6 +352,7 @@ export const useTripsHistory = (params: UseTripsHistoryParams = {}) => {
               rented_plate: trip.rented_plate,
               rented_model: trip.rented_model,
               rented_company: trip.rented_company,
+              device_id: trip.device_id ?? null,
               sync_status: "synced" as SyncStatus,
               employee: trip.employee,
               vehicle: trip.vehicle,
@@ -394,15 +402,16 @@ export const useTripsHistory = (params: UseTripsHistoryParams = {}) => {
 
           // Primeiro, coloca trips do Supabase
           for (const trip of supabaseTrips) {
-            if (trip.id) mergedByServerId.set(trip.id, trip);
+            if (trip.server_trip_id || trip.id) {
+              mergedByServerId.set(trip.server_trip_id || trip.id, trip);
+            }
           }
 
           // Depois, pendentes locais: se tem server_trip_id, sobrescreve a versão do Supabase
           for (const trip of sqliteTrips) {
-            if (trip.sync_status === "offline-only" && (trip as any).server_trip_id) {
-              mergedByServerId.set((trip as any).server_trip_id, trip);
+            if (trip.sync_status === "offline-only" && trip.server_trip_id) {
+              mergedByServerId.set(trip.server_trip_id, trip);
             } else {
-              // Trips locais sem server_trip_id: usa id numérico como chave única
               mergedByServerId.set(`local-${trip.id}`, trip);
             }
           }

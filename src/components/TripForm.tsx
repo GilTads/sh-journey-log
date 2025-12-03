@@ -81,6 +81,7 @@ export const TripForm = () => {
     syncNow,
     saveTripPosition,
     hasDb,
+    deviceId,
   } = useOfflineData();
 
   const { uploadPhoto, createTrip, updateTrip, getOngoingTripFromServer } = useTrips();
@@ -160,6 +161,10 @@ export const TripForm = () => {
     if (!canExecute) {
       return;
     }
+    if (isNative && !deviceId) {
+      // Aguarda deviceId para garantir filtro correto da viagem em andamento
+      return;
+    }
 
     // Marca como já executado ANTES de rodar para evitar race conditions
     hasLoadedOngoingTripRef.current = true;
@@ -188,7 +193,7 @@ export const TripForm = () => {
         // ONLINE: busca no Supabase
         if (isOnline) {
           console.log("[TripForm] Buscando viagem em andamento no Supabase...");
-          const serverTrip = await getOngoingTripFromServer();
+          const serverTrip = await getOngoingTripFromServer(deviceId);
 
           if (serverTrip) {
             console.log("[TripForm] Viagem em andamento encontrada (online):", serverTrip.id);
@@ -219,7 +224,7 @@ export const TripForm = () => {
 
     loadOngoingTripOnMount();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isReady, hasDb, isOnline, isViewMode, viewTripData]);
+  }, [deviceId, isReady, hasDb, isOnline, isViewMode, viewTripData]);
 
   // Função para carregar viagem em modo visualização
   const loadViewModeTrip = (trip: any) => {
@@ -405,6 +410,7 @@ export const TripForm = () => {
           captured_at: new Date().toISOString(),
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
+          device_id: deviceId ?? undefined,
           synced: 0,
           deleted: 0,
         };
@@ -435,7 +441,7 @@ export const TripForm = () => {
         locationTrackingRef.current = null;
       }
     };
-  }, [isActive, currentLocalTripId, currentServerTripId, saveTripPosition]);
+  }, [deviceId, isActive, currentLocalTripId, currentServerTripId, saveTripPosition]);
 
   const formatTime = (seconds: number) => {
     const hrs = Math.floor(seconds / 3600);
@@ -549,6 +555,7 @@ export const TripForm = () => {
           rented_plate: tripData.isRentedVehicle ? tripData.rentedPlate || null : null,
           rented_model: tripData.isRentedVehicle ? tripData.rentedModel || null : null,
           rented_company: tripData.isRentedVehicle ? tripData.rentedCompany || null : null,
+          device_id: deviceId ?? null,
           synced: 0,
           deleted: 0,
         };
@@ -588,6 +595,7 @@ export const TripForm = () => {
           rented_plate: tripData.isRentedVehicle ? tripData.rentedPlate || null : null,
           rented_model: tripData.isRentedVehicle ? tripData.rentedModel || null : null,
           rented_company: tripData.isRentedVehicle ? tripData.rentedCompany || null : null,
+          device_id: deviceId ?? null,
         };
 
         const { data, error } = await createTrip(draftTripRecord);
@@ -632,6 +640,7 @@ export const TripForm = () => {
               rented_plate: tripData.isRentedVehicle ? tripData.rentedPlate || null : null,
               rented_model: tripData.isRentedVehicle ? tripData.rentedModel || null : null,
               rented_company: tripData.isRentedVehicle ? tripData.rentedCompany || null : null,
+              device_id: deviceId ?? null,
               synced: 1,
               deleted: 0,
             };
@@ -720,6 +729,7 @@ export const TripForm = () => {
             trip_photos_base64: tripPhotosBase64.length > 0
               ? JSON.stringify(tripPhotosBase64)
               : undefined,
+            device_id: deviceId ?? null,
           };
 
           const updated = await updateTripOnEnd(currentLocalTripId, updates);
@@ -760,6 +770,7 @@ export const TripForm = () => {
             rented_plate: tripData.isRentedVehicle ? tripData.rentedPlate || null : null,
             rented_model: tripData.isRentedVehicle ? tripData.rentedModel || null : null,
             rented_company: tripData.isRentedVehicle ? tripData.rentedCompany || null : null,
+            device_id: deviceId ?? null,
             synced: 0,
             deleted: 0,
           };

@@ -73,6 +73,7 @@ const createConnectionIfNeeded = async () => {
         rented_plate TEXT,
         rented_model TEXT,
         rented_company TEXT,
+        device_id TEXT,
         synced INTEGER DEFAULT 0,
         deleted INTEGER DEFAULT 0,
         server_trip_id TEXT,
@@ -107,11 +108,20 @@ const createConnectionIfNeeded = async () => {
         captured_at TEXT NOT NULL,
         latitude REAL NOT NULL,
         longitude REAL NOT NULL,
+        device_id TEXT,
         synced INTEGER DEFAULT 0,
         deleted INTEGER DEFAULT 0,
         created_at TEXT DEFAULT (datetime('now'))
       );
     `);
+
+    // Add missing columns for backward compatibility
+    try {
+      await dbConnection.execute("ALTER TABLE offline_trips ADD COLUMN device_id TEXT;");
+    } catch {}
+    try {
+      await dbConnection.execute("ALTER TABLE offline_trip_positions ADD COLUMN device_id TEXT;");
+    } catch {}
 
     globalIsReady = true;
     globalHasDb = true;
@@ -154,6 +164,7 @@ export interface OfflineTrip {
   rented_plate?: string | null;
   rented_model?: string | null;
   rented_company?: string | null;
+  device_id?: string | null;
   synced?: number;
   deleted?: number;
   server_trip_id?: string | null;
@@ -182,6 +193,7 @@ export interface OfflineTripPosition {
   captured_at: string;
   latitude: number;
   longitude: number;
+  device_id?: string | null;
   synced?: number;
   deleted?: number;
   created_at?: string;
@@ -240,8 +252,9 @@ export const useSQLite = () => {
           origin, destination, reason, notes, status,
           employee_photo_base64, trip_photos_base64,
           is_rented_vehicle, rented_plate, rented_model, rented_company,
+          device_id,
           synced, deleted, server_trip_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
       `;
 
       const values = [
@@ -267,6 +280,7 @@ export const useSQLite = () => {
         trip.rented_plate ?? null,
         trip.rented_model ?? null,
         trip.rented_company ?? null,
+        trip.device_id ?? null,
         trip.synced ?? 0,
         trip.deleted ?? 0,
         trip.server_trip_id ?? null,
@@ -310,6 +324,7 @@ export const useSQLite = () => {
           status = 'finalizada',
           employee_photo_base64 = ?,
           trip_photos_base64 = ?,
+          device_id = COALESCE(device_id, ?),
           updated_at = datetime('now')
         WHERE id = ?;
       `;
@@ -326,6 +341,7 @@ export const useSQLite = () => {
         updates.notes ?? null,
         updates.employee_photo_base64 ?? null,
         updates.trip_photos_base64 ?? null,
+        updates.device_id ?? null,
         localTripId,
       ];
 
@@ -368,19 +384,30 @@ export const useSQLite = () => {
     }
   };
 
-  const getOngoingTrip = async (): Promise<OfflineTrip | null> => {
+  const getOngoingTrip = async (deviceId?: string): Promise<OfflineTrip | null> => {
     const db = requireDb("getOngoingTrip");
     if (!db) return null;
 
     try {
-      const result = await db.query(
-        `SELECT * FROM offline_trips 
-         WHERE status = 'em_andamento' 
-         AND deleted = 0 
-         AND end_time IS NULL
-         ORDER BY start_time DESC 
-         LIMIT 1;`
-      );
+      const hasDeviceFilter = !!deviceId;
+      const sql = hasDeviceFilter
+        ? `SELECT * FROM offline_trips 
+           WHERE status = 'em_andamento' 
+           AND deleted = 0 
+           AND end_time IS NULL
+           AND device_id = ?
+           ORDER BY start_time DESC 
+           LIMIT 1;`
+        : `SELECT * FROM offline_trips 
+           WHERE status = 'em_andamento' 
+           AND deleted = 0 
+           AND end_time IS NULL
+           ORDER BY start_time DESC 
+           LIMIT 1;`;
+
+      const result = hasDeviceFilter
+        ? await db.query(sql, [deviceId])
+        : await db.query(sql);
       const trips = (result.values || []) as OfflineTrip[];
       const found = trips.length > 0 ? trips[0] : null;
       
@@ -469,8 +496,9 @@ export const useSQLite = () => {
             origin, destination, reason, notes, status,
             employee_photo_base64, trip_photos_base64,
             is_rented_vehicle, rented_plate, rented_model, rented_company,
+            device_id,
             synced, deleted
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         `,
           [
             t.id,
@@ -496,6 +524,7 @@ export const useSQLite = () => {
             t.rented_plate ?? null,
             t.rented_model ?? null,
             t.rented_company ?? null,
+            (t as any).device_id ?? null,
             1,
             0,
           ]
@@ -614,8 +643,8 @@ export const useSQLite = () => {
     try {
       const query = `
         INSERT INTO offline_trip_positions (
-          local_trip_id, server_trip_id, captured_at, latitude, longitude, synced, deleted
-        ) VALUES (?, ?, ?, ?, ?, ?, ?);
+          local_trip_id, server_trip_id, captured_at, latitude, longitude, device_id, synced, deleted
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
       `;
 
       const values = [
@@ -624,6 +653,7 @@ export const useSQLite = () => {
         position.captured_at,
         position.latitude,
         position.longitude,
+        position.device_id ?? null,
         position.synced ?? 0,
         position.deleted ?? 0,
       ];
