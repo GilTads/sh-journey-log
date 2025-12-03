@@ -276,7 +276,60 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
               console.error("[OfflineContext] Erro ao atualizar trip no Supabase:", error);
             }
           } else {
-            // Trip só existe localmente: cria no servidor
+            // Trip só existe localmente: tenta localizar no servidor antes de criar para evitar duplicação
+            let targetServerId: string | null = null;
+            try {
+              const { data: found, error: findErr } = await supabase
+                .from("trips")
+                .select("id")
+                .eq("device_id", baseRecord.device_id)
+                .eq("employee_id", baseRecord.employee_id)
+                .eq("start_time", baseRecord.start_time)
+                .limit(1)
+                .maybeSingle();
+
+              if (!findErr && found?.id) {
+                targetServerId = found.id;
+                console.log(
+                  `[OfflineContext] Trip local ${trip.id} casou com servidor ${targetServerId} (mesmo device/start_time) - vou atualizar em vez de criar`
+                );
+              }
+            } catch (lookupErr) {
+              console.warn("[OfflineContext] Falha ao procurar trip existente no servidor:", lookupErr);
+            }
+
+            if (targetServerId) {
+              const { error } = await updateTrip(targetServerId, {
+                final_km: baseRecord.final_km ?? null,
+                end_time: baseRecord.end_time,
+                end_latitude: baseRecord.end_latitude ?? null,
+                end_longitude: baseRecord.end_longitude ?? null,
+                duration_seconds: baseRecord.duration_seconds ?? null,
+                destination: baseRecord.destination ?? null,
+                reason: baseRecord.reason ?? null,
+                notes: baseRecord.notes ?? null,
+                status: baseRecord.status,
+                trip_photos_urls: baseRecord.trip_photos_urls,
+                employee_photo_url: baseRecord.employee_photo_url,
+                rented_plate: baseRecord.rented_plate,
+                rented_model: baseRecord.rented_model,
+                rented_company: baseRecord.rented_company,
+                is_rented_vehicle: baseRecord.is_rented_vehicle,
+              });
+
+              if (!error) {
+                await markTripAsSynced(trip.id!);
+                await updateTripPositionsServerTripId(trip.id!, targetServerId);
+                console.log(
+                  `[OfflineContext] ✅ Trip local ${trip.id} sincronizada via update em servidor ${targetServerId}`
+                );
+                continue;
+              } else {
+                console.error("[OfflineContext] Erro ao atualizar trip existente (lookup):", error);
+              }
+            }
+
+            // Nenhuma trip correspondente encontrada -> cria no servidor
             const record = baseRecord;
 
             console.log(`[OfflineContext] Sincronizando trip ${trip.id} com status: ${record.status}`);

@@ -461,79 +461,144 @@ export const useSQLite = () => {
     try {
       await db.execute("BEGIN TRANSACTION;");
 
-      if (!tripsFromServer.length) {
-        await db.execute("DELETE FROM offline_trips WHERE synced = 1;");
-        await db.execute("COMMIT;");
-        console.log("[useSQLite] No trips from server - removed all synced=1");
-        return true;
-      }
-
-      const serverTripIds = tripsFromServer
-        .map(t => t.id)
-        .filter(id => id)
-        .map(id => `'${id}'`)
-        .join(',');
-
-      if (serverTripIds) {
-        await db.execute(`
-          DELETE FROM offline_trips 
-          WHERE synced = 1 
-          OR (server_trip_id IS NOT NULL AND server_trip_id NOT IN (${serverTripIds}));
-        `);
-        console.log("[useSQLite] Removed synced trips not present on server");
-      } else {
-        await db.execute("DELETE FROM offline_trips WHERE synced = 1;");
-      }
-
       for (const t of tripsFromServer) {
         const statusFromServer = t.status;
-        
-        console.log(`[useSQLite] Saving trip ${t.id} from server with status: ${statusFromServer}`);
 
-        await db.run(
-          `
-          INSERT INTO offline_trips (
-            server_trip_id, employee_id, vehicle_id, initial_km, final_km,
-            start_time, end_time,
-            start_latitude, start_longitude,
-            end_latitude, end_longitude,
-            duration_seconds,
-            origin, destination, reason, notes, status,
-            employee_photo_base64, trip_photos_base64,
-            is_rented_vehicle, rented_plate, rented_model, rented_company,
-            device_id,
-            synced, deleted
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-        `,
-          [
-            t.id,
-            t.employee_id,
-            t.vehicle_id ?? null,
-            t.initial_km,
-            t.final_km ?? null,
-            t.start_time,
-            t.end_time ?? null,
-            t.start_latitude ?? null,
-            t.start_longitude ?? null,
-            t.end_latitude ?? null,
-            t.end_longitude ?? null,
-            t.duration_seconds ?? null,
-            t.origin ?? null,
-            t.destination ?? null,
-            t.reason ?? null,
-            t.notes ?? null,
-            statusFromServer,
-            null,
-            null,
-            t.is_rented_vehicle ? 1 : 0,
-            t.rented_plate ?? null,
-            t.rented_model ?? null,
-            t.rented_company ?? null,
-            (t as any).device_id ?? null,
-            1,
-            0,
-          ]
+        // Verifica se já existe um espelho local com o mesmo server_trip_id
+        const existing = await db.query(
+          "SELECT * FROM offline_trips WHERE server_trip_id = ? LIMIT 1;",
+          [t.id]
         );
+        const local = (existing.values || [])[0] as OfflineTrip | undefined;
+
+        // Se local já foi finalizada offline (end_time preenchido), não sobrescreve com status mais antigo
+        const keepLocalFinal =
+          local && local.end_time && (!t.end_time || statusFromServer !== "finalizada");
+
+        const payload = keepLocalFinal
+          ? {
+              start_time: local.start_time,
+              end_time: local.end_time,
+              start_latitude: local.start_latitude ?? t.start_latitude ?? null,
+              start_longitude: local.start_longitude ?? t.start_longitude ?? null,
+              end_latitude: local.end_latitude ?? t.end_latitude ?? null,
+              end_longitude: local.end_longitude ?? t.end_longitude ?? null,
+              duration_seconds: local.duration_seconds ?? t.duration_seconds ?? null,
+              status: local.status ?? statusFromServer,
+              final_km: local.final_km ?? t.final_km ?? null,
+              initial_km: local.initial_km ?? t.initial_km,
+              origin: local.origin ?? t.origin ?? null,
+              destination: local.destination ?? t.destination ?? null,
+              reason: local.reason ?? t.reason ?? null,
+              notes: local.notes ?? t.notes ?? null,
+              synced: local.synced ?? 1,
+            }
+          : undefined;
+
+        console.log(`[useSQLite] Saving/updating trip ${t.id} from server with status: ${statusFromServer}`);
+
+        // Atualiza se existir, senão insere
+        if (local) {
+          await db.run(
+            `
+            UPDATE offline_trips SET
+              employee_id = ?,
+              vehicle_id = ?,
+              initial_km = ?,
+              final_km = ?,
+              start_time = ?,
+              end_time = ?,
+              start_latitude = ?,
+              start_longitude = ?,
+              end_latitude = ?,
+              end_longitude = ?,
+              duration_seconds = ?,
+              origin = ?,
+              destination = ?,
+              reason = ?,
+              notes = ?,
+              status = ?,
+              is_rented_vehicle = ?,
+              rented_plate = ?,
+              rented_model = ?,
+              rented_company = ?,
+              device_id = ?,
+              synced = ?,
+              deleted = 0
+            WHERE server_trip_id = ?;
+          `,
+            [
+              t.employee_id,
+              t.vehicle_id ?? null,
+              payload?.initial_km ?? t.initial_km,
+              payload?.final_km ?? t.final_km ?? null,
+              payload?.start_time ?? t.start_time,
+              payload?.end_time ?? t.end_time ?? null,
+              payload?.start_latitude ?? t.start_latitude ?? null,
+              payload?.start_longitude ?? t.start_longitude ?? null,
+              payload?.end_latitude ?? t.end_latitude ?? null,
+              payload?.end_longitude ?? t.end_longitude ?? null,
+              payload?.duration_seconds ?? t.duration_seconds ?? null,
+              payload?.origin ?? t.origin ?? null,
+              payload?.destination ?? t.destination ?? null,
+              payload?.reason ?? t.reason ?? null,
+              payload?.notes ?? t.notes ?? null,
+              payload?.status ?? statusFromServer,
+              t.is_rented_vehicle ? 1 : 0,
+              t.rented_plate ?? null,
+              t.rented_model ?? null,
+              t.rented_company ?? null,
+              (t as any).device_id ?? null,
+              payload?.synced ?? 1,
+              t.id,
+            ]
+          );
+        } else {
+          await db.run(
+            `
+            INSERT INTO offline_trips (
+              server_trip_id, employee_id, vehicle_id, initial_km, final_km,
+              start_time, end_time,
+              start_latitude, start_longitude,
+              end_latitude, end_longitude,
+              duration_seconds,
+              origin, destination, reason, notes, status,
+              employee_photo_base64, trip_photos_base64,
+              is_rented_vehicle, rented_plate, rented_model, rented_company,
+              device_id,
+              synced, deleted
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+          `,
+            [
+              t.id,
+              t.employee_id,
+              t.vehicle_id ?? null,
+              t.initial_km,
+              t.final_km ?? null,
+              t.start_time,
+              t.end_time ?? null,
+              t.start_latitude ?? null,
+              t.start_longitude ?? null,
+              t.end_latitude ?? null,
+              t.end_longitude ?? null,
+              t.duration_seconds ?? null,
+              t.origin ?? null,
+              t.destination ?? null,
+              t.reason ?? null,
+              t.notes ?? null,
+              statusFromServer,
+              null,
+              null,
+              t.is_rented_vehicle ? 1 : 0,
+              t.rented_plate ?? null,
+              t.rented_model ?? null,
+              t.rented_company ?? null,
+              (t as any).device_id ?? null,
+              1,
+              0,
+            ]
+          );
+        }
       }
 
       await db.execute("COMMIT;");
