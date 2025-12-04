@@ -53,9 +53,14 @@ const TripDetails = () => {
   }
 
   const kmDriven =
-    trip.final_km && trip.initial_km
+    trip.final_km !== null &&
+    trip.final_km !== undefined &&
+    trip.initial_km !== null &&
+    trip.initial_km !== undefined
       ? Number(trip.final_km) - Number(trip.initial_km)
       : null;
+  const startAt = trip.start_time ? new Date(trip.start_time) : null;
+  const endAt = trip.end_time ? new Date(trip.end_time) : null;
 
   return (
     <PortalLayout>
@@ -158,24 +163,28 @@ const TripDetails = () => {
                   <div>
                     <p className="text-sm text-muted-foreground">Início</p>
                     <p className="font-medium">
-                      {format(new Date(trip.start_time), "dd/MM/yyyy", { locale: ptBR })}
+                      {startAt && !isNaN(startAt.getTime())
+                        ? format(startAt, "dd/MM/yyyy", { locale: ptBR })
+                        : "—"}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {format(new Date(trip.start_time), "HH:mm", { locale: ptBR })}
+                      {startAt && !isNaN(startAt.getTime())
+                        ? format(startAt, "HH:mm", { locale: ptBR })
+                        : "—"}
                     </p>
                   </div>
                 </div>
 
-                {trip.end_time && (
+                {endAt && !isNaN(endAt.getTime()) && (
                   <div className="flex items-start gap-3">
                     <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
                     <div>
                       <p className="text-sm text-muted-foreground">Fim</p>
                       <p className="font-medium">
-                        {format(new Date(trip.end_time), "dd/MM/yyyy", { locale: ptBR })}
+                        {format(endAt, "dd/MM/yyyy", { locale: ptBR })}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {format(new Date(trip.end_time), "HH:mm", { locale: ptBR })}
+                        {format(endAt, "HH:mm", { locale: ptBR })}
                       </p>
                     </div>
                   </div>

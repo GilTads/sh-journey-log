@@ -57,9 +57,18 @@ export const TripsTable = ({ trips, isLoading }: TripsTableProps) => {
         </TableHeader>
         <TableBody>
           {trips.map((trip) => {
-            const kmDriven = trip.final_km && trip.initial_km 
-              ? Number(trip.final_km) - Number(trip.initial_km) 
-              : null;
+            const kmDriven =
+              trip.final_km !== null &&
+              trip.final_km !== undefined &&
+              trip.initial_km !== null &&
+              trip.initial_km !== undefined
+                ? Number(trip.final_km) - Number(trip.initial_km)
+                : null;
+            const startAt = trip.start_time ? new Date(trip.start_time) : null;
+            const formattedStart =
+              startAt && !isNaN(startAt.getTime())
+                ? format(startAt, "dd/MM/yyyy HH:mm", { locale: ptBR })
+                : "—";
 
             return (
               <TableRow key={trip.id}>
@@ -95,7 +104,7 @@ export const TripsTable = ({ trips, isLoading }: TripsTableProps) => {
                 </TableCell>
                 <TableCell>
                   <div className="text-sm">
-                    {format(new Date(trip.start_time), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                    {formattedStart}
                   </div>
                 </TableCell>
                 <TableCell>
