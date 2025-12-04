@@ -320,29 +320,44 @@ export const useTripPositions = (tripId: string, localTripId?: string | null) =>
     queryFn: async () => {
       let data: any[] = [];
 
-      try {
-        const { data: pointData, error } = await supabaseAny
-          .from("trip_points")
-          .select("*")
-          .eq("trip_id", tripId)
-          .order("captured_at", { ascending: true });
+      const fetchAllPoints = async (
+        table: string,
+        column: string,
+        value: string
+      ): Promise<any[]> => {
+        const pageSize = 1000;
+        let offset = 0;
+        let all: any[] = [];
+        // Supabase/PostgREST defaults to 1000 rows; fetch in pages until fewer than pageSize are returned.
+        while (true) {
+          const { data: chunk, error } = await supabaseAny
+            .from(table)
+            .select("*")
+            .eq(column, value)
+            .order("captured_at", { ascending: true })
+            .range(offset, offset + pageSize - 1);
 
-        if (error) throw error;
-        data = pointData || [];
+          if (error) throw error;
+          const rows = chunk || [];
+          all = all.concat(rows);
+          if (rows.length < pageSize) break;
+          offset += pageSize;
+        }
+        return all;
+      };
+
+      // 1) trip_points by trip_id
+      try {
+        data = await fetchAllPoints("trip_points", "trip_id", tripId);
       } catch (err) {
         console.warn("[useTripPositions] trip_points fetch failed, trying trip_point then trip_positions:", err);
 
+        // 2) trip_point (singular) by trip_id
         try {
-          const { data: singularData, error: singularError } = await supabaseAny
-            .from("trip_point")
-            .select("*")
-            .eq("trip_id", tripId)
-            .order("captured_at", { ascending: true });
-
-          if (singularError) throw singularError;
-          data = singularData || [];
+          data = await fetchAllPoints("trip_point", "trip_id", tripId);
         } catch (fallbackErr) {
           console.warn("[useTripPositions] trip_point fetch failed, falling back to trip_positions:", fallbackErr);
+          // 3) legacy trip_positions by trip_id
           const { data: fallbackData, error: fallbackError } = await supabase
             .from("trip_positions")
             .select("*")
@@ -354,16 +369,12 @@ export const useTripPositions = (tripId: string, localTripId?: string | null) =>
         }
       }
 
-      // If nothing came back and we have a local id, try local_trip_id as a last attempt.
+      // 4) If nothing came back and we have a local id, try local_trip_id (trip_points)
       if ((!data || data.length === 0) && localTripId) {
-        const { data: byLocal, error: localErr } = await supabaseAny
-          .from("trip_points")
-          .select("*")
-          .eq("local_trip_id", localTripId)
-          .order("captured_at", { ascending: true });
-
-        if (!localErr && byLocal) {
-          data = byLocal;
+        try {
+          data = await fetchAllPoints("trip_points", "local_trip_id", localTripId);
+        } catch (err) {
+          console.warn("[useTripPositions] trip_points by local_trip_id failed:", err);
         }
       }
 
