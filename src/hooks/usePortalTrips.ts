@@ -391,7 +391,7 @@ export const useTripPositions = (tripId: string, localTripId?: string | null) =>
         return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
       };
 
-      const accuracyThresholdMeters = 100; // discard very imprecise GPS reads
+      const accuracyThresholdMeters = 30; // stricter GPS accuracy to keep points closer to the road
       const speedThresholdKmH = 150; // discard impossible jumps
 
       const rawPoints = (data || [])
@@ -458,7 +458,26 @@ export const useTripPositions = (tripId: string, localTripId?: string | null) =>
         lastKept = point;
       }
 
-      return filtered;
+      // Light smoothing (moving average) to reduce lateral jitter without changing overall path.
+      const windowSize = 5;
+      const halfWindow = Math.floor(windowSize / 2);
+      const smoothed = filtered.map((p, idx) => {
+        const start = Math.max(0, idx - halfWindow);
+        const end = Math.min(filtered.length - 1, idx + halfWindow);
+        const slice = filtered.slice(start, end + 1);
+        const avgLat =
+          slice.reduce((sum, s) => sum + s.latitude, 0) / (slice.length || 1);
+        const avgLng =
+          slice.reduce((sum, s) => sum + s.longitude, 0) / (slice.length || 1);
+
+        return {
+          ...p,
+          latitude: avgLat,
+          longitude: avgLng,
+        };
+      });
+
+      return smoothed;
     },
     enabled: !!tripId || !!localTripId,
   });
