@@ -378,17 +378,37 @@ export const useTripPositions = (tripId: string, localTripId?: string | null) =>
         }
       }
 
-      return (data || [])
+      const toRad = (deg: number) => (deg * Math.PI) / 180;
+      const haversineKm = (a: { latitude: number; longitude: number }, b: { latitude: number; longitude: number }) => {
+        const R = 6371;
+        const dLat = toRad(b.latitude - a.latitude);
+        const dLon = toRad(b.longitude - a.longitude);
+        const lat1 = toRad(a.latitude);
+        const lat2 = toRad(b.latitude);
+        const h =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+      };
+
+      const accuracyThresholdMeters = 100; // discard very imprecise GPS reads
+      const speedThresholdKmH = 150; // discard impossible jumps
+
+      const rawPoints = (data || [])
         .map((pos) => {
           const latitude = extractLatitude(pos);
           const longitude = extractLongitude(pos);
+          const capturedAt = extractCapturedAt(pos) || new Date().toISOString();
+          const capturedAtMs = Date.parse(capturedAt);
 
           return {
             id: pos.id,
             trip_id: pos.trip_id ?? pos.tripId ?? tripId,
             latitude: latitude !== null && latitude !== undefined ? Number(latitude) : null,
             longitude: longitude !== null && longitude !== undefined ? Number(longitude) : null,
-            captured_at: extractCapturedAt(pos) || new Date().toISOString(),
+            captured_at: capturedAt,
+            capturedAtMs: Number.isFinite(capturedAtMs) ? capturedAtMs : null,
+            accuracy: pos.accuracy ?? pos.horizontal_accuracy ?? pos.h_accuracy ?? null,
           };
         })
         .filter(
@@ -398,8 +418,47 @@ export const useTripPositions = (tripId: string, localTripId?: string | null) =>
             !Number.isNaN(pos.latitude) &&
             pos.longitude !== null &&
             pos.longitude !== undefined &&
-            !Number.isNaN(pos.longitude)
-        ) as TripPosition[];
+            !Number.isNaN(pos.longitude) &&
+            pos.capturedAtMs !== null
+        );
+
+      const filtered: TripPosition[] = [];
+      let lastKept: typeof rawPoints[number] | null = null;
+
+      for (const point of rawPoints) {
+        if (
+          point.accuracy !== null &&
+          point.accuracy !== undefined &&
+          Number(point.accuracy) > accuracyThresholdMeters
+        ) {
+          continue;
+        }
+
+        if (lastKept) {
+          const dtSeconds = (point.capturedAtMs! - lastKept.capturedAtMs!) / 1000;
+          if (dtSeconds > 0) {
+            const distanceKm = haversineKm(
+              { latitude: lastKept.latitude as number, longitude: lastKept.longitude as number },
+              { latitude: point.latitude as number, longitude: point.longitude as number }
+            );
+            const speedKmH = distanceKm / (dtSeconds / 3600);
+            if (speedKmH > speedThresholdKmH) {
+              continue;
+            }
+          }
+        }
+
+        filtered.push({
+          id: point.id,
+          trip_id: point.trip_id,
+          latitude: point.latitude as number,
+          longitude: point.longitude as number,
+          captured_at: point.captured_at,
+        });
+        lastKept = point;
+      }
+
+      return filtered;
     },
     enabled: !!tripId || !!localTripId,
   });
