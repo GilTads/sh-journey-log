@@ -22,6 +22,7 @@ import { PullToRefresh } from "@/components/PullToRefresh";
 import { useOfflineData } from "@/contexts/OfflineContext";
 import { useTrips } from "@/hooks/useTrips";
 import { useSQLite } from "@/hooks/useSQLite";
+import { useTripLock } from "@/contexts/TripLockContext";
 import { Capacitor } from "@capacitor/core";
 import { App } from "@capacitor/app";
 import {
@@ -30,8 +31,8 @@ import {
 } from "@capacitor/barcode-scanner";
 import { Geolocation } from "@capacitor/geolocation";
 import {
-  startBackgroundLocationService,
-  stopBackgroundLocationService,
+  startBackgroundWatcher,
+  stopBackgroundWatcher,
 } from "@/lib/backgroundLocation";
 import {
   User,
@@ -75,7 +76,7 @@ export const TripForm = () => {
   const viewTripData = location.state?.viewTrip;
   const isTripInProgress = (status?: string | null) => {
     const normalized = status?.toLowerCase();
-    return normalized === "em_andamento" || normalized === "in_progress";
+    return normalized === "in_progress" || normalized === "em_andamento";
   };
   const isViewingOngoingTrip =
     !!viewTripData && isTripInProgress(viewTripData.status) && !viewTripData.end_time;
@@ -101,14 +102,17 @@ export const TripForm = () => {
     hasDb: hasSQLiteDb,
     saveTrip: saveTripOffline,
     updateTripOnEnd,
+    updateTripPhotos,
     getEmployees: getEmployeesRaw,
     getVehicles: getVehiclesRaw,
+    dumpOfflineTrips,
   } = useSQLite();
 
   const [employees, setEmployees] = useState<any[]>([]);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [isLoadingOngoingTrip, setIsLoadingOngoingTrip] = useState(true);
   const [plateError, setPlateError] = useState<string>("");
+  const { setTripLocked } = useTripLock();
 
   const [tripData, setTripData] = useState<TripData>({
     employeeId: "",
@@ -133,15 +137,19 @@ export const TripForm = () => {
   const [isCapturingLocation, setIsCapturingLocation] = useState(false);
   const [showEndTripDialog, setShowEndTripDialog] = useState(false);
   const [tempFinalKm, setTempFinalKm] = useState("");
+  const [imageBase64List, setImageBase64List] = useState<string[]>([]);
+  const employeePhotoBase64Ref = useRef<string | null>(null); // cache da foto do motorista em base64 para uso offline
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const locationTrackingRef = useRef<NodeJS.Timeout | null>(null);
   const locationWatchIdRef = useRef<string | null>(null);
+  const bgWatcherRef = useRef<{ id: string } | null>(null);
   const lastCaptureRef = useRef<number | null>(null);
+  const lastPositionRef = useRef<GeolocationPosition | null>(null); // cache da última posição válida para fallback rápido
   const fileInputRef = useRef<HTMLInputElement>(null);
   const employeePhotoInputRef = useRef<HTMLInputElement>(null);
 
   // IDs para rastreamento de posições
-  const [currentLocalTripId, setCurrentLocalTripId] = useState<number | null>(null);
+  const [currentLocalTripId, setCurrentLocalTripId] = useState<string | null>(null);
   const [currentServerTripId, setCurrentServerTripId] = useState<string | null>(null);
 
   // Ref para evitar execução múltipla do carregamento de viagem em andamento
@@ -196,13 +204,13 @@ export const TripForm = () => {
 
       try {
         // OFFLINE (nativo + sqlite disponível)
-        if (isNative && !isOnline && isReady && hasDb) {
+    if (isNative && !isOnline && isReady && hasDb) {
           console.log("[TripForm] Buscando viagem em andamento no SQLite...");
           const ongoingTrip = await getOngoingTrip();
 
           if (ongoingTrip) {
-            console.log("[TripForm] Viagem em andamento encontrada (offline):", ongoingTrip.id);
-            restoreTripState(ongoingTrip, ongoingTrip.id!, null);
+            console.log("[TripForm] Viagem em andamento encontrada (offline):", ongoingTrip.local_id);
+            restoreTripState(ongoingTrip, ongoingTrip.local_id!, ongoingTrip.server_trip_id ?? null);
             return;
           }
         }
@@ -225,8 +233,8 @@ export const TripForm = () => {
           const localOngoingTrip = await getOngoingTrip();
 
           if (localOngoingTrip) {
-            console.log("[TripForm] Viagem local em andamento encontrada:", localOngoingTrip.id);
-            restoreTripState(localOngoingTrip, localOngoingTrip.id!, null);
+            console.log("[TripForm] Viagem local em andamento encontrada:", localOngoingTrip.local_id);
+            restoreTripState(localOngoingTrip, localOngoingTrip.local_id!, localOngoingTrip.server_trip_id ?? null);
             return;
           }
         }
@@ -275,8 +283,8 @@ export const TripForm = () => {
       rentedCompany: trip.rented_company || "",
     });
 
-    setCurrentLocalTripId(trip.id || null);
-    setCurrentServerTripId(trip.server_trip_id || trip.id || null);
+    setCurrentLocalTripId(trip.local_id || trip.id || null);
+    setCurrentServerTripId(trip.server_trip_id || null);
     setElapsedTime(elapsed > 0 ? elapsed : 0);
     setIsActive(true);
 
@@ -290,7 +298,7 @@ export const TripForm = () => {
     const startTime = trip.start_time ? new Date(trip.start_time) : new Date();
     const now = new Date();
     const elapsed = Math.floor((now.getTime() - startTime.getTime()) / 1000);
-    const maybeLocalId = Number(trip.id);
+    const maybeLocalId = trip.local_id || trip.id;
 
     setTripData({
       employeeId: trip.employee_id || "",
@@ -318,8 +326,23 @@ export const TripForm = () => {
       rentedCompany: trip.rented_company || "",
     });
 
-    setCurrentLocalTripId(Number.isFinite(maybeLocalId) ? maybeLocalId : null);
-    setCurrentServerTripId(trip.server_trip_id || trip.id || null);
+    if (trip.employee_photo_base64) {
+      employeePhotoBase64Ref.current = trip.employee_photo_base64;
+    }
+
+    if (trip.trip_photos_base64) {
+      try {
+        const parsed = JSON.parse(trip.trip_photos_base64);
+        if (Array.isArray(parsed)) {
+          setImageBase64List(parsed);
+        }
+      } catch (err) {
+        console.warn("[TripForm] Não foi possível reprocessar trip_photos_base64 (histórico):", err);
+      }
+    }
+
+    setCurrentLocalTripId(maybeLocalId || null);
+    setCurrentServerTripId(trip.server_trip_id || null);
     setElapsedTime(elapsed > 0 ? elapsed : 0);
     setIsActive(true);
 
@@ -331,7 +354,7 @@ export const TripForm = () => {
   // Função auxiliar para restaurar estado do form a partir de viagem offline
   const restoreTripState = (
     trip: any,
-    localTripId: number | null,
+    localTripId: string | null,
     serverTripId: string | null
   ) => {
     const startTime = new Date(trip.start_time);
@@ -340,6 +363,9 @@ export const TripForm = () => {
 
     // Recupera foto do motorista (base64 do SQLite)
     const employeePhotoUrl = trip.employee_photo_base64 || trip.employee_photo_url || undefined;
+    if (trip.employee_photo_base64) {
+      employeePhotoBase64Ref.current = trip.employee_photo_base64;
+    }
 
     setTripData((prev) => ({
       ...prev,
@@ -360,6 +386,18 @@ export const TripForm = () => {
         : undefined,
       startTime,
     }));
+
+    // Recarrega fotos de observação armazenadas como base64 (quando existir).
+    if (trip.trip_photos_base64) {
+      try {
+        const parsed = JSON.parse(trip.trip_photos_base64);
+        if (Array.isArray(parsed)) {
+          setImageBase64List(parsed);
+        }
+      } catch (err) {
+        console.warn("[TripForm] Não foi possível reprocessar trip_photos_base64 do SQLite:", err);
+      }
+    }
 
     setCurrentLocalTripId(localTripId);
     setCurrentServerTripId(serverTripId);
@@ -438,6 +476,33 @@ export const TripForm = () => {
     };
   }, [isActive]);
 
+  // Recalcula o cronômetro quando o app volta ao foreground ou a aba é reativada (evita tempo “congelado”).
+  useEffect(() => {
+    const recalcElapsed = () => {
+      if (isActive && tripData.startTime) {
+        const diff = Math.floor(
+          (Date.now() - tripData.startTime.getTime()) / 1000
+        );
+        setElapsedTime(diff > 0 ? diff : 0);
+      }
+    };
+
+    const appSubPromise = App.addListener("appStateChange", ({ isActive: appActive }) => {
+      if (appActive) recalcElapsed();
+    });
+
+    const visibilityHandler = () => {
+      if (!document.hidden) recalcElapsed();
+    };
+
+    document.addEventListener("visibilitychange", visibilityHandler);
+
+    return () => {
+      appSubPromise.then((sub) => sub.remove());
+      document.removeEventListener("visibilitychange", visibilityHandler);
+    };
+  }, [isActive, tripData.startTime]);
+
   const ensureLocationPermission = useCallback(async (): Promise<boolean> => {
     try {
       const permission = await Geolocation.checkPermissions();
@@ -458,20 +523,35 @@ export const TripForm = () => {
   }, []);
 
   const persistPosition = async (position: GeolocationPosition, source: string) => {
+    // Se não há viagem ativa, ignore captura para não poluir o banco.
+    if (!currentLocalTripId && !currentServerTripId) {
+      console.warn("[TripForm] Ignorando posição pois não há viagem ativa");
+      return;
+    }
+
+    // Throttle para não registrar mais de 1 ponto < ~30s (watch + bg)
+    const now = Date.now();
+    if (lastCaptureRef.current && now - lastCaptureRef.current < 29000) {
+      return;
+    }
+
     const positionData = {
       local_trip_id: currentLocalTripId ?? undefined,
       server_trip_id: currentServerTripId ?? undefined,
       captured_at: new Date().toISOString(),
       latitude: position.coords.latitude,
       longitude: position.coords.longitude,
+      speed: position.coords.speed ?? null,
+      accuracy: position.coords.accuracy ?? null,
       device_id: deviceId ?? undefined,
-      synced: 0,
+      needs_sync: 1,
       deleted: 0,
     };
 
     const saved = await saveTripPosition(positionData);
     if (saved) {
-      lastCaptureRef.current = Date.now();
+      lastCaptureRef.current = now;
+      lastPositionRef.current = position;
       console.log(
         `[TripForm] (${source}) Posição capturada: ${position.coords.latitude.toFixed(
           6
@@ -488,16 +568,38 @@ export const TripForm = () => {
       if (!hasPermission) return false;
 
       try {
-        const position = await Geolocation.getCurrentPosition({
+        // Tentativa rápida (menor precisão) para evitar timeout com tela apagada
+        try {
+          const fast = await Geolocation.getCurrentPosition({
+            enableHighAccuracy: false,
+            timeout: 12000,
+            maximumAge: 60000,
+          });
+          if (fast?.coords) {
+            await persistPosition(fast, `${reason}_fast`);
+            return true;
+          }
+        } catch (errFast) {
+          console.warn("[TripForm] Fast location falhou, tentando alta precisão:", errFast);
+        }
+
+        // Tentativa com alta precisão e timeout maior (30s) para segundo plano
+        const precise = await Geolocation.getCurrentPosition({
           enableHighAccuracy: true,
-          timeout: 20000,
-          maximumAge: 20000,
+          timeout: 30000,
+          maximumAge: 60000,
         });
 
-        await persistPosition(position, reason);
+        await persistPosition(precise, reason);
         return true;
       } catch (error) {
         console.error(`[TripForm] Erro ao capturar posição (${reason}):`, error);
+        // Fallback: usa última posição conhecida para não perder amostra
+        if (lastPositionRef.current?.coords) {
+          console.warn("[TripForm] Usando última posição conhecida (fallback after error)");
+          await persistPosition(lastPositionRef.current, `${reason}_fallback_last`);
+          return true;
+        }
         return false;
       }
     },
@@ -514,10 +616,21 @@ export const TripForm = () => {
       Geolocation.clearWatch({ id: locationWatchIdRef.current });
       locationWatchIdRef.current = null;
     }
+
+    if (bgWatcherRef.current) {
+      stopBackgroundWatcher(bgWatcherRef.current);
+      bgWatcherRef.current = null;
+    }
   }, []);
 
   const startLocationTracking = useCallback(async () => {
     stopLocationTracking();
+
+    // Não inicia tracking se não houver viagem ativa (local_id)
+    if (!currentLocalTripId) {
+      console.warn("[TripForm] Tracking não iniciado: sem local_id de viagem ativa");
+      return;
+    }
 
     const hasPermission = await ensureLocationPermission();
     if (!hasPermission) return;
@@ -527,8 +640,11 @@ export const TripForm = () => {
     locationWatchIdRef.current = await Geolocation.watchPosition(
       {
         enableHighAccuracy: true,
-        timeout: 20000,
-        maximumAge: 15000,
+        timeout: 30000, // mais tolerante quando tela está apagada
+        maximumAge: 30000,
+        // allowBackground não está tipado em @capacitor/geolocation, mas alguns plugins honram essa flag.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...(Capacitor.isNativePlatform() ? ({ allowBackground: true } as any) : {}),
       },
       async (position, error) => {
         if (error) {
@@ -559,7 +675,24 @@ export const TripForm = () => {
       }
     }, 30000);
 
-    console.log("[TripForm] Rastreamento de localização iniciado (watch + fallback 30s)");
+    // Watcher em segundo plano (foreground service do plugin)
+    bgWatcherRef.current = await startBackgroundWatcher(async (loc) => {
+      const fakePosition: GeolocationPosition = {
+        coords: {
+          latitude: loc.latitude,
+          longitude: loc.longitude,
+          accuracy: loc.accuracy ?? 0,
+          altitude: loc.altitude ?? null,
+          altitudeAccuracy: loc.altitudeAccuracy ?? null,
+          heading: loc.bearing ?? null,
+          speed: loc.speed ?? null,
+        },
+        timestamp: loc.time ?? Date.now(),
+      };
+      await persistPosition(fakePosition, "bg_watcher");
+    });
+
+    console.log("[TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)");
   }, [captureAndSavePosition, ensureLocationPermission, stopLocationTracking]);
 
   // ========= RASTREAMENTO DE LOCALIZAÇÃO A CADA 30 SEGUNDOS =========
@@ -575,21 +708,32 @@ export const TripForm = () => {
     };
   }, [isActive, startLocationTracking, stopLocationTracking]);
 
-  // Ativa serviço nativo para manter o app acordado durante a viagem
+  // Trava navegação: seta lock global e bloqueia backButton nativo enquanto viagem ativa
   useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return;
+    setTripLocked(isActive);
 
-    if (isActive) {
-      startBackgroundLocationService({
-        title: "Viagem em andamento",
-        text: "Capturando localização a cada 30s",
-      });
-    } else {
-      stopBackgroundLocationService();
-    }
+    if (!Capacitor.isNativePlatform()) return;
+    if (!isActive) return;
+
+    const subPromise = App.addListener("backButton", (ev) => {
+      ev.preventDefault?.();
+    });
 
     return () => {
-      stopBackgroundLocationService();
+      subPromise.then((sub) => sub.remove());
+    };
+  }, [isActive, setTripLocked]);
+
+  // Background watcher já mantém o serviço; apenas para quando sair da viagem
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    if (!isActive) {
+      stopBackgroundWatcher(bgWatcherRef.current);
+      bgWatcherRef.current = null;
+    }
+    return () => {
+      stopBackgroundWatcher(bgWatcherRef.current);
+      bgWatcherRef.current = null;
     };
   }, [isActive]);
 
@@ -629,15 +773,41 @@ export const TripForm = () => {
         }
       }
 
-      const position = await Geolocation.getCurrentPosition({
-        enableHighAccuracy: true,
-        timeout: 10000,
-      });
+      // Tentativa rápida com menor precisão para não travar início da viagem.
+      try {
+        const fast = await Geolocation.getCurrentPosition({
+          enableHighAccuracy: false,
+          timeout: 7000,
+          maximumAge: 30000,
+        });
+        if (fast?.coords) {
+          lastPositionRef.current = fast;
+          return { lat: fast.coords.latitude, lng: fast.coords.longitude };
+        }
+      } catch (fastErr) {
+        console.warn("[TripForm] Falha na posição rápida, tentando alta precisão:", fastErr);
+      }
 
-      return {
-        lat: position.coords.latitude,
-        lng: position.coords.longitude,
-      };
+      // Tentativa padrão com alta precisão.
+      const precise = await Geolocation.getCurrentPosition({
+        enableHighAccuracy: true,
+        timeout: 15000,
+      });
+      if (precise?.coords) {
+        lastPositionRef.current = precise;
+        return { lat: precise.coords.latitude, lng: precise.coords.longitude };
+      }
+
+      // Fallback: usa última posição conhecida para não travar início.
+      if (lastPositionRef.current?.coords) {
+        console.warn("[TripForm] Usando última posição conhecida (fallback).");
+        return {
+          lat: lastPositionRef.current.coords.latitude,
+          lng: lastPositionRef.current.coords.longitude,
+        };
+      }
+
+      throw new Error("Não foi possível obter localização");
     } catch (error) {
       throw new Error("Erro ao obter localização");
     }
@@ -651,7 +821,25 @@ export const TripForm = () => {
       reader.onerror = (error) => reject(error);
     });
 
+  // Converte base64 em File para reenviar fotos quando só temos o cache offline.
+  const base64ToFile = (base64: string, filename: string, mime = "image/jpeg"): File => {
+    const arr = base64.split(",");
+    const bstr = atob(arr.length > 1 ? arr[1] : arr[0]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, { type: mime });
+  };
+
   const handleStartTrip = async () => {
+    // Garante deviceId antes de iniciar, para evitar duplicatas offline
+    if (Capacitor.isNativePlatform() && !deviceId) {
+      toast.error("Carregando identificador do dispositivo. Tente novamente em segundos.");
+      return;
+    }
+
     if (!tripData.employeeId || !tripData.employeePhoto) {
       toast.error(
         "Preencha os campos obrigatórios: Motorista e Foto do Motorista"
@@ -705,17 +893,49 @@ export const TripForm = () => {
 
       const location = await getCurrentLocation();
       const startTime = new Date();
+      const localId = typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+      // Se já existe viagem em andamento local, reaproveita para não duplicar
+      if (sqliteAvailable) {
+        const localOngoing = await getOngoingTrip(deviceId ?? undefined);
+        if (localOngoing) {
+          console.warn("[TripForm] Já existe viagem em andamento no SQLite, reutilizando:", localOngoing.local_id);
+          setCurrentLocalTripId(localOngoing.local_id);
+          setCurrentServerTripId(localOngoing.server_trip_id ?? null);
+          setIsActive(true);
+          setIsCapturingLocation(false);
+          startLocationTracking();
+          return;
+        }
+      }
 
       // Converte foto do motorista para base64 se for necessário salvar no SQLite
       let employeePhotoBase64: string | undefined;
       if (sqliteAvailable && tripData.employeePhoto) {
         employeePhotoBase64 = await fileToBase64(tripData.employeePhoto);
+        employeePhotoBase64Ref.current = employeePhotoBase64;
       }
 
-      const saveDraftOffline = async (options?: { synced?: number; serverTripId?: string | null }) => {
+      const saveDraftOffline = async (options?: { needsSync?: number; serverTripId?: string | null; customLocalId?: string }) => {
+        // Se já existe viagem em andamento no SQLite, não cria outra
+        if (sqliteAvailable) {
+          const localOngoing = await getOngoingTrip(deviceId ?? undefined);
+          if (localOngoing) {
+            console.warn("[TripForm] Viagem em andamento já existente, reaproveitando:", localOngoing.local_id);
+            setCurrentLocalTripId(localOngoing.local_id);
+            setCurrentServerTripId(localOngoing.server_trip_id ?? null);
+            setIsActive(true);
+            return true;
+          }
+        }
         const localTripId = await saveTripOffline({
+          local_id: options?.customLocalId ?? localId,
+          server_trip_id: options?.serverTripId ?? null,
           employee_id: tripData.employeeId,
           vehicle_id: tripData.isRentedVehicle ? null : tripData.vehicleId,
+          status: "in_progress",
           initial_km: initialKmNumber,
           final_km: null,
           start_time: startTime.toISOString(),
@@ -729,16 +949,16 @@ export const TripForm = () => {
           destination: tripData.destination || null,
           reason: tripData.reason || null,
           notes: tripData.observation || null,
-          status: "em_andamento",
           employee_photo_base64: employeePhotoBase64,
+          trip_photos_base64: null,
           is_rented_vehicle: tripData.isRentedVehicle ? 1 : 0,
           rented_plate: tripData.isRentedVehicle ? tripData.rentedPlate || null : null,
           rented_model: tripData.isRentedVehicle ? tripData.rentedModel || null : null,
           rented_company: tripData.isRentedVehicle ? tripData.rentedCompany || null : null,
           device_id: deviceId ?? null,
-          synced: options?.synced ?? 0,
+          needs_sync: options?.needsSync ?? 1,
           deleted: 0,
-          server_trip_id: options?.serverTripId ?? null,
+          last_updated: new Date().toISOString(),
         });
 
         if (localTripId) {
@@ -753,19 +973,23 @@ export const TripForm = () => {
         }
 
         console.error("[TripForm] Erro ao criar viagem draft no SQLite");
-        toast.error("Não foi possível salvar a viagem offline");
+        toast.error("Não foi possível salvar a viagem offline", {
+          description: sqliteAvailable
+            ? "SQLite ainda não respondeu. Tente novamente ou reabra o app."
+            : "SQLite indisponível no momento",
+        });
         return false;
       };
 
-      // Se offline, cria viagem "em_andamento" no SQLite para vincular posições
+      // Se offline, cria viagem "in_progress" no SQLite para vincular posições (mas evita duplicar)
       if (offlineMode && sqliteAvailable) {
-        const saved = await saveDraftOffline({ synced: 0 });
+        const saved = await saveDraftOffline({ needsSync: 1 });
         if (!saved) {
           setIsCapturingLocation(false);
           return;
         }
       } else if (isOnline) {
-        // ONLINE: cria viagem "em_andamento" no Supabase para vincular posições
+        // ONLINE: cria viagem "in_progress" no Supabase para vincular posições
         let employeePhotoUrl: string | null = null;
         if (tripData.employeePhoto) {
           const photoPath = `employees/${tripData.employeeId}/${Date.now()}.jpg`;
@@ -773,6 +997,7 @@ export const TripForm = () => {
         }
 
         const draftTripRecord = {
+          local_id: localId,
           employee_id: tripData.employeeId,
           vehicle_id: tripData.isRentedVehicle ? null : tripData.vehicleId,
           initial_km: initialKmNumber,
@@ -782,7 +1007,7 @@ export const TripForm = () => {
           start_latitude: location.lat,
           start_longitude: location.lng,
           duration_seconds: null,
-          status: "em_andamento",
+          status: "in_progress",
           origin: tripData.origin || null,
           destination: tripData.destination || null,
           reason: tripData.reason || null,
@@ -800,7 +1025,7 @@ export const TripForm = () => {
           console.error("[TripForm] Erro ao criar viagem draft no Supabase:", error);
           if (sqliteAvailable) {
             console.warn("[TripForm] Falha no Supabase, salvando draft offline como fallback.");
-            const saved = await saveDraftOffline({ synced: 0 });
+            const saved = await saveDraftOffline({ needsSync: 1 });
             if (!saved) {
               setIsCapturingLocation(false);
               return;
@@ -819,13 +1044,13 @@ export const TripForm = () => {
           // ✅ CORREÇÃO: Criar espelho no SQLite quando em plataforma nativa
           // Usa isReady && hasDb do OfflineContext (fonte confiável do estado do SQLite)
           if (sqliteAvailable) {
-            await saveDraftOffline({ synced: 1, serverTripId: data.id });
+            await saveDraftOffline({ needsSync: 0, serverTripId: data.id });
           } else if (isNative) {
             console.warn("[TripForm] SQLite não pronto para criar espelho local. isReady:", isReady, "hasDb:", hasDb);
           }
         } else if (sqliteAvailable) {
           console.warn("[TripForm] Supabase não retornou ID. Salvando draft offline.");
-          const saved = await saveDraftOffline({ synced: 0 });
+          const saved = await saveDraftOffline({ needsSync: 1 });
           if (!saved) {
             setIsCapturingLocation(false);
             return;
@@ -833,7 +1058,7 @@ export const TripForm = () => {
         }
       } else if (sqliteAvailable) {
         // Sem internet detectada mas com rede marcada como online -> salva offline como fallback
-        const saved = await saveDraftOffline({ synced: 0 });
+        const saved = await saveDraftOffline({ needsSync: 1 });
         if (!saved) {
           setIsCapturingLocation(false);
           return;
@@ -877,6 +1102,7 @@ export const TripForm = () => {
       return;
     }
     const isNative = Capacitor.isNativePlatform();
+    // Usa ambos os flags (Provider + hook) para não bloquear por um único estado desatualizado.
     const sqliteAvailable =
       isNative && ((isReady && hasDb) || (isSQLiteReady && hasSQLiteDb));
 
@@ -892,103 +1118,105 @@ export const TripForm = () => {
         endLocation: location,
       }));
 
+      // Converte fotos para base64 para garantir persistência offline.
+      const tripPhotosBase64 =
+        imageBase64List.length > 0
+          ? imageBase64List
+          : await Promise.all(tripData.images.map((img) => fileToBase64(img)));
+
+      const employeePhotoBase64 =
+        (tripData.employeePhotoUrl?.startsWith("data:")
+          ? tripData.employeePhotoUrl
+          : undefined) ||
+        employeePhotoBase64Ref.current ||
+        (tripData.employeePhoto
+          ? await fileToBase64(tripData.employeePhoto)
+          : undefined);
+
+      let localFinalized = false;
+
+      const finalizeLocalTrip = async (needsSyncFlag: number, serverId?: string | null) => {
+        if (!sqliteAvailable) return;
+
+        // Se por algum motivo perdemos o local_id, tenta recuperar a viagem em andamento
+        let targetLocalId = currentLocalTripId;
+        if (!targetLocalId) {
+          const localOngoing = await getOngoingTrip(deviceId ?? undefined);
+          if (localOngoing?.local_id) {
+            targetLocalId = localOngoing.local_id;
+            setCurrentLocalTripId(localOngoing.local_id);
+            setCurrentServerTripId(localOngoing.server_trip_id ?? null);
+          }
+        }
+        if (!targetLocalId) {
+          throw new Error("Não foi possível localizar a viagem offline para finalizar");
+        }
+
+        const updates = {
+          final_km: parseFloat(tempFinalKm),
+          end_time: endTime.toISOString(),
+          end_latitude: location.lat,
+          end_longitude: location.lng,
+          duration_seconds: elapsedTime,
+          origin: tripData.origin || null,
+          destination: tripData.destination || null,
+          reason: tripData.reason || null,
+          notes: tripData.observation || null,
+          trip_photos_base64:
+            tripPhotosBase64.length > 0 ? JSON.stringify(tripPhotosBase64) : null,
+          employee_photo_base64: employeePhotoBase64 ?? null,
+          device_id: deviceId ?? null,
+          needs_sync: needsSyncFlag,
+          status: "finalized",
+          server_trip_id: serverId ?? null,
+        };
+        const updated = await updateTripOnEnd(targetLocalId, updates);
+        if (!updated) {
+          throw new Error("Erro ao atualizar viagem offline");
+        }
+        await dumpOfflineTrips("after_finalize_local");
+        // Atualiza cache em memória para evitar novo fallback duplicado.
+        setCurrentServerTripId(serverId ?? currentServerTripId);
+        console.log("[TripForm] ✅ Viagem finalizada localmente (needs_sync=%s) ID:", needsSyncFlag, targetLocalId);
+        localFinalized = true;
+      };
+
+      // Finaliza local imediatamente para garantir persistência offline-first
+      if (sqliteAvailable && !localFinalized) {
+        await finalizeLocalTrip(isOnline ? 1 : 1, currentServerTripId ?? null);
+      }
+
       const shouldSaveOffline =
         isNative && !isOnline && sqliteAvailable;
 
       if (shouldSaveOffline) {
-        // Prepara fotos para base64
-        const tripPhotosBase64: string[] = [];
-        for (const img of tripData.images) {
-          const base64 = await fileToBase64(img);
-          tripPhotosBase64.push(base64);
+        if (!localFinalized) {
+          await finalizeLocalTrip(1, currentServerTripId ?? null);
         }
-
-        // Se já temos um local trip ID (criado no handleStartTrip), atualizamos
-        if (currentLocalTripId) {
-          // Finaliza espelho local já existente (mantém server_trip_id/synced para não duplicar)
-          const updates = {
-            final_km: parseFloat(tempFinalKm),
-            end_time: endTime.toISOString(),
-            end_latitude: location.lat,
-            end_longitude: location.lng,
-            duration_seconds: elapsedTime,
-            origin: tripData.origin || null,
-            destination: tripData.destination || null,
-            reason: tripData.reason || null,
-            notes: tripData.observation || null,
-            trip_photos_base64: tripPhotosBase64.length > 0
-              ? JSON.stringify(tripPhotosBase64)
-              : undefined,
-            device_id: deviceId ?? null,
-            synced: 0,
-            server_trip_id: currentServerTripId ?? null,
-          };
-
-          const updated = await updateTripOnEnd(currentLocalTripId, updates);
-          if (!updated) {
-            throw new Error("Erro ao atualizar viagem offline");
-          }
-
-          console.log("[TripForm] ✅ Viagem finalizada (offline) - ID local:", currentLocalTripId);
-        } else {
-          // Fallback: cria nova viagem (não deveria acontecer, mas por segurança)
-          let employeePhotoBase64: string | undefined;
-          if (tripData.employeePhoto) {
-            employeePhotoBase64 = await fileToBase64(tripData.employeePhoto);
-          }
-
-          const offlineTrip = {
-            employee_id: tripData.employeeId,
-            vehicle_id: tripData.isRentedVehicle ? null : tripData.vehicleId,
-            initial_km: parseFloat(tripData.initialKm),
-            final_km: parseFloat(tempFinalKm),
-            start_time: tripData.startTime!.toISOString(),
-            end_time: endTime.toISOString(),
-            start_latitude: tripData.startLocation?.lat,
-            start_longitude: tripData.startLocation?.lng,
-            end_latitude: location.lat,
-            end_longitude: location.lng,
-            duration_seconds: elapsedTime,
-            origin: tripData.origin || null,
-            destination: tripData.destination || null,
-            reason: tripData.reason || null,
-            notes: tripData.observation || null,
-            status: "finalizada",
-            employee_photo_base64: employeePhotoBase64,
-            trip_photos_base64: tripPhotosBase64.length > 0
-              ? JSON.stringify(tripPhotosBase64)
-              : undefined,
-            is_rented_vehicle: tripData.isRentedVehicle ? 1 : 0,
-            rented_plate: tripData.isRentedVehicle ? tripData.rentedPlate || null : null,
-            rented_model: tripData.isRentedVehicle ? tripData.rentedModel || null : null,
-            rented_company: tripData.isRentedVehicle ? tripData.rentedCompany || null : null,
-            device_id: deviceId ?? null,
-            synced: 0,
-            deleted: 0,
-          };
-
-          const savedId = await saveTripOffline(offlineTrip);
-          if (!savedId) {
-            throw new Error("Erro ao salvar viagem offline");
-          }
-          console.log("[TripForm] Viagem criada (fallback) com ID local:", savedId);
-        }
-
         setIsActive(false);
-
+        setTripLocked(false);
         toast.success("Viagem salva offline!", {
           description: "Será sincronizada quando houver internet",
         });
       } else {
-        // ONLINE: atualiza ou cria viagem no Supabase
+        // ONLINE: atualiza ou cria viagem no Supabase e mantém o espelho local consistente.
         const tripPhotosUrls: string[] = [];
-        for (let i = 0; i < tripData.images.length; i++) {
-          const photoPath = `trips/${Date.now()}_${i}.jpg`;
-          const url = await uploadPhoto(tripData.images[i], photoPath);
-          if (url) tripPhotosUrls.push(url);
+        // Usa imagens em memória ou fallback base64 armazenado.
+        if (tripData.images.length > 0) {
+          for (let i = 0; i < tripData.images.length; i++) {
+            const photoPath = `trips/${Date.now()}_${i}.jpg`;
+            const url = await uploadPhoto(tripData.images[i], photoPath);
+            if (url) tripPhotosUrls.push(url);
+          }
+        } else if (imageBase64List.length > 0) {
+          for (let i = 0; i < imageBase64List.length; i++) {
+            const file = base64ToFile(imageBase64List[i], `trip_cached_${i}.jpg`);
+            const photoPath = `trips/${Date.now()}_${i}.jpg`;
+            const url = await uploadPhoto(file, photoPath);
+            if (url) tripPhotosUrls.push(url);
+          }
         }
 
-        // Se já existe uma viagem no servidor (criada no handleStartTrip), apenas atualiza
         if (currentServerTripId) {
           const tripUpdates = {
             final_km: parseFloat(tempFinalKm),
@@ -998,7 +1226,8 @@ export const TripForm = () => {
             duration_seconds: elapsedTime,
             destination: tripData.destination || null,
             notes: tripData.observation || null,
-            status: "finalizada",
+            status: "finalized",
+            local_id: currentLocalTripId ?? undefined,
             trip_photos_urls:
               tripPhotosUrls.length > 0 ? tripPhotosUrls : undefined,
           };
@@ -1013,32 +1242,31 @@ export const TripForm = () => {
 
           console.log("[TripForm] ✅ Viagem finalizada (online) no Supabase:", currentServerTripId);
 
-          // Mantém espelho local coerente (marca synced=1 para não reaparecer em andamento offline)
-          if (sqliteAvailable && currentLocalTripId) {
-            await updateTripOnEnd(currentLocalTripId, {
-              final_km: parseFloat(tempFinalKm),
-              end_time: endTime.toISOString(),
-              end_latitude: location.lat,
-              end_longitude: location.lng,
-              duration_seconds: elapsedTime,
-              origin: tripData.origin || null,
-              destination: tripData.destination || null,
-              reason: tripData.reason || null,
-              notes: tripData.observation || null,
-              device_id: deviceId ?? null,
-              synced: 1,
-              server_trip_id: currentServerTripId,
-            });
+          if (sqliteAvailable) {
+            await finalizeLocalTrip(0, currentServerTripId);
           }
         } else {
-          // Fallback: cria nova viagem (não deveria acontecer se handleStartTrip funcionou)
+          // Sem server ID (ex: viagem iniciou offline): cria no Supabase e vincula ao espelho local.
           let employeePhotoUrl: string | null = null;
           if (tripData.employeePhoto) {
             const photoPath = `employees/${tripData.employeeId}/${Date.now()}.jpg`;
             employeePhotoUrl = await uploadPhoto(tripData.employeePhoto, photoPath);
           }
 
+          let targetLocalId = currentLocalTripId;
+          if (!targetLocalId && sqliteAvailable) {
+            const localOngoing = await getOngoingTrip(deviceId ?? undefined);
+            if (localOngoing?.local_id) targetLocalId = localOngoing.local_id;
+          }
+
+          if (!targetLocalId) {
+            throw new Error("Não foi possível identificar o local_id da viagem para sincronizar");
+          }
+
+          setCurrentLocalTripId(targetLocalId);
+
           const tripRecord = {
+            local_id: targetLocalId,
             employee_id: tripData.employeeId,
             vehicle_id: tripData.isRentedVehicle ? null : tripData.vehicleId,
             initial_km: parseFloat(tripData.initialKm),
@@ -1054,7 +1282,7 @@ export const TripForm = () => {
             destination: tripData.destination || null,
             reason: tripData.reason || null,
             notes: tripData.observation || null,
-            status: "finalizada",
+            status: "finalized",
             employee_photo_url: employeePhotoUrl || undefined,
             trip_photos_urls:
               tripPhotosUrls.length > 0 ? tripPhotosUrls : undefined,
@@ -1062,20 +1290,31 @@ export const TripForm = () => {
             rented_plate: tripData.isRentedVehicle ? tripData.rentedPlate || null : null,
             rented_model: tripData.isRentedVehicle ? tripData.rentedModel || null : null,
             rented_company: tripData.isRentedVehicle ? tripData.rentedCompany || null : null,
+            device_id: deviceId ?? null,
           };
 
           const { data, error } = await createTrip(tripRecord);
 
           if (error) {
+            // Se falhou no Supabase, mantém finalização local pendente de sync
+            console.error("[TripForm] Supabase falhou ao criar viagem, mantendo offline pendente");
+            if (sqliteAvailable && !localFinalized) {
+              await finalizeLocalTrip(1, currentServerTripId ?? null);
+            }
             throw new Error("Erro ao salvar viagem no banco de dados");
           }
 
           if (data?.id) {
-            console.log("[TripForm] Viagem criada (fallback) no Supabase com ID:", data.id);
+            setCurrentServerTripId(data.id);
+            console.log("[TripForm] Viagem criada/atualizada no Supabase com ID:", data.id, "local_id:", targetLocalId);
+            if (sqliteAvailable) {
+              await finalizeLocalTrip(0, data.id);
+            }
           }
         }
 
         setIsActive(false);
+        setTripLocked(false);
 
         toast.success("Viagem finalizada e salva!", {
           description: `Duração: ${formatTime(elapsedTime)}`,
@@ -1100,13 +1339,15 @@ export const TripForm = () => {
         rentedModel: "",
         rentedCompany: "",
       });
-      setTempFinalKm("");
-      setElapsedTime(0);
-      // ✅ Limpa IDs de rastreamento de posição
-      setCurrentLocalTripId(null);
-      setCurrentServerTripId(null);
-      
-      console.log("[TripForm] ✅ Estados limpos - pronto para nova viagem");
+    setTempFinalKm("");
+    setElapsedTime(0);
+    setImageBase64List([]);
+    employeePhotoBase64Ref.current = null;
+    // ✅ Limpa IDs de rastreamento de posição
+    setCurrentLocalTripId(null);
+    setCurrentServerTripId(null);
+    
+    console.log("[TripForm] ✅ Estados limpos - pronto para nova viagem");
     } catch (error) {
       console.error("Error ending trip:", error);
       toast.error("Erro ao finalizar viagem", {
@@ -1118,20 +1359,28 @@ export const TripForm = () => {
     }
   };
 
-  const handleEmployeePhotoUpload = (
+  const handleEmployeePhotoUpload = async (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
     const files = e.target.files;
     if (files && files[0]) {
+      const file = files[0];
       setTripData((prev) => ({
         ...prev,
-        employeePhoto: files[0],
+        employeePhoto: file,
       }));
+      try {
+        // Guarda base64 para uso offline e evita perda se a conexão cair.
+        const base64 = await fileToBase64(file);
+        employeePhotoBase64Ref.current = base64;
+      } catch (err) {
+        console.error("[TripForm] Falha ao converter foto do motorista para base64:", err);
+      }
       toast.success("Foto do motorista capturada");
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
       const newImages = Array.from(files);
@@ -1139,6 +1388,22 @@ export const TripForm = () => {
         ...prev,
         images: [...prev.images, ...newImages],
       }));
+
+      // Converte para base64 para persistir mesmo offline/background.
+      try {
+        const newBase64 = await Promise.all(newImages.map((img) => fileToBase64(img)));
+        const combined = [...imageBase64List, ...newBase64];
+        setImageBase64List(combined);
+
+        const sqliteAvailable =
+          Capacitor.isNativePlatform() && ((isReady && hasDb) || (isSQLiteReady && hasSQLiteDb));
+        if (sqliteAvailable && currentLocalTripId) {
+          await updateTripPhotos(currentLocalTripId, JSON.stringify(combined));
+        }
+      } catch (err) {
+        console.error("[TripForm] Falha ao converter imagens para base64:", err);
+      }
+
       toast.success(`${newImages.length} imagem(ns) adicionada(s)`);
     }
   };

@@ -19,6 +19,14 @@ import {
 } from "@/hooks/useSQLite";
 import { supabase } from "@/integrations/supabase/client";
 import { useTrips } from "@/hooks/useTrips";
+
+const mapStatus = (status?: string | null) => {
+  const s = (status || "").toLowerCase();
+  if (s === "em_andamento") return "in_progress";
+  if (s === "finalizada") return "finalized";
+  if (s === "in_progress" || s === "finalized" || s === "created") return s;
+  return "created";
+};
 import { toast } from "sonner";
 import { getDeviceId } from "@/lib/deviceId";
 
@@ -63,6 +71,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
     getAllTrips,
     getOngoingTrip: getOngoingTripSQLite,
     markTripAsSynced,
+    updateTripOnEnd,
     replaceSyncedTripsFromServer,
     saveTripPosition: saveTripPositionSQLite,
     getUnsyncedTripPositions,
@@ -144,7 +153,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
         );
       }
 
-      // TRIPS – histórico completo vindo do Supabase
+      // TRIPS – puxa do Supabase e faz UPSERT por local_id
       const { data: trips, error: tripsError } = await supabase
         .from("trips")
         .select("*")
@@ -155,7 +164,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
       } else if (trips) {
         await replaceSyncedTripsFromServer(trips);
         console.log(
-          `[OfflineContext] ${trips.length} trips do servidor salvas no SQLite`
+          `[OfflineContext] ${trips.length} trips do servidor salvas/atualizadas no SQLite`
         );
       }
     } catch (err) {
@@ -189,6 +198,14 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
 
       for (const trip of unsynced) {
         try {
+          const localId = trip.local_id;
+          if (!localId) {
+            console.error("[OfflineContext] Trip sem local_id, ignorando sync");
+            continue;
+          }
+
+          const normalizedStatus = trip.end_time ? "finalized" : mapStatus(trip.status);
+
           let employeePhotoUrl: string | null = null;
           if (trip.employee_photo_base64) {
             const photoFile = base64ToFile(
@@ -207,7 +224,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
             for (let i = 0; i < photosArray.length; i++) {
               const photoFile = base64ToFile(
                 photosArray[i],
-                `trip_${trip.id}_${i}.jpg`
+                `trip_${localId}_${i}.jpg`
               );
               const photoPath = `trips/${Date.now()}_${i}.jpg`;
               const url = await uploadPhoto(photoFile, photoPath);
@@ -216,6 +233,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
           }
 
           const baseRecord = {
+            local_id: localId,
             employee_id: trip.employee_id,
             vehicle_id: trip.vehicle_id ?? null,
             initial_km: trip.initial_km,
@@ -231,7 +249,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
             destination: trip.destination ?? null,
             reason: trip.reason ?? null,
             notes: trip.notes ?? null,
-            status: trip.status,
+            status: normalizedStatus,
             employee_photo_url: employeePhotoUrl || undefined,
             trip_photos_urls:
               tripPhotosUrls.length > 0 ? tripPhotosUrls : undefined,
@@ -242,121 +260,51 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
             device_id: trip.device_id ?? deviceId ?? null,
           };
 
-          if (trip.server_trip_id) {
-            // Atualiza viagem já criada no servidor (evita duplicação)
-            console.log(
-              `[OfflineContext] Atualizando trip existente no Supabase (espelho) local=${trip.id} server=${trip.server_trip_id}`
-            );
-
-            const { error } = await updateTrip(trip.server_trip_id, {
-              final_km: baseRecord.final_km ?? null,
-              end_time: baseRecord.end_time,
-              end_latitude: baseRecord.end_latitude ?? null,
-              end_longitude: baseRecord.end_longitude ?? null,
-              duration_seconds: baseRecord.duration_seconds ?? null,
-              destination: baseRecord.destination ?? null,
-              reason: baseRecord.reason ?? null,
-              notes: baseRecord.notes ?? null,
-              status: baseRecord.status,
-              trip_photos_urls: baseRecord.trip_photos_urls,
-              employee_photo_url: baseRecord.employee_photo_url,
-              rented_plate: baseRecord.rented_plate,
-              rented_model: baseRecord.rented_model,
-              rented_company: baseRecord.rented_company,
-              is_rented_vehicle: baseRecord.is_rented_vehicle,
-            });
-
-            if (!error) {
-              // Marca local como sincronizado para não tentar recriar
-              await markTripAsSynced(trip.id!);
-              console.log(
-                `[OfflineContext] ✅ Trip local ${trip.id} atualizada no servidor (ID ${trip.server_trip_id})`
-              );
-            } else {
-              console.error("[OfflineContext] Erro ao atualizar trip no Supabase:", error);
-            }
-          } else {
-            // Trip só existe localmente: tenta localizar no servidor antes de criar para evitar duplicação
-            let targetServerId: string | null = null;
-            try {
-              const { data: found, error: findErr } = await supabase
+          const upsertResult = trip.server_trip_id
+            ? await supabase
                 .from("trips")
-                .select("id")
-                .eq("device_id", baseRecord.device_id)
-                .eq("employee_id", baseRecord.employee_id)
-                .eq("start_time", baseRecord.start_time)
-                .limit(1)
+                .update(baseRecord as any)
+                .eq("id", trip.server_trip_id)
+                .select()
+                .maybeSingle()
+            : await supabase
+                .from("trips")
+                .upsert(baseRecord as any, { onConflict: "local_id" })
+                .select()
                 .maybeSingle();
 
-              if (!findErr && found?.id) {
-                targetServerId = found.id;
-                console.log(
-                  `[OfflineContext] Trip local ${trip.id} casou com servidor ${targetServerId} (mesmo device/start_time) - vou atualizar em vez de criar`
-                );
-              }
-            } catch (lookupErr) {
-              console.warn("[OfflineContext] Falha ao procurar trip existente no servidor:", lookupErr);
-            }
+          if (!upsertResult.error && (upsertResult.data?.id || trip.server_trip_id)) {
+            const serverId = upsertResult.data?.id ?? trip.server_trip_id!;
 
-            if (targetServerId) {
-              const { error } = await updateTrip(targetServerId, {
-                final_km: baseRecord.final_km ?? null,
-                end_time: baseRecord.end_time,
-                end_latitude: baseRecord.end_latitude ?? null,
-                end_longitude: baseRecord.end_longitude ?? null,
-                duration_seconds: baseRecord.duration_seconds ?? null,
-                destination: baseRecord.destination ?? null,
-                reason: baseRecord.reason ?? null,
-                notes: baseRecord.notes ?? null,
-                status: baseRecord.status,
-                trip_photos_urls: baseRecord.trip_photos_urls,
-                employee_photo_url: baseRecord.employee_photo_url,
-                rented_plate: baseRecord.rented_plate,
-                rented_model: baseRecord.rented_model,
-                rented_company: baseRecord.rented_company,
-                is_rented_vehicle: baseRecord.is_rented_vehicle,
-              });
+            await updateTripOnEnd(localId, {
+              final_km: trip.final_km ?? null,
+              end_time: trip.end_time ?? null,
+              end_latitude: trip.end_latitude ?? null,
+              end_longitude: trip.end_longitude ?? null,
+              duration_seconds: trip.duration_seconds ?? null,
+              origin: trip.origin ?? null,
+              destination: trip.destination ?? null,
+              reason: trip.reason ?? null,
+              notes: trip.notes ?? null,
+              trip_photos_base64: trip.trip_photos_base64 ?? null,
+              employee_photo_base64: trip.employee_photo_base64 ?? null,
+              device_id: deviceId ?? trip.device_id ?? null,
+              needs_sync: 0,
+              server_trip_id: serverId,
+              status: normalizedStatus,
+            });
 
-              if (!error) {
-                await markTripAsSynced(trip.id!);
-                await updateTripPositionsServerTripId(trip.id!, targetServerId);
-                console.log(
-                  `[OfflineContext] ✅ Trip local ${trip.id} sincronizada via update em servidor ${targetServerId}`
-                );
-                continue;
-              } else {
-                console.error("[OfflineContext] Erro ao atualizar trip existente (lookup):", error);
-              }
-            }
+            await markTripAsSynced(localId);
+            console.log(
+              `[OfflineContext] ✅ Trip ${localId} sincronizada (server ID: ${serverId})`
+            );
 
-            // Nenhuma trip correspondente encontrada -> cria no servidor
-            const record = baseRecord;
-
-            console.log(`[OfflineContext] Sincronizando trip ${trip.id} com status: ${record.status}`);
-
-            const { data, error } = await createTrip(record);
-            
-            if (!error && data?.id) {
-              // ✅ Marca a trip como sincronizada (synced = 1)
-              await markTripAsSynced(trip.id!);
-              console.log(
-                `[OfflineContext] ✅ Trip ${trip.id} sincronizada com sucesso, server ID: ${data.id}, status: ${data.status}`
-              );
-
-              // Atualiza as posições dessa viagem com o server_trip_id
-              const localTripId = trip.id!;
-              const serverTripId = data.id;
-              
-              await updateTripPositionsServerTripId(localTripId, serverTripId);
-              console.log(
-                `[OfflineContext] Posições da trip ${localTripId} atualizadas com server_trip_id: ${serverTripId}`
-              );
-            } else if (error) {
-              console.error(
-                "[OfflineContext] Erro ao sincronizar trip no Supabase:",
-                error
-              );
-            }
+            await updateTripPositionsServerTripId(localId, serverId);
+          } else if (upsertResult.error) {
+            console.error(
+              "[OfflineContext] Erro ao sincronizar trip no Supabase:",
+              upsertResult.error
+            );
           }
         } catch (err) {
           console.error(
@@ -369,7 +317,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
       console.error("[OfflineContext] Erro em syncTripsToServer:", err);
       throw err;
     }
-  }, [deviceId, isOnline, isReady, getUnsyncedTrips, uploadPhoto, createTrip, updateTrip, markTripAsSynced, updateTripPositionsServerTripId]);
+  }, [deviceId, isOnline, isReady, getUnsyncedTrips, uploadPhoto, markTripAsSynced, updateTripOnEnd, updateTripPositionsServerTripId]);
 
   // ========= sincronização trip positions pendentes (SQLite -> Supabase) =========
   const syncTripPositionsToServerInternal = useCallback(async () => {
@@ -395,65 +343,91 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
       );
 
       for (const pos of unsynced) {
-        // Só sincroniza se tiver server_trip_id (viagem já foi sincronizada)
-        if (!pos.server_trip_id) {
-          console.log(`[OfflineContext] Position ${pos.id} aguardando server_trip_id`);
-          continue;
-        }
-
         try {
-          const { error } = await supabase.from("trip_positions").insert({
-            trip_id: pos.server_trip_id,
-            captured_at: pos.captured_at,
-            latitude: pos.latitude,
-            longitude: pos.longitude,
-            device_id: deviceId ?? null,
-          });
+          // Se não houver server_trip_id, tenta associar via trips.local_id
+          let targetTripId = pos.server_trip_id;
+          if (!targetTripId) {
+            const { data: tripRow } = await supabase
+              .from("trips")
+              .select("id")
+              .eq("local_id", pos.local_trip_id)
+              .maybeSingle();
+            targetTripId = tripRow?.id;
+          }
+
+          const { error } = await supabase
+            .from("trip_points")
+            .upsert(
+              {
+                local_trip_id: pos.local_trip_id,
+                trip_id: targetTripId ?? null,
+                captured_at: pos.captured_at,
+                latitude: pos.latitude,
+                longitude: pos.longitude,
+                speed: pos.speed ?? null,
+                accuracy: pos.accuracy ?? null,
+                device_id: deviceId ?? null,
+              },
+              { onConflict: "local_trip_id,captured_at" }
+            );
 
           if (!error) {
             await markTripPositionAsSynced(pos.id!);
             console.log(`[OfflineContext] TripPosition ${pos.id} sincronizada`);
           } else {
-            console.error("[OfflineContext] Erro ao sincronizar trip position:", error);
+            const msg = (error as any)?.message || JSON.stringify(error);
+            console.error("[OfflineContext] Erro ao sincronizar trip position:", msg);
           }
         } catch (err) {
-          console.error("[OfflineContext] Erro ao sincronizar trip position individual:", err);
+          const msg = err instanceof Error ? err.message : JSON.stringify(err);
+          console.error("[OfflineContext] Erro ao sincronizar trip position individual:", msg);
         }
       }
     } catch (err) {
-      console.error("[OfflineContext] Erro em syncTripPositions:", err);
+      const msg = err instanceof Error ? err.message : JSON.stringify(err);
+      console.error("[OfflineContext] Erro em syncTripPositions:", msg);
     }
   }, [deviceId, isOnline, isReady, getUnsyncedTripPositions, markTripPositionAsSynced]);
 
   // ========= salvar trip position (usado pelo TripForm) =========
   const saveTripPosition = useCallback(async (position: OfflineTripPosition): Promise<boolean> => {
-    // Se online e tem server_trip_id, salva direto no Supabase
+    // Se online e tem server_trip_id, salva direto no Supabase (trip_points) com upsert por local_id+captured_at
     if (isOnline && position.server_trip_id) {
       try {
-        const { error } = await supabase.from("trip_positions").insert({
-          trip_id: position.server_trip_id,
-          captured_at: position.captured_at,
-          latitude: position.latitude,
-          longitude: position.longitude,
-          device_id: deviceId ?? null,
-        });
+        const { error } = await supabase
+          .from("trip_points")
+          .upsert(
+            {
+              local_trip_id: position.local_trip_id,
+              trip_id: position.server_trip_id,
+              captured_at: position.captured_at,
+              latitude: position.latitude,
+              longitude: position.longitude,
+              speed: position.speed ?? null,
+              accuracy: position.accuracy ?? null,
+              device_id: deviceId ?? null,
+            },
+            { onConflict: "local_trip_id,captured_at" }
+          );
 
         if (error) {
-          console.error("[OfflineContext] Erro ao salvar position no Supabase:", error);
+          const msg = (error as any)?.message || JSON.stringify(error);
+          console.error("[OfflineContext] Erro ao salvar position no Supabase:", msg);
           // Fallback: salva no SQLite
-          return await saveTripPositionSQLite({ ...position, device_id: position.device_id ?? deviceId ?? null, synced: 0 });
+          return await saveTripPositionSQLite({ ...position, device_id: position.device_id ?? deviceId ?? null, needs_sync: 1 });
         }
 
-        console.log("[OfflineContext] TripPosition salva diretamente no Supabase");
+        console.log("[OfflineContext] TripPoint salvo diretamente no Supabase");
         return true;
       } catch (err) {
-        console.error("[OfflineContext] Erro ao salvar position:", err);
-        return await saveTripPositionSQLite({ ...position, device_id: position.device_id ?? deviceId ?? null, synced: 0 });
+        const msg = err instanceof Error ? err.message : JSON.stringify(err);
+        console.error("[OfflineContext] Erro ao salvar position:", msg);
+        return await saveTripPositionSQLite({ ...position, device_id: position.device_id ?? deviceId ?? null, needs_sync: 1 });
       }
     }
 
     // Offline ou sem server_trip_id: salva no SQLite
-    return await saveTripPositionSQLite({ ...position, device_id: position.device_id ?? deviceId ?? null });
+    return await saveTripPositionSQLite({ ...position, device_id: position.device_id ?? deviceId ?? null, needs_sync: 1 });
   }, [deviceId, isOnline, saveTripPositionSQLite]);
 
   // ========= sincronizar positions de uma viagem específica =========
@@ -465,21 +439,31 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       for (const pos of positions) {
-        const { error } = await supabase.from("trip_positions").insert({
-          trip_id: serverTripId,
-          captured_at: pos.captured_at,
-          latitude: pos.latitude,
-          longitude: pos.longitude,
-          device_id: deviceId ?? null,
-        });
+        const { error } = await supabase
+          .from("trip_points")
+          .upsert(
+            {
+              local_trip_id: pos.local_trip_id,
+              trip_id: serverTripId,
+              captured_at: pos.captured_at,
+              latitude: pos.latitude,
+              longitude: pos.longitude,
+              speed: pos.speed ?? null,
+              accuracy: pos.accuracy ?? null,
+              device_id: deviceId ?? null,
+            },
+            { onConflict: "local_trip_id,captured_at" }
+          );
 
         if (error) {
-          console.error("[OfflineContext] Erro ao sincronizar position:", error);
+          const msg = (error as any)?.message || JSON.stringify(error);
+          console.error("[OfflineContext] Erro ao sincronizar position:", msg);
         }
       }
       console.log(`[OfflineContext] ${positions.length} positions sincronizadas para trip ${serverTripId}`);
     } catch (err) {
-      console.error("[OfflineContext] Erro em syncTripPositionsToServer:", err);
+      const msg = err instanceof Error ? err.message : JSON.stringify(err);
+      console.error("[OfflineContext] Erro em syncTripPositionsToServer:", msg);
     }
   }, [deviceId, isOnline]);
 

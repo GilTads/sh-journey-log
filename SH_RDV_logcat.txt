@@ -1,0 +1,722 @@
+12-03 22:51:24.506 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] App retomado; reiniciando rastreamento de localização
+12-03 22:51:24.534 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Rede restaurada, disparando syncNow()
+12-03 22:51:24.534 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: false
+12-03 22:51:24.570 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Sincronizando employees/vehicles/trips...
+12-03 22:51:25.707 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 22:51:25.708 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255171, -53.343676
+12-03 22:51:25.708 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 22:51:25.709 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255171, -53.343676
+12-03 22:51:25.745 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 22:51:25.745 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (start_fast) Posição capturada: -22.255171, -53.343676
+12-03 22:51:25.746 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 22:51:25.746 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 22:51:25.746 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (start_fast) Posição capturada: -22.255171, -53.343676
+12-03 22:51:25.747 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 22:51:25.947 E/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 193 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:51:25.954 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] 15 employees salvos no SQLite
+12-03 22:51:26.290 E/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 193 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:51:26.298 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] 15 vehicles salvos no SQLite
+12-03 22:51:26.525 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 193 - Msg: [useSQLite] ✅ 1 trips from server saved/updated (mirror)
+12-03 22:51:26.525 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] 1 trips do servidor salvas/atualizadas no SQLite
+12-03 22:51:26.532 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Nenhuma trip pendente para sync
+12-03 22:51:26.536 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Nenhuma trip position pendente para sync
+12-03 22:51:26.634 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 22:51:31.041 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] Carregando viagem em andamento vinda do histórico: [object Object]
+12-03 22:51:31.270 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 22:51:42.743 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 136 - Msg: [useSQLite] ✅ Trip finalized in SQLite (status=finalizada): fc7e4b63-0099-41c6-a4f9-0fb6ca408540
+12-03 22:51:42.753 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] ✅ Viagem finalizada localmente (needs_sync=%s) ID: 1 fc7e4b63-0099-41c6-a4f9-0fb6ca408540
+12-03 22:51:42.753 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] ✅ Estados limpos - pronto para nova viagem
+12-03 22:51:54.745 E/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:51:54.747 E/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:51:54.748 E/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:51:54.767 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:51:54.768 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255187, -53.343703
+12-03 22:51:54.779 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:51:54.779 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255187, -53.343703
+12-03 22:51:54.786 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:51:54.786 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255187, -53.343703
+12-03 22:52:23.772 E/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:52:23.775 E/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:52:23.775 E/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:52:23.780 E/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:52:23.781 E/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:52:23.797 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:52:23.797 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (watch) Posição capturada: -22.255205, -53.343680
+12-03 22:52:23.807 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:52:23.808 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255205, -53.343680
+12-03 22:52:23.817 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:52:23.818 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255205, -53.343680
+12-03 22:52:23.828 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:52:23.829 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (watch) Posição capturada: -22.255205, -53.343680
+12-03 22:52:23.837 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:52:23.837 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255205, -53.343680
+12-03 22:52:53.755 E/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:52:53.760 E/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:52:53.761 E/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:52:53.764 E/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:52:53.765 E/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:52:53.775 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:52:53.775 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255202, -53.343680
+12-03 22:52:53.782 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:52:53.782 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (watch) Posição capturada: -22.255202, -53.343680
+12-03 22:52:53.789 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:52:53.789 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (watch) Posição capturada: -22.255202, -53.343680
+12-03 22:52:53.796 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:52:53.796 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255202, -53.343680
+12-03 22:52:53.802 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:52:53.802 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255202, -53.343680
+12-03 22:53:23.770 E/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:53:23.777 E/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:53:23.779 E/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:53:23.780 E/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:53:23.783 E/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:53:23.801 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:53:23.801 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255202, -53.343680
+12-03 22:53:23.822 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:53:23.823 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (watch) Posição capturada: -22.255202, -53.343680
+12-03 22:53:23.835 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:53:23.835 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255202, -53.343680
+12-03 22:53:23.842 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:53:23.843 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (watch) Posição capturada: -22.255202, -53.343680
+12-03 22:53:23.852 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:53:23.853 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255202, -53.343680
+12-03 22:53:53.752 E/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:53:53.758 E/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:53:53.763 E/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:53:53.767 E/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:53:53.768 E/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:53:53.780 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:53:53.781 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255202, -53.343680
+12-03 22:53:53.792 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:53:53.792 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255202, -53.343680
+12-03 22:53:53.803 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:53:53.804 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (watch) Posição capturada: -22.255202, -53.343680
+12-03 22:53:53.814 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:53:53.814 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255202, -53.343680
+12-03 22:53:53.824 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:53:53.825 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (watch) Posição capturada: -22.255202, -53.343680
+12-03 22:54:05.486 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] Carregando viagem em andamento vinda do histórico: [object Object]
+12-03 22:54:06.139 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:54:06.140 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (start_fast) Posição capturada: -22.255194, -53.343679
+12-03 22:54:06.142 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 22:54:17.014 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 136 - Msg: [useSQLite] ✅ Trip finalized in SQLite (status=finalizada): fc7e4b63-0099-41c6-a4f9-0fb6ca408540
+12-03 22:54:17.014 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] ✅ Viagem finalizada localmente (needs_sync=%s) ID: 1 fc7e4b63-0099-41c6-a4f9-0fb6ca408540
+12-03 22:54:17.014 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] ✅ Estados limpos - pronto para nova viagem
+12-03 22:54:22.767 E/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:54:22.775 E/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:54:22.776 E/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:54:22.807 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:54:22.807 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255182, -53.343675
+12-03 22:54:22.821 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:54:22.821 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255182, -53.343675
+12-03 22:54:22.830 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:54:22.830 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255182, -53.343675
+12-03 22:54:47.110 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Rede restaurada, disparando syncNow()
+12-03 22:54:47.110 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] syncNow -> isOnline: false isReady: true hasDb: true isSyncing: false
+12-03 22:54:49.712 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Rede restaurada, disparando syncNow()
+12-03 22:54:49.713 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: false
+12-03 22:54:49.714 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Sincronizando employees/vehicles/trips...
+12-03 22:54:50.572 E/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 193 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:54:50.579 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] 15 employees salvos no SQLite
+12-03 22:54:50.966 E/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 193 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:54:50.972 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] 15 vehicles salvos no SQLite
+12-03 22:54:51.271 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 193 - Msg: [useSQLite] ✅ 1 trips from server saved/updated (mirror)
+12-03 22:54:51.271 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] 1 trips do servidor salvas/atualizadas no SQLite
+12-03 22:54:51.278 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Nenhuma trip pendente para sync
+12-03 22:54:51.288 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] Enviando 26 trip positions pendentes para o servidor...
+12-03 22:54:51.563 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition marked as synced: 1
+12-03 22:54:51.563 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPosition 1 sincronizada
+12-03 22:54:51.694 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition marked as synced: 2
+12-03 22:54:51.694 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPosition 2 sincronizada
+12-03 22:54:51.806 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition marked as synced: 3
+12-03 22:54:51.806 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPosition 3 sincronizada
+12-03 22:54:51.856 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 22:54:51.856 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255173, -53.343683
+12-03 22:54:51.942 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 22:54:51.942 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (interval_fallback_fast) Posição capturada: -22.255173, -53.343683
+12-03 22:54:51.957 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 22:54:51.958 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (interval_fallback_fast) Posição capturada: -22.255173, -53.343683
+12-03 22:54:51.982 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition marked as synced: 4
+12-03 22:54:51.982 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPosition 4 sincronizada
+12-03 22:54:52.113 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition marked as synced: 5
+12-03 22:54:52.114 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPosition 5 sincronizada
+12-03 22:54:52.216 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition marked as synced: 6
+12-03 22:54:52.216 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPosition 6 sincronizada
+12-03 22:54:52.376 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition marked as synced: 7
+12-03 22:54:52.377 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPosition 7 sincronizada
+12-03 22:54:52.526 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition marked as synced: 8
+12-03 22:54:52.528 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPosition 8 sincronizada
+12-03 22:54:52.801 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition marked as synced: 9
+12-03 22:54:52.801 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPosition 9 sincronizada
+12-03 22:54:52.873 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] Carregando viagem em andamento vinda do histórico: [object Object]
+12-03 22:54:52.995 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition marked as synced: 10
+12-03 22:54:52.995 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPosition 10 sincronizada
+12-03 22:54:53.125 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition marked as synced: 11
+12-03 22:54:53.126 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPosition 11 sincronizada
+12-03 22:54:53.189 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 22:54:53.189 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (start_fast) Posição capturada: -22.255174, -53.343682
+12-03 22:54:53.190 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 22:54:53.273 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition marked as synced: 12
+12-03 22:54:53.273 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPosition 12 sincronizada
+12-03 22:54:53.425 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition marked as synced: 13
+12-03 22:54:53.425 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPosition 13 sincronizada
+12-03 22:54:53.538 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition marked as synced: 14
+12-03 22:54:53.538 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPosition 14 sincronizada
+12-03 22:54:53.710 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition marked as synced: 15
+12-03 22:54:53.711 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPosition 15 sincronizada
+12-03 22:54:53.884 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition marked as synced: 16
+12-03 22:54:53.884 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPosition 16 sincronizada
+12-03 22:54:54.094 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition marked as synced: 17
+12-03 22:54:54.094 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPosition 17 sincronizada
+12-03 22:54:54.209 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition marked as synced: 18
+12-03 22:54:54.209 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPosition 18 sincronizada
+12-03 22:54:54.545 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition marked as synced: 19
+12-03 22:54:54.545 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPosition 19 sincronizada
+12-03 22:54:54.746 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition marked as synced: 20
+12-03 22:54:54.747 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPosition 20 sincronizada
+12-03 22:54:54.920 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition marked as synced: 21
+12-03 22:54:54.920 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPosition 21 sincronizada
+12-03 22:54:55.084 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition marked as synced: 22
+12-03 22:54:55.084 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPosition 22 sincronizada
+12-03 22:54:55.293 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition marked as synced: 23
+12-03 22:54:55.293 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPosition 23 sincronizada
+12-03 22:54:55.399 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition marked as synced: 24
+12-03 22:54:55.400 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPosition 24 sincronizada
+12-03 22:54:55.659 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition marked as synced: 25
+12-03 22:54:55.659 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPosition 25 sincronizada
+12-03 22:54:55.897 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 205 - Msg: [useSQLite] TripPosition marked as synced: 27
+12-03 22:54:55.898 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPosition 27 sincronizada
+12-03 22:54:56.061 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 22:54:59.147 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] Finalizando viagem no Supabase - ID: fc7e4b63-0099-41c6-a4f9-0fb6ca408540
+12-03 22:54:59.313 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] ✅ Viagem finalizada (online) no Supabase: fc7e4b63-0099-41c6-a4f9-0fb6ca408540
+12-03 22:54:59.349 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 136 - Msg: [useSQLite] ✅ Trip finalized in SQLite (status=finalizada): fc7e4b63-0099-41c6-a4f9-0fb6ca408540
+12-03 22:54:59.350 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] ✅ Viagem finalizada localmente (needs_sync=%s) ID: 0 fc7e4b63-0099-41c6-a4f9-0fb6ca408540
+12-03 22:54:59.350 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] ✅ Estados limpos - pronto para nova viagem
+12-03 22:55:08.123 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] Carregando viagem em andamento vinda do histórico: [object Object]
+12-03 22:55:08.573 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 22:55:08.573 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (start_fast) Posição capturada: -22.255173, -53.343717
+12-03 22:55:08.577 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 22:55:15.077 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] Finalizando viagem no Supabase - ID: fc7e4b63-0099-41c6-a4f9-0fb6ca408540
+12-03 22:55:15.187 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] ✅ Viagem finalizada (online) no Supabase: fc7e4b63-0099-41c6-a4f9-0fb6ca408540
+12-03 22:55:15.208 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 136 - Msg: [useSQLite] ✅ Trip finalized in SQLite (status=finalizada): fc7e4b63-0099-41c6-a4f9-0fb6ca408540
+12-03 22:55:15.209 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] ✅ Viagem finalizada localmente (needs_sync=%s) ID: 0 fc7e4b63-0099-41c6-a4f9-0fb6ca408540
+12-03 22:55:15.209 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] ✅ Estados limpos - pronto para nova viagem
+12-03 22:55:21.851 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 22:55:21.852 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255183, -53.343719
+12-03 22:55:21.856 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 22:55:21.856 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255183, -53.343719
+12-03 22:55:21.858 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 22:55:21.858 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255183, -53.343719
+12-03 22:55:21.893 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 22:55:21.893 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (interval_fallback_fast) Posição capturada: -22.255183, -53.343719
+12-03 22:55:21.909 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 22:55:21.909 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (interval_fallback_fast) Posição capturada: -22.255183, -53.343719
+12-03 22:55:26.195 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] Verificando viagem em andamento... [object Object]
+12-03 22:55:26.195 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] Buscando viagem em andamento no Supabase...
+12-03 22:55:26.391 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] Verificando SQLite por viagem local em andamento...
+12-03 22:55:26.399 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 147 - Msg: [useSQLite] Search for ongoing trip: none
+12-03 22:55:26.399 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] Nenhuma viagem em andamento encontrada
+12-03 22:55:51.872 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 22:55:51.873 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255205, -53.343695
+12-03 22:55:51.873 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 22:55:51.873 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255205, -53.343695
+12-03 22:55:51.873 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 22:55:51.874 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255205, -53.343695
+12-03 22:55:51.933 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 22:55:51.933 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (interval_fallback_fast) Posição capturada: -22.255205, -53.343695
+12-03 22:55:51.943 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 245 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 22:55:51.944 I/Capacitor/Console(20591): File: https://localhost/assets/index-WhiRUPsi.js - Line 561 - Msg: [TripForm] (interval_fallback_fast) Posição capturada: -22.255205, -53.343695
+12-03 22:56:23.352 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Verificando viagem em andamento... [object Object]
+12-03 22:56:23.353 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Buscando viagem em andamento no Supabase...
+12-03 22:56:23.361 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: false
+12-03 22:56:23.365 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Sincronizando employees/vehicles/trips...
+12-03 22:56:23.932 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Verificando SQLite por viagem local em andamento...
+12-03 22:56:23.952 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 152 - Msg: [useSQLite] Search for ongoing trip: none
+12-03 22:56:23.953 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Nenhuma viagem em andamento encontrada
+12-03 22:56:24.167 E/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:56:24.174 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 employees salvos no SQLite
+12-03 22:56:24.515 E/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:56:24.520 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 vehicles salvos no SQLite
+12-03 22:56:24.673 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] ✅ 1 trips from server saved/updated (mirror)
+12-03 22:56:24.674 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 1 trips do servidor salvas/atualizadas no SQLite
+12-03 22:56:24.679 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip pendente para sync
+12-03 22:56:24.684 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip position pendente para sync
+12-03 22:56:39.167 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Rede restaurada, disparando syncNow()
+12-03 22:56:39.167 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: false
+12-03 22:56:39.169 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Sincronizando employees/vehicles/trips...
+12-03 22:56:40.415 E/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:56:40.425 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 employees salvos no SQLite
+12-03 22:56:40.810 E/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:56:40.819 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 vehicles salvos no SQLite
+12-03 22:56:40.965 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] ✅ 1 trips from server saved/updated (mirror)
+12-03 22:56:40.966 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 1 trips do servidor salvas/atualizadas no SQLite
+12-03 22:56:40.974 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip pendente para sync
+12-03 22:56:40.982 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip position pendente para sync
+12-03 22:56:45.493 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Rede restaurada, disparando syncNow()
+12-03 22:56:45.493 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: false
+12-03 22:56:45.493 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Sincronizando employees/vehicles/trips...
+12-03 22:56:47.612 E/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:56:47.624 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 employees salvos no SQLite
+12-03 22:56:48.129 E/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:56:48.140 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 vehicles salvos no SQLite
+12-03 22:56:48.248 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] ✅ 1 trips from server saved/updated (mirror)
+12-03 22:56:48.249 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 1 trips do servidor salvas/atualizadas no SQLite
+12-03 22:56:48.255 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip pendente para sync
+12-03 22:56:48.262 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip position pendente para sync
+12-03 22:56:53.027 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: false
+12-03 22:56:53.027 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Sincronizando employees/vehicles/trips...
+12-03 22:56:53.393 E/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:56:53.402 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 employees salvos no SQLite
+12-03 22:56:54.241 E/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:56:54.246 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 vehicles salvos no SQLite
+12-03 22:56:54.336 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] ✅ 1 trips from server saved/updated (mirror)
+12-03 22:56:54.336 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 1 trips do servidor salvas/atualizadas no SQLite
+12-03 22:56:54.341 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip pendente para sync
+12-03 22:56:54.344 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip position pendente para sync
+12-03 22:57:04.177 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 152 - Msg: [useSQLite] Search for ongoing trip: none
+12-03 22:57:07.491 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Viagem draft criada no Supabase com ID: 8850f2e5-2fd0-466a-9657-55fa4346ffdc
+12-03 22:57:07.510 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 152 - Msg: [useSQLite] Search for ongoing trip: none
+12-03 22:57:08.515 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Rede restaurada, disparando syncNow()
+12-03 22:57:08.516 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: false
+12-03 22:57:08.516 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Sincronizando employees/vehicles/trips...
+12-03 22:57:08.737 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 122 - Msg: [useSQLite] Trip saved in SQLite with local_id: 01f63578-6df6-49a5-b937-e00986114860 server: 8850f2e5-2fd0-466a-9657-55fa4346ffdc
+12-03 22:57:08.738 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Espelho local criado com ID: 01f63578-6df6-49a5-b937-e00986114860 para server ID: 8850f2e5-2fd0-466a-9657-55fa4346ffdc
+12-03 22:57:09.148 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 22:57:09.148 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] (start_fast) Posição capturada: -22.255103, -53.343650
+12-03 22:57:09.149 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 22:57:09.314 E/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:57:09.318 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 employees salvos no SQLite
+12-03 22:57:09.998 E/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:57:10.004 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 vehicles salvos no SQLite
+12-03 22:57:10.181 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] ✅ 2 trips from server saved/updated (mirror)
+12-03 22:57:10.181 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 2 trips do servidor salvas/atualizadas no SQLite
+12-03 22:57:10.188 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip pendente para sync
+12-03 22:57:10.194 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip position pendente para sync
+12-03 22:57:10.445 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 22:57:14.422 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Rede restaurada, disparando syncNow()
+12-03 22:57:14.422 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: false
+12-03 22:57:14.422 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Sincronizando employees/vehicles/trips...
+12-03 22:57:14.580 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 22:57:15.301 E/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:57:15.308 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 employees salvos no SQLite
+12-03 22:57:15.632 E/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:57:15.639 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 vehicles salvos no SQLite
+12-03 22:57:15.778 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] ✅ 2 trips from server saved/updated (mirror)
+12-03 22:57:15.779 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 2 trips do servidor salvas/atualizadas no SQLite
+12-03 22:57:15.788 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip pendente para sync
+12-03 22:57:15.795 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip position pendente para sync
+12-03 22:57:15.967 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 22:57:17.875 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: false
+12-03 22:57:17.875 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Sincronizando employees/vehicles/trips...
+12-03 22:57:18.045 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 22:57:18.865 E/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:57:18.878 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 employees salvos no SQLite
+12-03 22:57:19.388 E/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:57:19.395 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 vehicles salvos no SQLite
+12-03 22:57:19.525 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] ✅ 2 trips from server saved/updated (mirror)
+12-03 22:57:19.526 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 2 trips do servidor salvas/atualizadas no SQLite
+12-03 22:57:19.531 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip pendente para sync
+12-03 22:57:19.537 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip position pendente para sync
+12-03 22:57:19.710 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 22:57:38.859 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 22:57:38.860 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255143, -53.343614
+12-03 22:57:45.332 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] App retomado; reiniciando rastreamento de localização
+12-03 22:57:45.362 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Rede restaurada, disparando syncNow()
+12-03 22:57:45.363 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: false
+12-03 22:57:45.364 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Sincronizando employees/vehicles/trips...
+12-03 22:57:46.041 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 22:57:46.041 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] (start_fast) Posição capturada: -22.255138, -53.343618
+12-03 22:57:46.042 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 22:57:46.049 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 22:57:46.049 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] (start_fast) Posição capturada: -22.255138, -53.343618
+12-03 22:57:46.050 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 22:57:46.268 E/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:57:46.275 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 employees salvos no SQLite
+12-03 22:57:46.893 E/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:57:46.905 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 vehicles salvos no SQLite
+12-03 22:57:47.293 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] ✅ 2 trips from server saved/updated (mirror)
+12-03 22:57:47.294 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 2 trips do servidor salvas/atualizadas no SQLite
+12-03 22:57:47.303 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip pendente para sync
+12-03 22:57:47.311 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip position pendente para sync
+12-03 22:57:47.462 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 22:57:52.943 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: false
+12-03 22:57:52.943 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Sincronizando employees/vehicles/trips...
+12-03 22:57:53.567 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 22:57:54.406 E/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:57:54.417 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 employees salvos no SQLite
+12-03 22:57:54.842 E/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:57:54.850 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 vehicles salvos no SQLite
+12-03 22:57:55.301 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] ✅ 2 trips from server saved/updated (mirror)
+12-03 22:57:55.302 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 2 trips do servidor salvas/atualizadas no SQLite
+12-03 22:57:55.311 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip pendente para sync
+12-03 22:57:55.322 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip position pendente para sync
+12-03 22:57:55.495 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 22:58:00.344 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 22:58:11.827 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 141 - Msg: [useSQLite] ✅ Trip finalized in SQLite (status=finalizada): 01f63578-6df6-49a5-b937-e00986114860
+12-03 22:58:11.828 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] ✅ Viagem finalizada localmente (needs_sync=%s) ID: 1 01f63578-6df6-49a5-b937-e00986114860
+12-03 22:58:11.828 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] ✅ Estados limpos - pronto para nova viagem
+12-03 22:58:15.738 E/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:58:15.759 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 210 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:58:15.759 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255173, -53.343669
+12-03 22:58:45.714 E/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:58:45.742 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 210 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:58:45.742 I/Capacitor/Console(22306): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255131, -53.343649
+12-03 22:58:59.137 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Verificando viagem em andamento... [object Object]
+12-03 22:58:59.138 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Buscando viagem em andamento no SQLite...
+12-03 22:58:59.162 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 152 - Msg: [useSQLite] Search for ongoing trip: none
+12-03 22:58:59.162 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Nenhuma viagem em andamento encontrada
+12-03 22:59:11.690 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Rede restaurada, disparando syncNow()
+12-03 22:59:11.690 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: false isReady: true hasDb: true isSyncing: false
+12-03 22:59:11.719 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: false
+12-03 22:59:11.720 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Sincronizando employees/vehicles/trips...
+12-03 22:59:14.254 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Rede restaurada, disparando syncNow()
+12-03 22:59:14.255 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: true
+12-03 22:59:14.548 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:59:14.624 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 employees salvos no SQLite
+12-03 22:59:14.693 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:59:14.793 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:59:14.835 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:59:16.312 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:59:16.452 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 vehicles salvos no SQLite
+12-03 22:59:16.647 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:59:16.779 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:59:16.833 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:59:16.874 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] ✅ 2 trips from server saved/updated (mirror)
+12-03 22:59:16.874 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 2 trips do servidor salvas/atualizadas no SQLite
+12-03 22:59:16.907 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip pendente para sync
+12-03 22:59:17.009 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip position pendente para sync
+12-03 22:59:20.784 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Carregando viagem em andamento vinda do histórico: [object Object]
+12-03 22:59:22.402 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] App retomado; reiniciando rastreamento de localização
+12-03 22:59:22.532 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Rede restaurada, disparando syncNow()
+12-03 22:59:22.533 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: false
+12-03 22:59:22.533 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Sincronizando employees/vehicles/trips...
+12-03 22:59:23.086 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 22:59:23.087 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] (start_fast) Posição capturada: -22.255101, -53.343646
+12-03 22:59:23.091 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 22:59:23.092 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 22:59:23.092 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] (start_fast) Posição capturada: -22.255101, -53.343646
+12-03 22:59:23.094 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 22:59:23.094 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 22:59:23.094 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] (start_fast) Posição capturada: -22.255101, -53.343646
+12-03 22:59:23.095 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 22:59:23.283 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Rede restaurada, disparando syncNow()
+12-03 22:59:23.284 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: true
+12-03 22:59:23.432 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:59:23.436 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 employees salvos no SQLite
+12-03 22:59:23.786 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:59:23.790 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 vehicles salvos no SQLite
+12-03 22:59:24.118 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] ✅ 2 trips from server saved/updated (mirror)
+12-03 22:59:24.119 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 2 trips do servidor salvas/atualizadas no SQLite
+12-03 22:59:24.126 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip pendente para sync
+12-03 22:59:24.130 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip position pendente para sync
+12-03 22:59:24.231 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 22:59:26.298 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Rede restaurada, disparando syncNow()
+12-03 22:59:26.299 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: false
+12-03 22:59:26.299 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Sincronizando employees/vehicles/trips...
+12-03 22:59:26.421 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 22:59:26.848 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:59:26.857 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 employees salvos no SQLite
+12-03 22:59:27.175 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:59:27.183 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 vehicles salvos no SQLite
+12-03 22:59:27.298 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] ✅ 2 trips from server saved/updated (mirror)
+12-03 22:59:27.299 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 2 trips do servidor salvas/atualizadas no SQLite
+12-03 22:59:27.305 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip pendente para sync
+12-03 22:59:27.309 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip position pendente para sync
+12-03 22:59:27.414 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 22:59:29.323 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Rede restaurada, disparando syncNow()
+12-03 22:59:29.324 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: false
+12-03 22:59:29.330 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Sincronizando employees/vehicles/trips...
+12-03 22:59:29.592 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 22:59:30.188 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Carregando viagem em andamento vinda do histórico: [object Object]
+12-03 22:59:30.603 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 22:59:30.636 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 employees salvos no SQLite
+12-03 22:59:30.654 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 22:59:37.519 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 141 - Msg: [useSQLite] ✅ Trip finalized in SQLite (status=finalizada): 8850f2e5-2fd0-466a-9657-55fa4346ffdc
+12-03 22:59:37.519 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] ✅ Viagem finalizada localmente (needs_sync=%s) ID: 1 8850f2e5-2fd0-466a-9657-55fa4346ffdc
+12-03 22:59:37.519 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] ✅ Estados limpos - pronto para nova viagem
+12-03 22:59:40.220 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Erro ao buscar vehicles: [object Object]
+12-03 22:59:40.244 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Erro ao buscar trips: [object Object]
+12-03 22:59:40.257 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip pendente para sync
+12-03 22:59:40.268 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip position pendente para sync
+12-03 22:59:52.745 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:59:52.748 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:59:52.758 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:59:52.761 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 22:59:52.777 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 210 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:59:52.777 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] (watch) Posição capturada: -22.255156, -53.343662
+12-03 22:59:52.786 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 210 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:59:52.786 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255156, -53.343662
+12-03 22:59:52.795 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 210 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:59:52.795 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] (watch) Posição capturada: -22.255156, -53.343662
+12-03 22:59:52.808 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 210 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 22:59:52.809 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255156, -53.343662
+12-03 23:00:22.748 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 23:00:22.753 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 23:00:22.754 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 23:00:22.756 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 23:00:22.779 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 210 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 23:00:22.779 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] (watch) Posição capturada: -22.255186, -53.343656
+12-03 23:00:22.797 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 210 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 23:00:22.797 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] (watch) Posição capturada: -22.255186, -53.343656
+12-03 23:00:22.809 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 210 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 23:00:22.809 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255186, -53.343656
+12-03 23:00:22.818 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 210 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 23:00:22.819 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255186, -53.343656
+12-03 23:00:51.754 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 23:00:51.788 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 210 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 23:00:51.788 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255186, -53.343656
+12-03 23:01:20.747 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 23:01:20.772 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 210 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 23:01:20.772 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255201, -53.343667
+12-03 23:01:49.775 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 23:01:49.784 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 23:01:49.806 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 210 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 23:01:49.806 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255201, -53.343667
+12-03 23:01:49.817 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 210 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 23:01:49.817 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255201, -53.343667
+12-03 23:02:19.745 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 23:02:19.750 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Erro ao salvar position no Supabase: TypeError: Failed to fetch
+12-03 23:02:19.770 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 210 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 23:02:19.770 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255201, -53.343667
+12-03 23:02:19.782 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 210 - Msg: [useSQLite] TripPosition saved to SQLite
+12-03 23:02:19.782 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255201, -53.343667
+12-03 23:02:34.507 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Rede restaurada, disparando syncNow()
+12-03 23:02:34.508 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: false isReady: true hasDb: true isSyncing: false
+12-03 23:02:37.047 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Rede restaurada, disparando syncNow()
+12-03 23:02:37.047 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: false
+12-03 23:02:37.047 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Sincronizando employees/vehicles/trips...
+12-03 23:02:37.702 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:02:37.716 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 employees salvos no SQLite
+12-03 23:02:38.240 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:02:38.256 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 vehicles salvos no SQLite
+12-03 23:02:38.457 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] ✅ 2 trips from server saved/updated (mirror)
+12-03 23:02:38.457 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 2 trips do servidor salvas/atualizadas no SQLite
+12-03 23:02:38.464 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip pendente para sync
+12-03 23:02:38.476 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Enviando 14 trip positions pendentes para o servidor...
+12-03 23:02:38.631 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 210 - Msg: [useSQLite] TripPosition marked as synced: 1
+12-03 23:02:38.631 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] TripPosition 1 sincronizada
+12-03 23:02:38.837 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 210 - Msg: [useSQLite] TripPosition marked as synced: 2
+12-03 23:02:38.837 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] TripPosition 2 sincronizada
+12-03 23:02:38.949 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 210 - Msg: [useSQLite] TripPosition marked as synced: 3
+12-03 23:02:38.950 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] TripPosition 3 sincronizada
+12-03 23:02:39.161 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 210 - Msg: [useSQLite] TripPosition marked as synced: 4
+12-03 23:02:39.162 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] TripPosition 4 sincronizada
+12-03 23:02:39.256 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 210 - Msg: [useSQLite] TripPosition marked as synced: 5
+12-03 23:02:39.256 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] TripPosition 5 sincronizada
+12-03 23:02:39.484 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 210 - Msg: [useSQLite] TripPosition marked as synced: 6
+12-03 23:02:39.485 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] TripPosition 6 sincronizada
+12-03 23:02:39.735 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 210 - Msg: [useSQLite] TripPosition marked as synced: 7
+12-03 23:02:39.735 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] TripPosition 7 sincronizada
+12-03 23:02:39.824 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 210 - Msg: [useSQLite] TripPosition marked as synced: 8
+12-03 23:02:39.824 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] TripPosition 8 sincronizada
+12-03 23:02:40.048 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 210 - Msg: [useSQLite] TripPosition marked as synced: 9
+12-03 23:02:40.048 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] TripPosition 9 sincronizada
+12-03 23:02:40.058 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Rede restaurada, disparando syncNow()
+12-03 23:02:40.058 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: true
+12-03 23:02:40.282 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 210 - Msg: [useSQLite] TripPosition marked as synced: 10
+12-03 23:02:40.282 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] TripPosition 10 sincronizada
+12-03 23:02:40.391 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 210 - Msg: [useSQLite] TripPosition marked as synced: 11
+12-03 23:02:40.391 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] TripPosition 11 sincronizada
+12-03 23:02:40.574 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 210 - Msg: [useSQLite] TripPosition marked as synced: 12
+12-03 23:02:40.574 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] TripPosition 12 sincronizada
+12-03 23:02:40.661 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 210 - Msg: [useSQLite] TripPosition marked as synced: 13
+12-03 23:02:40.661 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] TripPosition 13 sincronizada
+12-03 23:02:40.849 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 210 - Msg: [useSQLite] TripPosition marked as synced: 14
+12-03 23:02:40.849 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] TripPosition 14 sincronizada
+12-03 23:02:43.084 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Rede restaurada, disparando syncNow()
+12-03 23:02:43.084 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: false
+12-03 23:02:43.084 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Sincronizando employees/vehicles/trips...
+12-03 23:02:43.603 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:02:43.607 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 employees salvos no SQLite
+12-03 23:02:43.877 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:02:43.880 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 vehicles salvos no SQLite
+12-03 23:02:43.992 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] ✅ 2 trips from server saved/updated (mirror)
+12-03 23:02:43.993 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 2 trips do servidor salvas/atualizadas no SQLite
+12-03 23:02:43.995 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip pendente para sync
+12-03 23:02:43.999 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip position pendente para sync
+12-03 23:02:44.114 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Carregando viagem em andamento vinda do histórico: [object Object]
+12-03 23:02:44.886 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 23:02:44.887 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] (start_fast) Posição capturada: -22.255178, -53.343678
+12-03 23:02:44.891 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 23:02:46.118 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Rede restaurada, disparando syncNow()
+12-03 23:02:46.120 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: false
+12-03 23:02:46.121 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Sincronizando employees/vehicles/trips...
+12-03 23:02:46.201 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 23:02:46.776 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:02:46.780 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 employees salvos no SQLite
+12-03 23:02:47.047 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:02:47.052 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 vehicles salvos no SQLite
+12-03 23:02:47.194 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] ✅ 2 trips from server saved/updated (mirror)
+12-03 23:02:47.194 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 2 trips do servidor salvas/atualizadas no SQLite
+12-03 23:02:47.201 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip pendente para sync
+12-03 23:02:47.210 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip position pendente para sync
+12-03 23:02:47.325 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 23:02:49.897 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 23:02:49.897 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255155, -53.343700
+12-03 23:02:49.898 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 23:02:49.898 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255155, -53.343700
+12-03 23:02:55.959 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] Finalizando viagem no Supabase - ID: 8850f2e5-2fd0-466a-9657-55fa4346ffdc
+12-03 23:02:56.129 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] ✅ Viagem finalizada (online) no Supabase: 8850f2e5-2fd0-466a-9657-55fa4346ffdc
+12-03 23:02:56.146 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 141 - Msg: [useSQLite] ✅ Trip finalized in SQLite (status=finalizada): 8850f2e5-2fd0-466a-9657-55fa4346ffdc
+12-03 23:02:56.146 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] ✅ Viagem finalizada localmente (needs_sync=%s) ID: 0 8850f2e5-2fd0-466a-9657-55fa4346ffdc
+12-03 23:02:56.146 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] ✅ Estados limpos - pronto para nova viagem
+12-03 23:03:01.191 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Rede restaurada, disparando syncNow()
+12-03 23:03:01.191 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: false
+12-03 23:03:01.191 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Sincronizando employees/vehicles/trips...
+12-03 23:03:01.871 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:03:01.878 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 employees salvos no SQLite
+12-03 23:03:02.340 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:03:02.350 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 vehicles salvos no SQLite
+12-03 23:03:02.597 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] ✅ 2 trips from server saved/updated (mirror)
+12-03 23:03:02.597 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 2 trips do servidor salvas/atualizadas no SQLite
+12-03 23:03:02.603 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip pendente para sync
+12-03 23:03:02.612 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip position pendente para sync
+12-03 23:03:04.181 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Rede restaurada, disparando syncNow()
+12-03 23:03:04.181 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: false
+12-03 23:03:04.181 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Sincronizando employees/vehicles/trips...
+12-03 23:03:04.552 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:03:04.558 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 employees salvos no SQLite
+12-03 23:03:04.793 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:03:04.799 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 vehicles salvos no SQLite
+12-03 23:03:04.919 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] ✅ 2 trips from server saved/updated (mirror)
+12-03 23:03:04.919 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 2 trips do servidor salvas/atualizadas no SQLite
+12-03 23:03:04.925 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip pendente para sync
+12-03 23:03:04.931 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip position pendente para sync
+12-03 23:03:07.211 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Rede restaurada, disparando syncNow()
+12-03 23:03:07.212 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: false
+12-03 23:03:07.212 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Sincronizando employees/vehicles/trips...
+12-03 23:03:07.782 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:03:07.788 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 employees salvos no SQLite
+12-03 23:03:08.122 E/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:03:08.129 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 15 vehicles salvos no SQLite
+12-03 23:03:08.343 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 198 - Msg: [useSQLite] ✅ 2 trips from server saved/updated (mirror)
+12-03 23:03:08.344 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] 2 trips do servidor salvas/atualizadas no SQLite
+12-03 23:03:08.360 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip pendente para sync
+12-03 23:03:08.388 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] Nenhuma trip position pendente para sync
+12-03 23:03:18.831 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 23:03:18.831 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255124, -53.343744
+12-03 23:03:18.842 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 250 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 23:03:18.842 I/Capacitor/Console(23878): File: https://localhost/assets/index-IAKVMPIa.js - Line 566 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255124, -53.343744
+12-03 23:04:42.998 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 566 - Msg: [TripForm] Verificando viagem em andamento... [object Object]
+12-03 23:04:42.998 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 566 - Msg: [TripForm] Buscando viagem em andamento no Supabase...
+12-03 23:04:43.008 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: false
+12-03 23:04:43.011 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Sincronizando employees/vehicles/trips...
+12-03 23:04:44.087 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 566 - Msg: [TripForm] Verificando SQLite por viagem local em andamento...
+12-03 23:04:44.120 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 152 - Msg: [useSQLite] Search for ongoing trip: none
+12-03 23:04:44.121 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 566 - Msg: [TripForm] Nenhuma viagem em andamento encontrada
+12-03 23:04:45.082 E/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:04:45.127 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] 15 employees salvos no SQLite
+12-03 23:04:45.145 E/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:04:45.186 E/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:04:45.993 E/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:04:46.032 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] 15 vehicles salvos no SQLite
+12-03 23:04:46.147 E/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:04:46.219 E/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:04:46.283 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 198 - Msg: [useSQLite] ✅ 2 trips from server saved/updated (mirror)
+12-03 23:04:46.284 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] 2 trips do servidor salvas/atualizadas no SQLite
+12-03 23:04:46.296 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Nenhuma trip pendente para sync
+12-03 23:04:46.309 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Nenhuma trip position pendente para sync
+12-03 23:08:10.147 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Rede restaurada, disparando syncNow()
+12-03 23:08:10.147 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: false
+12-03 23:08:10.152 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Sincronizando employees/vehicles/trips...
+12-03 23:08:10.949 E/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:08:10.957 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] 15 employees salvos no SQLite
+12-03 23:08:11.298 E/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:08:11.305 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] 15 vehicles salvos no SQLite
+12-03 23:08:11.442 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 198 - Msg: [useSQLite] ✅ 2 trips from server saved/updated (mirror)
+12-03 23:08:11.443 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] 2 trips do servidor salvas/atualizadas no SQLite
+12-03 23:08:11.449 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Nenhuma trip pendente para sync
+12-03 23:08:11.457 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Nenhuma trip position pendente para sync
+12-03 23:09:05.051 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: false
+12-03 23:09:05.057 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Sincronizando employees/vehicles/trips...
+12-03 23:09:05.684 E/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:09:05.698 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] 15 employees salvos no SQLite
+12-03 23:09:06.057 E/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:09:06.065 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] 15 vehicles salvos no SQLite
+12-03 23:09:06.223 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 198 - Msg: [useSQLite] ✅ 2 trips from server saved/updated (mirror)
+12-03 23:09:06.224 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] 2 trips do servidor salvas/atualizadas no SQLite
+12-03 23:09:06.231 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Nenhuma trip pendente para sync
+12-03 23:09:06.236 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Nenhuma trip position pendente para sync
+12-03 23:09:17.245 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Rede restaurada, disparando syncNow()
+12-03 23:09:17.246 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: false
+12-03 23:09:17.247 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Sincronizando employees/vehicles/trips...
+12-03 23:09:18.261 E/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:09:18.284 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] 15 employees salvos no SQLite
+12-03 23:09:18.702 E/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:09:18.713 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] 15 vehicles salvos no SQLite
+12-03 23:09:18.857 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 198 - Msg: [useSQLite] ✅ 2 trips from server saved/updated (mirror)
+12-03 23:09:18.858 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] 2 trips do servidor salvas/atualizadas no SQLite
+12-03 23:09:18.865 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Nenhuma trip pendente para sync
+12-03 23:09:18.873 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Nenhuma trip position pendente para sync
+12-03 23:09:22.852 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Rede restaurada, disparando syncNow()
+12-03 23:09:22.852 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: false
+12-03 23:09:22.852 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Sincronizando employees/vehicles/trips...
+12-03 23:09:24.587 E/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:09:24.591 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] 15 employees salvos no SQLite
+12-03 23:09:24.911 E/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:09:24.925 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] 15 vehicles salvos no SQLite
+12-03 23:09:25.105 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 198 - Msg: [useSQLite] ✅ 2 trips from server saved/updated (mirror)
+12-03 23:09:25.106 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] 2 trips do servidor salvas/atualizadas no SQLite
+12-03 23:09:25.113 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Nenhuma trip pendente para sync
+12-03 23:09:25.121 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Nenhuma trip position pendente para sync
+12-03 23:09:44.536 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Rede restaurada, disparando syncNow()
+12-03 23:09:44.536 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: false
+12-03 23:09:44.537 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Sincronizando employees/vehicles/trips...
+12-03 23:09:44.771 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 152 - Msg: [useSQLite] Search for ongoing trip: none
+12-03 23:09:45.202 E/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:09:45.213 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] 15 employees salvos no SQLite
+12-03 23:09:45.608 E/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:09:45.617 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] 15 vehicles salvos no SQLite
+12-03 23:09:45.761 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 198 - Msg: [useSQLite] ✅ 2 trips from server saved/updated (mirror)
+12-03 23:09:45.761 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] 2 trips do servidor salvas/atualizadas no SQLite
+12-03 23:09:45.766 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Nenhuma trip pendente para sync
+12-03 23:09:45.778 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Nenhuma trip position pendente para sync
+12-03 23:09:47.665 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 566 - Msg: [TripForm] Viagem draft criada no Supabase com ID: 911e98b1-5ce1-4c19-9347-f7113c6aa470
+12-03 23:09:47.685 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 152 - Msg: [useSQLite] Search for ongoing trip: none
+12-03 23:09:48.741 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Rede restaurada, disparando syncNow()
+12-03 23:09:48.741 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: false
+12-03 23:09:48.741 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Sincronizando employees/vehicles/trips...
+12-03 23:09:49.000 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 122 - Msg: [useSQLite] Trip saved in SQLite with local_id: 39ecec78-66c2-4d4a-acd1-39394aa8ad65 server: 911e98b1-5ce1-4c19-9347-f7113c6aa470
+12-03 23:09:49.000 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 566 - Msg: [TripForm] Espelho local criado com ID: 39ecec78-66c2-4d4a-acd1-39394aa8ad65 para server ID: 911e98b1-5ce1-4c19-9347-f7113c6aa470
+12-03 23:09:49.617 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 23:09:49.617 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 566 - Msg: [TripForm] (start_fast) Posição capturada: -22.255154, -53.343715
+12-03 23:09:49.618 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 566 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 23:09:49.748 E/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:09:49.753 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] 15 employees salvos no SQLite
+12-03 23:09:50.146 E/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:09:50.152 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] 15 vehicles salvos no SQLite
+12-03 23:09:50.580 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 198 - Msg: [useSQLite] ✅ 3 trips from server saved/updated (mirror)
+12-03 23:09:50.580 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] 3 trips do servidor salvas/atualizadas no SQLite
+12-03 23:09:50.586 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Nenhuma trip pendente para sync
+12-03 23:09:50.592 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Nenhuma trip position pendente para sync
+12-03 23:09:50.832 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 566 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 23:09:51.583 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Rede restaurada, disparando syncNow()
+12-03 23:09:51.583 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: false
+12-03 23:09:51.584 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Sincronizando employees/vehicles/trips...
+12-03 23:09:51.735 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 566 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 23:09:52.034 E/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:09:52.054 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] 15 employees salvos no SQLite
+12-03 23:09:52.328 E/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:09:52.335 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] 15 vehicles salvos no SQLite
+12-03 23:09:52.493 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 198 - Msg: [useSQLite] ✅ 3 trips from server saved/updated (mirror)
+12-03 23:09:52.493 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] 3 trips do servidor salvas/atualizadas no SQLite
+12-03 23:09:52.498 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Nenhuma trip pendente para sync
+12-03 23:09:52.502 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Nenhuma trip position pendente para sync
+12-03 23:09:52.683 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 566 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 23:09:57.629 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Rede restaurada, disparando syncNow()
+12-03 23:09:57.631 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: false
+12-03 23:09:57.632 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Sincronizando employees/vehicles/trips...
+12-03 23:09:57.793 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 566 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 23:09:58.281 E/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 198 - Msg: [useSQLite] Error saving employees: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:09:58.286 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] 15 employees salvos no SQLite
+12-03 23:09:58.741 E/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 198 - Msg: [useSQLite] Error saving vehicles: Error: Execute: Cannot perform this operation because there is no current transaction.
+12-03 23:09:58.748 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] 15 vehicles salvos no SQLite
+12-03 23:09:58.917 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 198 - Msg: [useSQLite] ✅ 3 trips from server saved/updated (mirror)
+12-03 23:09:58.917 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] 3 trips do servidor salvas/atualizadas no SQLite
+12-03 23:09:58.923 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Nenhuma trip pendente para sync
+12-03 23:09:58.929 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] Nenhuma trip position pendente para sync
+12-03 23:09:59.069 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 566 - Msg: [TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)
+12-03 23:10:18.855 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] TripPoint salvo diretamente no Supabase
+12-03 23:10:18.856 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 566 - Msg: [TripForm] (bg_watcher) Posição capturada: -22.255144, -53.343712
+12-03 23:10:28.196 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineContext] syncNow -> isOnline: true isReady: true hasDb: true isSyncing: false
+12-03 23:10:28.197 I/Capacitor/Console(25586): File: https://localhost/assets/index-Bn6Z05Pt.js - Line 250 - Msg: [OfflineCont

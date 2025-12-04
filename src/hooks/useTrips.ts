@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export interface TripRecord {
+  local_id: string;
   employee_id: string;
   vehicle_id?: string | null;
   initial_km: number;
@@ -53,7 +54,7 @@ export const useTrips = () => {
     try {
       const { data, error } = await supabase
         .from("trips")
-        .insert([tripData as any])
+        .upsert([tripData as any], { onConflict: "local_id" })
         .select()
         .single();
 

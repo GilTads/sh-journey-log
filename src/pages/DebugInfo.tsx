@@ -22,7 +22,7 @@ export default function DebugInfo() {
   const navigate = useNavigate();
 
   // offline data
-  const { isOnline, lastSyncAt, isSyncing, syncNow } = useOfflineData();
+  const { isOnline, lastSyncAt, isSyncing, syncNow, deviceId } = useOfflineData();
 
   // sqlite access (usando funções que realmente existem no hook)
   const { getEmployees, getVehicles, getUnsyncedTrips, getAllTrips } =
@@ -199,6 +199,9 @@ export default function DebugInfo() {
           <p className="text-sm">
             <strong>SQLite Disponível:</strong>{" "}
             {String(appInfo.sqliteAvailable)}
+          </p>
+          <p className="text-sm">
+            <strong>Device ID:</strong> {deviceId || "(indisponível)"}
           </p>
         </CardContent>
       </Card>
