@@ -61,6 +61,44 @@ const TripDetails = () => {
       : null;
   const startAt = trip.start_time ? new Date(trip.start_time) : null;
   const endAt = trip.end_time ? new Date(trip.end_time) : null;
+  const startPos = positions && positions.length > 0 ? positions[0] : null;
+  const endPos =
+    positions && positions.length > 0 ? positions[positions.length - 1] : null;
+
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const haversineKm = (a: typeof startPos, b: typeof startPos) => {
+    if (!a || !b) return 0;
+    const R = 6371;
+    const dLat = toRad((b.latitude ?? 0) - (a.latitude ?? 0));
+    const dLon = toRad((b.longitude ?? 0) - (a.longitude ?? 0));
+    const lat1 = toRad(a.latitude ?? 0);
+    const lat2 = toRad(b.latitude ?? 0);
+    const h =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+  };
+
+  const boundingBox = positions?.reduce(
+    (acc, pos) => ({
+      minLat: Math.min(acc.minLat, pos.latitude),
+      maxLat: Math.max(acc.maxLat, pos.latitude),
+      minLng: Math.min(acc.minLng, pos.longitude),
+      maxLng: Math.max(acc.maxLng, pos.longitude),
+    }),
+    {
+      minLat: Number.POSITIVE_INFINITY,
+      maxLat: Number.NEGATIVE_INFINITY,
+      minLng: Number.POSITIVE_INFINITY,
+      maxLng: Number.NEGATIVE_INFINITY,
+    }
+  );
+
+  const outlierThresholdKm = 50;
+  const outliers =
+    positions && startPos
+      ? positions.filter((p) => haversineKm(startPos, p) > outlierThresholdKm)
+      : [];
 
   return (
     <PortalLayout>
@@ -261,6 +299,35 @@ const TripDetails = () => {
                   positions={positions}
                 />
               </div>
+              {positions && positions.length > 0 && (
+                <div className="p-4 border-t text-sm text-muted-foreground space-y-1">
+                  <div>
+                    <span className="font-medium text-foreground">Primeiro ponto:</span>{" "}
+                    {startPos
+                      ? `${startPos.latitude.toFixed(6)}, ${startPos.longitude.toFixed(6)}`
+                      : "—"}
+                  </div>
+                  <div>
+                    <span className="font-medium text-foreground">Último ponto:</span>{" "}
+                    {endPos
+                      ? `${endPos.latitude.toFixed(6)}, ${endPos.longitude.toFixed(6)}`
+                      : "—"}
+                  </div>
+                  {boundingBox && Number.isFinite(boundingBox.minLat) && (
+                    <div>
+                      <span className="font-medium text-foreground">Extremos:</span>{" "}
+                      lat {boundingBox.minLat.toFixed(6)} .. {boundingBox.maxLat.toFixed(6)} | lng{" "}
+                      {boundingBox.minLng.toFixed(6)} .. {boundingBox.maxLng.toFixed(6)}
+                    </div>
+                  )}
+                  {outliers.length > 0 && (
+                    <div className="text-amber-700">
+                      {outliers.length} ponto(s) ficam a mais de {outlierThresholdKm} km do primeiro
+                      ponto — possível GPS fora de rota ou dado incorreto.
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
