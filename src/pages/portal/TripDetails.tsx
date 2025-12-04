@@ -23,7 +23,7 @@ import { formatDuration } from "@/lib/formatters";
 const TripDetails = () => {
   const { id } = useParams<{ id: string }>();
   const { data: trip, isLoading } = useTripDetails(id || "");
-  const { data: positions } = useTripPositions(id || "");
+  const { data: positions } = useTripPositions(trip?.id || id || "", trip?.local_id);
 
   if (isLoading) {
     return (

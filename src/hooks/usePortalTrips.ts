@@ -120,6 +120,7 @@ const normalizeTripRecord = (
 
   return {
     id: trip.id,
+    local_id: trip.local_id ?? trip.localId ?? null,
     employee_id: employeeId || "",
     vehicle_id: vehicleId ?? null,
     initial_km: Number(initialKmRaw) || 0,
@@ -313,15 +314,15 @@ export const useTripDetails = (tripId: string) => {
   });
 };
 
-export const useTripPositions = (tripId: string) => {
+export const useTripPositions = (tripId: string, localTripId?: string | null) => {
   return useQuery({
-    queryKey: ["trip-positions", tripId],
+    queryKey: ["trip-positions", tripId, localTripId],
     queryFn: async () => {
       let data: any[] = [];
 
       try {
         const { data: pointData, error } = await supabaseAny
-          .from("trip_point")
+          .from("trip_points")
           .select("*")
           .eq("trip_id", tripId)
           .order("captured_at", { ascending: true });
@@ -329,15 +330,41 @@ export const useTripPositions = (tripId: string) => {
         if (error) throw error;
         data = pointData || [];
       } catch (err) {
-        console.warn("[useTripPositions] trip_point fetch failed, falling back to trip_positions:", err);
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from("trip_positions")
+        console.warn("[useTripPositions] trip_points fetch failed, trying trip_point then trip_positions:", err);
+
+        try {
+          const { data: singularData, error: singularError } = await supabaseAny
+            .from("trip_point")
+            .select("*")
+            .eq("trip_id", tripId)
+            .order("captured_at", { ascending: true });
+
+          if (singularError) throw singularError;
+          data = singularData || [];
+        } catch (fallbackErr) {
+          console.warn("[useTripPositions] trip_point fetch failed, falling back to trip_positions:", fallbackErr);
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from("trip_positions")
+            .select("*")
+            .eq("trip_id", tripId)
+            .order("captured_at", { ascending: true });
+
+          if (fallbackError) throw fallbackError;
+          data = fallbackData || [];
+        }
+      }
+
+      // If nothing came back and we have a local id, try local_trip_id as a last attempt.
+      if ((!data || data.length === 0) && localTripId) {
+        const { data: byLocal, error: localErr } = await supabaseAny
+          .from("trip_points")
           .select("*")
-          .eq("trip_id", tripId)
+          .eq("local_trip_id", localTripId)
           .order("captured_at", { ascending: true });
 
-        if (fallbackError) throw fallbackError;
-        data = fallbackData || [];
+        if (!localErr && byLocal) {
+          data = byLocal;
+        }
       }
 
       return (data || [])
@@ -363,7 +390,7 @@ export const useTripPositions = (tripId: string) => {
             !Number.isNaN(pos.longitude)
         ) as TripPosition[];
     },
-    enabled: !!tripId,
+    enabled: !!tripId || !!localTripId,
   });
 };
 

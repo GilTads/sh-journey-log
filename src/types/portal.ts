@@ -10,6 +10,7 @@ export interface TripFilters {
 
 export interface TripWithDetails {
   id: string;
+  local_id?: string | null;
   employee_id: string;
   vehicle_id: string | null;
   initial_km: number;
