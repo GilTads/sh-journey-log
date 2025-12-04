@@ -529,9 +529,9 @@ export const TripForm = () => {
       return;
     }
 
-    // Throttle para não registrar mais de 1 ponto < ~30s (watch + bg)
+    // Throttle para não registrar mais de 1 ponto < ~10s (watch + bg)
     const now = Date.now();
-    if (lastCaptureRef.current && now - lastCaptureRef.current < 29000) {
+    if (lastCaptureRef.current && now - lastCaptureRef.current < 10000) {
       return;
     }
 
@@ -640,8 +640,8 @@ export const TripForm = () => {
     locationWatchIdRef.current = await Geolocation.watchPosition(
       {
         enableHighAccuracy: true,
-        timeout: 30000, // mais tolerante quando tela está apagada
-        maximumAge: 30000,
+        timeout: 20000, // mais tolerante quando tela está apagada
+        maximumAge: 15000,
         // allowBackground não está tipado em @capacitor/geolocation, mas alguns plugins honram essa flag.
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         ...(Capacitor.isNativePlatform() ? ({ allowBackground: true } as any) : {}),
@@ -656,24 +656,24 @@ export const TripForm = () => {
       }
     );
 
-    // Fallback: força captura se nenhuma posição chegar em 30s
+    // Fallback: força captura se nenhuma posição chegar em ~15s
     locationTrackingRef.current = setInterval(async () => {
       const now = Date.now();
       const elapsedSinceLast = lastCaptureRef.current
         ? now - lastCaptureRef.current
         : Number.MAX_SAFE_INTEGER;
 
-      if (elapsedSinceLast >= 28000) {
+      if (elapsedSinceLast >= 14000) {
         const ok = await captureAndSavePosition("interval_fallback");
         if (!ok) {
           setTimeout(() => {
             captureAndSavePosition("interval_retry").catch((err) =>
               console.error("[TripForm] Erro em retry de posição:", err)
             );
-          }, 7000);
+          }, 5000);
         }
       }
-    }, 30000);
+    }, 15000);
 
     // Watcher em segundo plano (foreground service do plugin)
     bgWatcherRef.current = await startBackgroundWatcher(async (loc) => {
@@ -692,7 +692,7 @@ export const TripForm = () => {
       await persistPosition(fakePosition, "bg_watcher");
     });
 
-    console.log("[TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 30s)");
+    console.log("[TripForm] Rastreamento de localização iniciado (watch + bg watcher + fallback 15s)");
   }, [captureAndSavePosition, ensureLocationPermission, stopLocationTracking]);
 
   // ========= RASTREAMENTO DE LOCALIZAÇÃO A CADA 30 SEGUNDOS =========
