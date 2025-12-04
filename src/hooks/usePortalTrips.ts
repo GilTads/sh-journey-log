@@ -254,6 +254,15 @@ const computeKmDriven = (trip: any) => {
   return 0;
 };
 
+const extractCapturedAt = (pos: any): string | null =>
+  pos.captured_at ?? pos.capturedAt ?? pos.timestamp ?? pos.created_at ?? null;
+
+const extractLatitude = (pos: any): number | null =>
+  pos.latitude ?? pos.lat ?? pos.latitud ?? null;
+
+const extractLongitude = (pos: any): number | null =>
+  pos.longitude ?? pos.lng ?? pos.long ?? null;
+
 const fetchStatsFromTable = async (tableName: TripTable) => {
   const { data, error } = await supabaseAny.from(tableName).select("*");
   if (error) throw error;
@@ -308,14 +317,51 @@ export const useTripPositions = (tripId: string) => {
   return useQuery({
     queryKey: ["trip-positions", tripId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("trip_positions")
-        .select("*")
-        .eq("trip_id", tripId)
-        .order("captured_at", { ascending: true });
+      let data: any[] = [];
 
-      if (error) throw error;
-      return data as TripPosition[];
+      try {
+        const { data: pointData, error } = await supabaseAny
+          .from("trip_point")
+          .select("*")
+          .eq("trip_id", tripId)
+          .order("captured_at", { ascending: true });
+
+        if (error) throw error;
+        data = pointData || [];
+      } catch (err) {
+        console.warn("[useTripPositions] trip_point fetch failed, falling back to trip_positions:", err);
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from("trip_positions")
+          .select("*")
+          .eq("trip_id", tripId)
+          .order("captured_at", { ascending: true });
+
+        if (fallbackError) throw fallbackError;
+        data = fallbackData || [];
+      }
+
+      return (data || [])
+        .map((pos) => {
+          const latitude = extractLatitude(pos);
+          const longitude = extractLongitude(pos);
+
+          return {
+            id: pos.id,
+            trip_id: pos.trip_id ?? pos.tripId ?? tripId,
+            latitude: latitude !== null && latitude !== undefined ? Number(latitude) : null,
+            longitude: longitude !== null && longitude !== undefined ? Number(longitude) : null,
+            captured_at: extractCapturedAt(pos) || new Date().toISOString(),
+          };
+        })
+        .filter(
+          (pos) =>
+            pos.latitude !== null &&
+            pos.latitude !== undefined &&
+            !Number.isNaN(pos.latitude) &&
+            pos.longitude !== null &&
+            pos.longitude !== undefined &&
+            !Number.isNaN(pos.longitude)
+        ) as TripPosition[];
     },
     enabled: !!tripId,
   });
