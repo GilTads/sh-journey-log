@@ -92,20 +92,19 @@ export const useTrips = () => {
    * STRICT FILTER: status = 'em_andamento' AND end_time IS NULL
    */
   const getOngoingTripFromServer = async (deviceId?: string | null) => {
+    if (!deviceId) {
+      console.warn("[useTrips] Dispositivo não registrado, ignorando busca de viagem em andamento");
+      return null;
+    }
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from("trips")
         .select("*")
         .eq("status", "em_andamento")
         .is("end_time", null)
+        .eq("device_id", deviceId)
         .order("start_time", { ascending: false })
         .limit(1);
-
-      if (deviceId) {
-        query = query.eq("device_id", deviceId);
-      }
-
-      const { data, error } = await query.maybeSingle();
 
       if (error) {
         console.error("[useTrips] Error fetching ongoing trip:", error);

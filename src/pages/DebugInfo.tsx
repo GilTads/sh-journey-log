@@ -17,12 +17,23 @@ import { useSQLite } from "@/hooks/useSQLite";
 import { Capacitor } from "@capacitor/core";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils"; // ✅ IMPORT DO cn
+import { clearRegisteredDevice } from "@/lib/deviceId";
+import { toast } from "sonner";
 
 export default function DebugInfo() {
   const navigate = useNavigate();
 
   // offline data
-  const { isOnline, lastSyncAt, isSyncing, syncNow, deviceId } = useOfflineData();
+  const {
+    isOnline,
+    lastSyncAt,
+    isSyncing,
+    syncNow,
+    deviceId,
+    deviceCode,
+    deviceName,
+    refreshDeviceFromStorage,
+  } = useOfflineData();
 
   // sqlite access (usando funções que realmente existem no hook)
   const { getEmployees, getVehicles, getUnsyncedTrips, getAllTrips } =
@@ -32,6 +43,7 @@ export default function DebugInfo() {
   const [supabaseStatus, setSupabaseStatus] =
     useState<"idle" | "ok" | "error">("idle");
   const [supabaseMessage, setSupabaseMessage] = useState("");
+  const [isClearingDevice, setIsClearingDevice] = useState(false);
 
   const [pendingTrips, setPendingTrips] = useState<any[]>([]);
   const [sqliteDump, setSqliteDump] = useState<any>({
@@ -105,6 +117,22 @@ export default function DebugInfo() {
       setSupabaseStatus("error");
       setSupabaseMessage("Erro ao conectar: " + (err?.message ?? String(err)));
       addLog("Falha Supabase: " + (err?.message ?? String(err)));
+    }
+  };
+
+  const handleClearDevice = async () => {
+    try {
+      setIsClearingDevice(true);
+      await clearRegisteredDevice();
+      await refreshDeviceFromStorage();
+      toast.success("Registro do dispositivo limpo. Cadastre novamente para continuar usando o app.");
+      navigate("/registrar-dispositivo");
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Erro ao limpar registro do dispositivo");
+      addLog("Erro ao limpar dispositivo: " + (err?.message ?? String(err)));
+    } finally {
+      setIsClearingDevice(false);
     }
   };
 
@@ -203,6 +231,20 @@ export default function DebugInfo() {
           <p className="text-sm">
             <strong>Device ID:</strong> {deviceId || "(indisponível)"}
           </p>
+          <p className="text-sm">
+            <strong>Código do dispositivo:</strong> {deviceCode || "(indisponível)"}
+          </p>
+          <p className="text-sm">
+            <strong>Nome do dispositivo:</strong> {deviceName || "(indisponível)"}
+          </p>
+          <Button
+            variant="destructive"
+            onClick={handleClearDevice}
+            disabled={isClearingDevice}
+            className="mt-2"
+          >
+            {isClearingDevice ? "Limpando registro..." : "Limpar registro do dispositivo"}
+          </Button>
         </CardContent>
       </Card>
 

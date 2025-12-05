@@ -28,13 +28,16 @@ const mapStatus = (status?: string | null) => {
   return "created";
 };
 import { toast } from "sonner";
-import { getDeviceId } from "@/lib/deviceId";
+import { getRegisteredDevice } from "@/lib/deviceId";
 
 interface OfflineContextType {
   isOnline: boolean;
   isSyncing: boolean;
   lastSyncAt: Date | null;
   deviceId: string | null;
+  deviceCode: string | null;
+  deviceName: string | null;
+  isDeviceLoaded: boolean;
 
   getMotoristas: (filtro?: string) => Promise<OfflineEmployee[]>;
   getVeiculos: (filtro?: string) => Promise<OfflineVehicle[]>;
@@ -50,6 +53,7 @@ interface OfflineContextType {
 
   isReady: boolean;
   hasDb: boolean;
+  refreshDeviceFromStorage: () => Promise<void>;
 }
 
 const OfflineContext = createContext<OfflineContextType | undefined>(undefined);
@@ -60,6 +64,9 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
   const [hasInitialSyncRun, setHasInitialSyncRun] = useState(false);
   const [deviceId, setDeviceId] = useState<string | null>(null);
+  const [deviceCode, setDeviceCode] = useState<string | null>(null);
+  const [deviceName, setDeviceName] = useState<string | null>(null);
+  const [isDeviceLoaded, setIsDeviceLoaded] = useState(false);
 
   const {
     isReady,
@@ -83,18 +90,34 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
 
   const { uploadPhoto, createTrip, updateTrip } = useTrips();
 
-  // Load deviceId once
+  const refreshDeviceFromStorage = useCallback(async () => {
+    try {
+      const registered = await getRegisteredDevice();
+      setDeviceId(registered?.id ?? null);
+      setDeviceCode(registered?.code ?? null);
+      setDeviceName(registered?.name ?? null);
+    } catch (err) {
+      console.error("[OfflineContext] Erro ao carregar dispositivo registrado:", err);
+      setDeviceId(null);
+      setDeviceCode(null);
+      setDeviceName(null);
+    } finally {
+      setIsDeviceLoaded(true);
+    }
+  }, []);
+
+  // Load device registration once on mount
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      const id = await getDeviceId();
-      if (!cancelled) setDeviceId(id);
+      await refreshDeviceFromStorage();
+      if (cancelled) return;
     };
     load();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [refreshDeviceFromStorage]);
 
   // ========= utils =========
   const base64ToFile = (base64: string, filename: string): File => {
@@ -154,25 +177,30 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
         );
       }
 
-      // TRIPS – puxa do Supabase e faz UPSERT por local_id
-      const { data: trips, error: tripsError } = await supabase
-        .from("trips")
-        .select("*")
-        .order("start_time", { ascending: false });
+      // TRIPS – puxa do Supabase e faz UPSERT por local_id (apenas do dispositivo registrado)
+      if (!deviceId) {
+        console.warn("[OfflineContext] Dispositivo não registrado, pulando sync de trips.");
+      } else {
+        const { data: trips, error: tripsError } = await supabase
+          .from("trips")
+          .select("*")
+          .eq("device_id", deviceId)
+          .order("start_time", { ascending: false });
 
-      if (tripsError) {
-        console.error("[OfflineContext] Erro ao buscar trips:", tripsError);
-      } else if (trips) {
-        await replaceSyncedTripsFromServer(trips);
-        console.log(
-          `[OfflineContext] ${trips.length} trips do servidor salvas/atualizadas no SQLite`
-        );
+        if (tripsError) {
+          console.error("[OfflineContext] Erro ao buscar trips:", tripsError);
+        } else if (trips) {
+          await replaceSyncedTripsFromServer(trips);
+          console.log(
+            `[OfflineContext] ${trips.length} trips do servidor salvas/atualizadas no SQLite`
+          );
+        }
       }
     } catch (err) {
       console.error("[OfflineContext] Erro em syncMasterData:", err);
       throw err;
     }
-  }, [isOnline, isReady, saveEmployees, saveVehicles, replaceSyncedTripsFromServer]);
+  }, [deviceId, isOnline, isReady, saveEmployees, saveVehicles, replaceSyncedTripsFromServer]);
 
   // ========= sincronização trips pendentes (SQLite -> Supabase) =========
   const syncTripsToServer = useCallback(async () => {
@@ -183,6 +211,12 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
         "isReady:",
         isReady
       );
+      return;
+    }
+
+    if (!deviceId) {
+      console.warn("[OfflineContext] Dispositivo não registrado, abortando syncTripsToServer");
+      toast.error("Cadastre o dispositivo para sincronizar viagens.");
       return;
     }
 
@@ -258,7 +292,8 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
             rented_plate: trip.rented_plate ?? null,
             rented_model: trip.rented_model ?? null,
             rented_company: trip.rented_company ?? null,
-            device_id: trip.device_id ?? deviceId ?? null,
+            // device_id é sempre a referência do Supabase (devices.id)
+            device_id: deviceId,
           };
 
           const upsertResult = trip.server_trip_id
@@ -289,7 +324,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
               notes: trip.notes ?? null,
               trip_photos_base64: trip.trip_photos_base64 ?? null,
               employee_photo_base64: trip.employee_photo_base64 ?? null,
-              device_id: deviceId ?? trip.device_id ?? null,
+              device_id: deviceId,
               needs_sync: 0,
               server_trip_id: serverId,
               status: normalizedStatus,
@@ -324,6 +359,11 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
 
   // Auditoria simples: compara local_id entre SQLite e Supabase
   const auditTripsSync = useCallback(async () => {
+    if (!deviceId) {
+      console.warn("[OfflineContext][audit] Dispositivo não registrado, ignorando auditoria de trips");
+      return { localOnly: [], remoteOnly: [], localCount: 0, remoteCount: 0 };
+    }
+
     try {
       const localTrips = await getAllTrips();
       const localIds = new Set(localTrips.map((t) => t.local_id).filter(Boolean));
@@ -331,6 +371,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
       const { data: remote, error } = await supabase
         .from("trips")
         .select("id, local_id")
+        .eq("device_id", deviceId)
         .order("start_time", { ascending: false });
       if (error) throw error;
 
@@ -353,7 +394,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
       console.error("[OfflineContext][audit] Erro:", err);
       return { localOnly: [], remoteOnly: [], localCount: 0, remoteCount: 0 };
     }
-  }, [getAllTrips]);
+  }, [deviceId, getAllTrips]);
 
   // ========= sincronização trip positions pendentes (SQLite -> Supabase) =========
   const syncTripPositionsToServerInternal = useCallback(async () => {
@@ -364,6 +405,11 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
         "isReady:",
         isReady
       );
+      return;
+    }
+
+    if (!deviceId) {
+      console.warn("[OfflineContext] Dispositivo não registrado, pulando syncTripPositions");
       return;
     }
 
@@ -398,14 +444,14 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
                 local_trip_id: pos.local_trip_id,
                 trip_id: targetTripId ?? null,
                 captured_at: pos.captured_at,
-                latitude: pos.latitude,
-                longitude: pos.longitude,
-                speed: pos.speed ?? null,
-                accuracy: pos.accuracy ?? null,
-                device_id: deviceId ?? null,
-              },
-              { onConflict: "local_trip_id,captured_at" }
-            );
+              latitude: pos.latitude,
+              longitude: pos.longitude,
+              speed: pos.speed ?? null,
+              accuracy: pos.accuracy ?? null,
+              device_id: deviceId,
+            },
+            { onConflict: "local_trip_id,captured_at" }
+          );
 
           if (!error) {
             await markTripPositionAsSynced(pos.id!);
@@ -427,6 +473,11 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
 
   // ========= salvar trip position (usado pelo TripForm) =========
   const saveTripPosition = useCallback(async (position: OfflineTripPosition): Promise<boolean> => {
+    if (!deviceId) {
+      console.warn("[OfflineContext] Sem dispositivo registrado, ignorando captura de posição");
+      return false;
+    }
+
     // Se online e tem server_trip_id, salva direto no Supabase (trip_points) com upsert por local_id+captured_at
     if (isOnline && position.server_trip_id) {
       try {
@@ -441,7 +492,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
               longitude: position.longitude,
               speed: position.speed ?? null,
               accuracy: position.accuracy ?? null,
-              device_id: deviceId ?? null,
+              device_id: deviceId,
             },
             { onConflict: "local_trip_id,captured_at" }
           );
@@ -450,7 +501,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
           const msg = (error as any)?.message || JSON.stringify(error);
           console.error("[OfflineContext] Erro ao salvar position no Supabase:", msg);
           // Fallback: salva no SQLite
-          return await saveTripPositionSQLite({ ...position, device_id: position.device_id ?? deviceId ?? null, needs_sync: 1 });
+          return await saveTripPositionSQLite({ ...position, device_id: deviceId, needs_sync: 1 });
         }
 
         console.log("[OfflineContext] TripPoint salvo diretamente no Supabase");
@@ -458,12 +509,12 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
       } catch (err) {
         const msg = err instanceof Error ? err.message : JSON.stringify(err);
         console.error("[OfflineContext] Erro ao salvar position:", msg);
-        return await saveTripPositionSQLite({ ...position, device_id: position.device_id ?? deviceId ?? null, needs_sync: 1 });
+        return await saveTripPositionSQLite({ ...position, device_id: deviceId, needs_sync: 1 });
       }
     }
 
     // Offline ou sem server_trip_id: salva no SQLite
-    return await saveTripPositionSQLite({ ...position, device_id: position.device_id ?? deviceId ?? null, needs_sync: 1 });
+    return await saveTripPositionSQLite({ ...position, device_id: deviceId, needs_sync: 1 });
   }, [deviceId, isOnline, saveTripPositionSQLite]);
 
   // ========= sincronizar positions de uma viagem específica =========
@@ -472,6 +523,10 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
     positions: OfflineTripPosition[]
   ): Promise<void> => {
     if (!isOnline) return;
+    if (!deviceId) {
+      console.warn("[OfflineContext] Sem dispositivo registrado, ignorando syncTripPositionsToServer");
+      return;
+    }
 
     try {
       for (const pos of positions) {
@@ -486,7 +541,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
               longitude: pos.longitude,
               speed: pos.speed ?? null,
               accuracy: pos.accuracy ?? null,
-              device_id: deviceId ?? null,
+              device_id: deviceId,
             },
             { onConflict: "local_trip_id,captured_at" }
           );
@@ -528,6 +583,11 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
 
     if (isSyncing) return;
 
+    if (!deviceId) {
+      toast.error("Cadastre o dispositivo com um código válido antes de sincronizar.");
+      return;
+    }
+
     setIsSyncing(true);
     try {
       toast.info("Sincronizando dados...");
@@ -542,7 +602,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setIsSyncing(false);
     }
-  }, [isOnline, isReady, hasDb, isSyncing, syncMasterData, syncTripsToServer, syncTripPositionsToServerInternal]);
+  }, [deviceId, isOnline, isReady, hasDb, isSyncing, syncMasterData, syncTripsToServer, syncTripPositionsToServerInternal]);
 
   // ========= monitor de rede =========
   useEffect(() => {
@@ -599,14 +659,14 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
   // ========= sync inicial (apenas app nativo) =========
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
-    if (!isOnline || !isReady || !hasDb) return;
+    if (!isOnline || !isReady || !hasDb || !deviceId || !isDeviceLoaded) return;
     if (hasInitialSyncRun) return;
 
     setHasInitialSyncRun(true);
     syncNow().catch((err) =>
       console.error("[OfflineContext] Erro ao sincronizar na inicialização:", err)
     );
-  }, [hasDb, hasInitialSyncRun, isOnline, isReady, syncNow]);
+  }, [deviceId, hasDb, hasInitialSyncRun, isDeviceLoaded, isOnline, isReady, syncNow]);
 
   // ========= Motoristas =========
   const getMotoristas = useCallback(
@@ -767,6 +827,9 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
     isSyncing,
     lastSyncAt,
     deviceId,
+    deviceCode,
+    deviceName,
+    isDeviceLoaded,
     getMotoristas,
     getVeiculos,
     getViagens,
@@ -777,6 +840,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
     syncTripPositionsToServer,
     isReady,
     hasDb,
+    refreshDeviceFromStorage,
   };
 
   return (

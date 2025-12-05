@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -73,6 +73,7 @@ interface TripData {
 
 export const TripForm = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const viewTripData = location.state?.viewTrip;
   const isTripInProgress = (status?: string | null) => {
     const normalized = status?.toLowerCase();
@@ -94,6 +95,7 @@ export const TripForm = () => {
     saveTripPosition,
     hasDb,
     deviceId,
+    isDeviceLoaded,
   } = useOfflineData();
 
   const { uploadPhoto, createTrip, updateTrip, getOngoingTripFromServer } = useTrips();
@@ -160,6 +162,15 @@ export const TripForm = () => {
     "Aguardando teste..."
   );
 
+  // Bloqueia uso caso não exista dispositivo registrado
+  useEffect(() => {
+    if (!isDeviceLoaded) return;
+    if (!deviceId) {
+      toast.error("Cadastre o dispositivo com o código fornecido pela TI antes de registrar viagens.");
+      navigate("/registrar-dispositivo");
+    }
+  }, [deviceId, isDeviceLoaded, navigate]);
+
   // ========= CARREGA VIAGEM EM ANDAMENTO NO MOUNT =========
   useEffect(() => {
     if (viewTripData) {
@@ -171,6 +182,10 @@ export const TripForm = () => {
         loadViewModeTrip(viewTripData);
       }
       setIsLoadingOngoingTrip(false);
+      return;
+    }
+
+    if (!isDeviceLoaded) {
       return;
     }
 
@@ -186,8 +201,8 @@ export const TripForm = () => {
     if (!canExecute) {
       return;
     }
-    if (isNative && !deviceId) {
-      // Aguarda deviceId para garantir filtro correto da viagem em andamento
+    if (!deviceId) {
+      // Aguarda deviceId registrado para garantir filtro correto da viagem em andamento
       return;
     }
 
@@ -249,7 +264,7 @@ export const TripForm = () => {
 
     loadOngoingTripOnMount();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deviceId, isReady, hasDb, isOnline, viewTripData, isViewingOngoingTrip]);
+  }, [deviceId, hasDb, isDeviceLoaded, isOnline, isReady, isViewingOngoingTrip, viewTripData]);
 
   // Função para carregar viagem em modo visualização (somente leitura)
   const loadViewModeTrip = (trip: any) => {
@@ -529,6 +544,11 @@ export const TripForm = () => {
       return;
     }
 
+    if (!deviceId) {
+      console.warn("[TripForm] Sem dispositivo registrado, posição não será salva");
+      return;
+    }
+
     // Throttle para não registrar mais de 1 ponto < ~10s (watch + bg)
     const now = Date.now();
     if (lastCaptureRef.current && now - lastCaptureRef.current < 10000) {
@@ -543,7 +563,7 @@ export const TripForm = () => {
       longitude: position.coords.longitude,
       speed: position.coords.speed ?? null,
       accuracy: position.coords.accuracy ?? null,
-      device_id: deviceId ?? undefined,
+      device_id: deviceId,
       needs_sync: 1,
       deleted: 0,
     };
@@ -834,9 +854,15 @@ export const TripForm = () => {
   };
 
   const handleStartTrip = async () => {
+    if (!isDeviceLoaded) {
+      toast.info("Carregando dispositivo registrado...");
+      return;
+    }
+
     // Garante deviceId antes de iniciar, para evitar duplicatas offline
-    if (Capacitor.isNativePlatform() && !deviceId) {
-      toast.error("Carregando identificador do dispositivo. Tente novamente em segundos.");
+    if (!deviceId) {
+      toast.error("Cadastre o dispositivo para começar uma viagem.");
+      navigate("/registrar-dispositivo");
       return;
     }
 
@@ -955,7 +981,7 @@ export const TripForm = () => {
           rented_plate: tripData.isRentedVehicle ? tripData.rentedPlate || null : null,
           rented_model: tripData.isRentedVehicle ? tripData.rentedModel || null : null,
           rented_company: tripData.isRentedVehicle ? tripData.rentedCompany || null : null,
-          device_id: deviceId ?? null,
+          device_id: deviceId,
           needs_sync: options?.needsSync ?? 1,
           deleted: 0,
           last_updated: new Date().toISOString(),
@@ -1017,7 +1043,7 @@ export const TripForm = () => {
           rented_plate: tripData.isRentedVehicle ? tripData.rentedPlate || null : null,
           rented_model: tripData.isRentedVehicle ? tripData.rentedModel || null : null,
           rented_company: tripData.isRentedVehicle ? tripData.rentedCompany || null : null,
-          device_id: deviceId ?? null,
+          device_id: deviceId,
         };
 
         const { data, error } = await createTrip(draftTripRecord);
@@ -1165,7 +1191,7 @@ export const TripForm = () => {
           trip_photos_base64:
             tripPhotosBase64.length > 0 ? JSON.stringify(tripPhotosBase64) : null,
           employee_photo_base64: employeePhotoBase64 ?? null,
-          device_id: deviceId ?? null,
+          device_id: deviceId,
           needs_sync: needsSyncFlag,
           status: "finalized",
           server_trip_id: serverId ?? null,
@@ -1290,7 +1316,7 @@ export const TripForm = () => {
             rented_plate: tripData.isRentedVehicle ? tripData.rentedPlate || null : null,
             rented_model: tripData.isRentedVehicle ? tripData.rentedModel || null : null,
             rented_company: tripData.isRentedVehicle ? tripData.rentedCompany || null : null,
-            device_id: deviceId ?? null,
+            device_id: deviceId,
           };
 
           const { data, error } = await createTrip(tripRecord);

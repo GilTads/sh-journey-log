@@ -250,16 +250,21 @@ export const useSQLite = () => {
       if (!db) return null;
     }
 
+    if (!trip.device_id) {
+      console.warn("[useSQLite] Trip sem device_id registrado, abortando saveTrip");
+      return null;
+    }
+
     try {
-      // Evita duplicar viagem em andamento para o mesmo device (ou mesmo sem device_id)
+      // Evita duplicar viagem em andamento para o mesmo device (id vindo do Supabase.devices)
       const existing = await db.query(
         `SELECT local_id FROM offline_trips 
          WHERE status = 'in_progress' 
          AND deleted = 0 
          AND end_time IS NULL 
-         AND (device_id = ? OR ? IS NULL OR device_id IS NULL)
+         AND device_id = ?
          LIMIT 1;`,
-        [trip.device_id ?? null, trip.device_id ?? null]
+        [trip.device_id]
       );
       const found = (existing.values || [])[0] as { local_id: string } | undefined;
       if (found?.local_id) {
@@ -309,7 +314,7 @@ export const useSQLite = () => {
         trip.rented_plate ?? null,
         trip.rented_model ?? null,
         trip.rented_company ?? null,
-        trip.device_id ?? null,
+        trip.device_id,
         trip.needs_sync ?? 1,
         trip.deleted ?? 0,
         trip.last_updated ?? new Date().toISOString(),
@@ -449,28 +454,21 @@ export const useSQLite = () => {
   const getOngoingTrip = async (deviceId?: string): Promise<OfflineTrip | null> => {
     const db = requireDb("getOngoingTrip");
     if (!db) return null;
+    if (!deviceId) {
+      console.warn("[useSQLite] getOngoingTrip chamado sem deviceId registrado");
+      return null;
+    }
 
     try {
-      // Sempre filtra por deviceId quando informado para evitar duplicações entre dispositivos
-      const hasDeviceFilter = !!deviceId;
-      const sql = hasDeviceFilter
-        ? `SELECT * FROM offline_trips 
+      const sql = `SELECT * FROM offline_trips 
            WHERE status = 'in_progress' 
            AND deleted = 0 
            AND end_time IS NULL
            AND device_id = ?
            ORDER BY start_time DESC 
-           LIMIT 1;`
-        : `SELECT * FROM offline_trips 
-           WHERE status = 'in_progress' 
-           AND deleted = 0 
-           AND end_time IS NULL
-           ORDER BY start_time DESC 
            LIMIT 1;`;
 
-      const result = hasDeviceFilter
-        ? await db.query(sql, [deviceId])
-        : await db.query(sql);
+      const result = await db.query(sql, [deviceId]);
       const trips = (result.values || []) as OfflineTrip[];
       const found = trips.length > 0 ? trips[0] : null;
       
@@ -738,6 +736,11 @@ export const useSQLite = () => {
       if (!db) return false;
     }
 
+    if (!position.device_id) {
+      console.warn("[useSQLite] TripPosition sem device_id registrado, abortando saveTripPosition");
+      return false;
+    }
+
     try {
       const query = `
         INSERT INTO offline_trip_positions (
@@ -761,7 +764,7 @@ export const useSQLite = () => {
         position.longitude,
         position.speed ?? null,
         position.accuracy ?? null,
-        position.device_id ?? null,
+        position.device_id,
         position.needs_sync ?? 1,
         position.deleted ?? 0,
         position.last_updated ?? new Date().toISOString(),
