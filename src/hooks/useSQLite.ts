@@ -394,8 +394,10 @@ export const useSQLite = () => {
     if (!db) return [];
 
     try {
+      // Também captura viagens que por algum motivo ficaram sem server_trip_id
+      // mesmo com needs_sync zerado, para reempurrar ao servidor.
       const result = await db.query(
-        "SELECT * FROM offline_trips WHERE needs_sync = 1 AND deleted = 0;"
+        "SELECT * FROM offline_trips WHERE (needs_sync = 1 OR server_trip_id IS NULL) AND deleted = 0;"
       );
       return (result.values || []) as OfflineTrip[];
     } catch (error) {

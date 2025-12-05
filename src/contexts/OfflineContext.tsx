@@ -42,6 +42,7 @@ interface OfflineContextType {
   getOngoingTrip: () => Promise<OfflineTrip | null>;
 
   syncNow: () => Promise<void>;
+  auditTripsSync: () => Promise<{ localOnly: string[]; remoteOnly: string[]; localCount: number; remoteCount: number }>;
 
   // Trip positions
   saveTripPosition: (position: OfflineTripPosition) => Promise<boolean>;
@@ -305,6 +306,8 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
               "[OfflineContext] Erro ao sincronizar trip no Supabase:",
               upsertResult.error
             );
+            // Mantém needs_sync=1 para tentar novamente no próximo ciclo
+            await updateTripOnEnd(localId, { needs_sync: 1 });
           }
         } catch (err) {
           console.error(
@@ -318,6 +321,39 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
       throw err;
     }
   }, [deviceId, isOnline, isReady, getUnsyncedTrips, uploadPhoto, markTripAsSynced, updateTripOnEnd, updateTripPositionsServerTripId]);
+
+  // Auditoria simples: compara local_id entre SQLite e Supabase
+  const auditTripsSync = useCallback(async () => {
+    try {
+      const localTrips = await getAllTrips();
+      const localIds = new Set(localTrips.map((t) => t.local_id).filter(Boolean));
+
+      const { data: remote, error } = await supabase
+        .from("trips")
+        .select("id, local_id")
+        .order("start_time", { ascending: false });
+      if (error) throw error;
+
+      const remoteIds = new Set((remote || []).map((r: any) => r.local_id || r.id));
+
+      const localOnly = Array.from(localIds).filter((id) => !remoteIds.has(id as string));
+      const remoteOnly = Array.from(remoteIds).filter((id) => !localIds.has(id as string));
+
+      console.log("[OfflineContext][audit] Local:", localTrips.length, "Remote:", remote?.length || 0);
+      console.log("[OfflineContext][audit] Só no local:", localOnly);
+      console.log("[OfflineContext][audit] Só no remoto:", remoteOnly);
+
+      return {
+        localOnly: localOnly as string[],
+        remoteOnly: remoteOnly as string[],
+        localCount: localTrips.length,
+        remoteCount: remote?.length || 0,
+      };
+    } catch (err) {
+      console.error("[OfflineContext][audit] Erro:", err);
+      return { localOnly: [], remoteOnly: [], localCount: 0, remoteCount: 0 };
+    }
+  }, [getAllTrips]);
 
   // ========= sincronização trip positions pendentes (SQLite -> Supabase) =========
   const syncTripPositionsToServerInternal = useCallback(async () => {
@@ -736,6 +772,7 @@ export const OfflineProvider = ({ children }: { children: ReactNode }) => {
     getViagens,
     getOngoingTrip,
     syncNow,
+    auditTripsSync,
     saveTripPosition,
     syncTripPositionsToServer,
     isReady,

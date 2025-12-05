@@ -45,7 +45,7 @@ import {
   Clock,
   QrCode,
   Play,
-  Square,
+  Flag,
 } from "lucide-react";
 import { CapacitorSQLite } from "@capacitor-community/sqlite";
 
@@ -2068,7 +2068,7 @@ export const TripForm = () => {
               </>
             ) : isActive ? (
               <>
-                <Square className="h-5 w-5" />
+                <Flag className="h-5 w-5" />
                 Finalizar Viagem
               </>
             ) : (
